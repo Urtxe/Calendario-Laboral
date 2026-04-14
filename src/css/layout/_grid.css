@@ -1,0 +1,151 @@
+#calendario {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important; /* 7 columnas obligatorias */
+    gap: 8px;
+    width: 100%;
+    margin-top: 15px;
+    padding: 5px;
+    background-color: #ffffff;
+}
+.calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px; /* Espacio entre los botones y el nombre del mes */
+    margin-bottom: 15px;
+}
+
+.calendar-header h2 {
+    margin: 0;
+    min-width: 160px; /* Evita que los botones se muevan al cambiar de mes */
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.btn-step {
+    background: #f1f5f9;
+    border: none;
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-step:hover {
+    background: #e2e8f0;
+}
+.day-cell {
+    aspect-ratio: 1 / 1;
+    width: 100%; /* El ancho lo dicta la columna del grid */
+    background-color: #f8fafc;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+}
+.day-cell:hover {
+    transform: scale(1.05);
+    z-index: 2;
+}
+
+.day-number {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1e293b;
+}
+
+/* 1. Colores de los Botones de Acción */
+.btn-trabajado { background-color: #c6f6d5 !important; color: #22543d !important; border: 1px solid #9ae6b4; } /* Verde claro */
+.btn-festivo { background-color: #bee3f8 !important; color: #2a4365 !important; border: 1px solid #90cdf4; }   /* Azul celeste */
+.btn-vacaciones { background-color: #fefcbf !important; color: #744210 !important; border: 1px solid #faf089; }/* Amarillo suave */
+.btn-baja { background-color: #fed7d7 !important; color: #822727 !important; border: 1px solid #feb2b2; }      /* Rojo suave */
+.btn-horas-extra { background-color: #ed8936 !important; color: white !important; border: none; }            /* Naranja intenso */
+.btn-limpiar { background-color: #f7fafc !important; color: #4a5568 !important; border: 1px solid #e2e8f0; }   /* Gris muy claro */
+.btn-abonable { background-color: #e0b255 !important; color: white !important; } /* Amarillo mostaza */
+
+
+/* 2. Colores de las Marcas en el Calendario */
+/* Es vital usar .day-cell.clase para que no se desmarquen los días */
+.day-cell.trabajado { background-color: #c6f6d5 !important; color: #22543d !important; }
+.day-cell.festivo { background-color: #bee3f8 !important; color: #2a4365 !important; }
+.day-cell.vacaciones { background-color: #fefcbf !important; color: #744210 !important; }
+.day-cell.baja { background-color: #fed7d7 !important; color: #822727 !important; }
+.day-cell.abonable { background-color: #e0b255 !important; color: white !important; } /* Amarillo mostaza */
+
+/* 3. La Burbujita de Horas Extra */
+.day-cell { position: relative; } /* Necesario para posicionar la burbuja */
+
+.extra-badge {
+    display: inline-block;
+    background-color: #ed8936 !important; /* Naranja intenso */
+    color: white !important;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 8px;
+    margin-top: 4px; /* Espacio justo debajo del número */
+    pointer-events: none;
+    line-height: 1;
+}
+#tablaHorasExtra input[type="checkbox"] {
+    accent-color: #ed8936; /* El naranja intenso que estamos usando */
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    vertical-align: middle;
+}
+.texto-limite-excedido {
+    color: #ef4444 !important;
+    font-weight: 800;
+}
+/* Si la tarjeta tiene la clase premium-locked, escondemos el texto del límite */
+.premium-locked #info-limite-80 {
+    display: none !important;
+}
+
+/* Estilo para el modo oscuro si lo usas */
+body.dark-mode .texto-limite-excedido {
+    color: #f87171 !important;
+}
+.emoji-festivo {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 0.7rem;
+}
+
+/* Botones de acción del calendario */
+.action-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Dos columnas para que quepan todos */
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.action-buttons button {
+    padding: 10px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+    font-weight: 600;
+}
+.balance-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.balance-grid .stat-card {
+    background: #f8fafc;
+    padding: 15px 10px;
+    border-radius: 12px;
+    text-align: center;
+    border-bottom: 4px solid #e2e8f0;
+}
+
+.balance-grid .stat-card.positive { border-bottom-color: #22c55e; }
+.balance-grid .stat-card.negative { border-bottom-color: #ef4444; }

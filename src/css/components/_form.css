@@ -1,0 +1,134 @@
+.select-standard, .input-standard, input[type="email"], input[type="password"], input[type="number"], .inputJornadaCustom {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background-color: #f8fafc;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    transition: var(--transition);
+    outline: none;
+}
+
+.select-standard:focus, .input-standard:focus, .inputJornadaCustom {
+    border-color: var(--primary-color);
+    background-color: var(--white);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.config-card {
+    margin-bottom: 15px;
+}
+
+.card-title {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+/* Contenedor del icono "i" */
+.info-tooltip {
+    cursor: help;
+    color: #94a3b8; /* Gris suave para que no destaque más que el texto */
+    margin-left: 6px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    transform: translateY(-5px);
+}
+
+/* El globo de texto (Tooltip) */
+.info-tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 150%; /* Distancia sobre el icono */
+    left: 50%;
+    transform: translateX(-50%) scale(0.9); /* Empieza un poco más pequeño */
+    background: #1e293b; /* Fondo azul oscuro elegante o var(--bg-dark) */
+    color: white;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    z-index: 1000;
+    
+    /* SOLUCIÓN AL PROBLEMA: Ancho definido y permite saltos de línea */
+    width: 200px; 
+    white-space: normal; 
+    text-align: center;
+    
+    /* Efectos visuales */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* La flecha decorativa debajo del globo */
+.info-tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: #1e293b transparent transparent transparent;
+    opacity: 0;
+    transition: all 0.2s ease;
+    z-index: 1000;
+}
+
+/* Mostrar al pasar el ratón o al pulsar (móvil) */
+.info-tooltip:hover::after,
+.info-tooltip:active::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+
+.info-tooltip:hover::before,
+.info-tooltip:active::before {
+    opacity: 1;
+}
+.stepper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.step-btn {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    background: transparent;
+    border: none;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.step-btn:first-child { left: 0; border-right: 1px solid #e2e8f0; }
+.step-btn:last-child { right: 0; border-left: 1px solid #e2e8f0; }
+
+#inputAnio {
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: center;
+    padding: 12px 40px; /* Espacio para que el texto no choque con los botones */
+    font-weight: 700;
+    font-size: 1rem;
+    outline: none;
+}

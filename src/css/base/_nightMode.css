@@ -1,0 +1,59 @@
+/* --- MODO OSCURO "NEGATIVO" (ALTO CONTRASTE) --- */
+body.dark-mode {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+
+body.dark-mode .collapsible-card, 
+body.dark-mode .header-card, 
+body.dark-mode .config-card,
+body.dark-mode .stat-card,
+body.dark-mode .main-card,
+body.dark-mode .modal-content {
+    background-color: #0a0a0a !important; 
+    border: 1px solid #333333 !important; 
+    box-shadow: none !important;
+}
+
+/* 1. LO QUE YA TENÍAS BIEN (Restaurado) */
+body.dark-mode h2, 
+body.dark-mode h3, 
+body.dark-mode span, 
+body.dark-mode p,
+body.dark-mode .stat-value {
+    color: #ffffff !important;
+}
+
+/* 2. ARREGLO ESPECÍFICO PARA LA TABLA (Los meses) */
+body.dark-mode #tablaHorasExtra td,
+body.dark-mode #tablaHorasExtra td strong {
+    color: #aca106 !important;
+    opacity: 1 !important;
+}
+
+/* 3. ARREGLO ESPECÍFICO PARA AYUDA/SOPORTE */
+/* Esto obliga a que los textos dentro de las tarjetas de ayuda se vean blancos */
+body.dark-mode .card-body p,
+body.dark-mode .card-body li,
+body.dark-mode .card-body label {
+    color: #aca106 !important;
+    opacity: 1 !important;
+}
+
+/* Mantener el resto de tus configuraciones */
+body.dark-mode select, 
+body.dark-mode input {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+    border: 1px solid #444444 !important;
+}
+
+body.dark-mode .btn-dark-mode-toggle {
+    background-color: #24344d;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+}
+
+body.dark-mode a {
+    color: #fbbf24; 
+}

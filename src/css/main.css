@@ -1,0 +1,21 @@
+/* 1. Definiciones base (Variables y reset) */
+@import url('base/_variables.css');
+@import url('base/_reset.css');
+@import url('base/_nightMode.css');
+
+
+/* 2. Estructura de la página (Header y contenedores) */
+@import url('layout/_header.css');
+@import url('layout/_container.css');
+@import "layout/_grid.css"; 
+
+/* 3. Elementos repetibles (Tarjetas, botones, etiquetas) */
+@import url('components/_card.css');
+@import url('components/_button.css');
+@import url('components/_badge.css');
+
+@import url('components/_form.css');
+@import url('components/_modal.css');
+
+
+

@@ -1,0 +1,230 @@
+/* ============================================
+   CONTENEDOR PRINCIPAL
+   ============================================ */
+#app-header-container {
+    background-color: #24344d !important;
+    padding: 15px !important;
+    display: flex !important;
+    flex-direction: column !important; /* Título arriba, usuario/auth abajo */
+    gap: 10px;
+    width: 100%;
+}
+
+/* Tarjetas base */
+.header-card {
+    border-radius: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================
+   SECCIÓN TÍTULO (RELOJ + TEXTO)
+   ============================================ */
+.main-title-card {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    padding: 15px;
+}
+
+/* Forzamos que el reloj y el texto estén en la misma línea siempre */
+.header-info {
+    display: flex !important;
+    flex-direction: row !important; 
+    align-items: center !important;
+    gap: 15px;
+}
+
+.header-icon-main {
+    width: 52px !important;
+    height: 52px !important;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+
+.header-text-group h2 {
+    color: white !important;
+    font-size: 1.5rem !important;
+    margin: 0;
+    font-weight: 700;
+}
+
+/* Subtítulo en blanco */
+.header-text-group p {
+    color: #ffffff !important;
+    font-size: 0.85rem;
+    margin: 0;
+    opacity: 0.9;
+}
+
+/* ============================================
+   SECCIÓN USUARIO / AUTH (COMPACTA)
+   ============================================ */
+.user-card, .auth-card {
+    padding: 8px 15px !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    min-height: 48px;
+}
+
+/* Mensaje y Email en blanco */
+.auth-message, .text-white-figma {
+    color: #ffffff !important;
+    font-size: 0.85rem !important;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* Alineación del icono de usuario con el mail */
+.user-profile-info {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px;
+}
+
+.user-avatar {
+    width: 28px !important;
+    height: 28px !important;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+/* ============================================
+   BOTONES "BONITOS" (ACCESO)
+   ============================================ */
+.auth-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Botón Entrar (Blanco sólido con sombra suave) */
+.btn-login-figma {
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    padding: 6px 14px !important;
+    border-radius: 10px;
+    font-size: 0.75rem !important;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+/* Botón Unirse y Salir (Contorno elegante) */
+.btn-register-figma, .btn-logout-figma {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    padding: 6px 14px !important;
+    border-radius: 10px;
+    font-size: 0.75rem !important;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-login-figma:hover { transform: translateY(-1px); background-color: #f8fafc !important; }
+.btn-register-figma:hover { background-color: rgba(255, 255, 255, 0.2) !important; }
+
+/* ETIQUETA PREMIUM DORADA */
+.pro-badge-email {
+    background-color: #FFD700 !important;
+    color: #1a202c !important;
+    font-size: 0.55rem !important;
+    font-weight: 900 !important;
+    padding: 1px 5px !important;
+    border-radius: 4px !important;
+    margin-left: 8px !important;
+    text-transform: uppercase;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+}body.is-premium .premium-tag {
+    display: none !important;
+}.user-details-group {
+    display: flex !important;
+    flex-direction: row !important; /* Cambiado de column a row */
+    align-items: center !important;
+    gap: 12px; /* Espacio entre el email y el botón */
+}
+
+.btn-upgrade-minimal {
+    background: linear-gradient(90deg, #FFD700, #FFA500);
+    border: none;
+    color: #1a202c;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    width: fit-content;
+    text-transform: uppercase;
+    box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+}
+
+/* Ocultar si el body tiene la clase is-premium */
+body.is-premium #btn-upgrade {
+    display: none !important;
+}
+/* Contenedor del logo */
+.header-icon-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 45px;  /* Ajusta según el tamaño de tu logo */
+    height: 45px;
+    background: transparent !important; /* Quitamos el fondo si el logo ya tiene color */
+}
+
+/* Estilo de la imagen del logo */
+.app-logo-header, .auth-logo, .pdf-logo-preview {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%; /* Esto lo hace redondo */
+    object-fit: cover; /* Asegura que la imagen no se deforme al recortarse */
+    /*border: 2px solid #fbbf24; /* Opcional: un borde dorado para resaltar */
+}
+/* Estilos para el visor de logo */
+.logo-viewer-overlay {
+    display: none; /* Oculto por defecto */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85); /* Fondo negro semitransparente */
+    z-index: 9999; /* Por encima de todo */
+    justify-content: center;
+    align-items: center;
+    cursor: zoom-out;
+    animation: fadeIn 0.3s ease;
+}
+
+.logo-ampliado {
+    max-width: 90%;
+    max-height: 80%;
+    border-radius: 20px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    transform: scale(0.9);
+    animation: zoomIn 0.3s ease forwards;
+}
+
+.close-viewer {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: white;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes zoomIn { from { transform: scale(0.7); } to { transform: scale(1); } }

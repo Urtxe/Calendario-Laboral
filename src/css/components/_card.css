@@ -1,0 +1,233 @@
+.collapsible-card {
+    background: white;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+.card-body {
+    display: none; 
+    padding: 20px;
+    border-top: 1px solid #f1f5f9;
+}
+.card-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+/* El contenedor del icono a la izquierda */
+.card-icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    background-color: #f1f5f9; /* Gris suave */
+    border-radius: 10px;
+    color: #475569; /* Color del icono */
+    margin-right: 15px;
+}
+
+.card-header span:first-child {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: var(--text-main);
+    font-size: 0.95rem;
+}
+
+.toggle-icon {
+    color: #94a3b8;
+    width: 18px;
+    height: 18px;
+    transition: var(--transition);
+}
+.collapsible-card.active .card-body {
+    display: block;
+}
+.collapsible-card.active .toggle-icon {
+    transform: rotate(180deg);
+}
+
+/* Estadísticas más visuales */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.stat-card {
+    padding: 15px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border-left: 4px solid var(--primary-color);
+}
+
+.stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+.stat-value { font-size: 1.2rem; font-weight: 700; color: var(--text-main); }
+
+/* Tablas modernas */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+
+th { text-align: left; padding: 10px; color: var(--text-muted); font-size: 0.8rem; }
+td { background: #f8fafc; padding: 12px 10px; }
+td:first-child { border-radius: 8px 0 0 8px; }
+td:last-child { border-radius: 0 8px 8px 0; }
+/* Bloqueo visual de secciones Premium */
+.premium-locked:not(.active) .card-body {
+    display: none !important;
+}
+/* Quitar opacidad o efectos de bloqueo cuando la sección está activa */
+body.is-premium .premium-locked {
+    opacity: 1 !important;
+    filter: none !important;
+    pointer-events: auto !important;
+}
+/* Contenedor de la tabla */
+.table-wrapper {
+    width: 100% !important;
+    margin-top: 10px;
+    overflow: hidden; /* Evita el desplazamiento lateral */
+    border-radius: 8px;
+}
+
+/* Encabezados de la cuadrícula: Centrados, Negros y Negrita */
+#tablaResumen th {
+    background-color: #f1f5f9 !important;
+    color: #000000 !important;
+    font-size: 0.65rem !important;
+    font-weight: 800 !important; /* Negrita extra */
+    text-transform: uppercase;
+    padding: 10px 2px !important;
+    border: 1px solid #cbd5e1;
+    text-align: center !important; /* CENTRADO SOLICITADO */
+}
+
+/* Celdas de datos: Texto negro (sin !important para permitir colores de JS) */
+#tablaResumen td {
+    color: #000000; /* Quitamos !important para que el balance funcione */
+    font-size: 0.70rem !important;
+    padding: 10px 2px !important;
+    text-align: center !important;
+    border: 1px solid #cbd5e1;
+}
+
+/* El año en negrita y negro */
+#tablaResumen td strong {
+    color: #000000 !important;
+}
+
+/* Forzar que el balance sea siempre legible y en negrita */
+.balance-cell {
+    font-weight: 800 !important;
+}
+
+/* Estilos para la sección de Ayuda */
+.ayuda-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.faq-item {
+    background: #f1f5f9;
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.faq-item summary {
+    font-weight: 600;
+    color: #1e293b;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.faq-item p {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.4;
+}
+
+.contacto-directo {
+    margin-top: 20px;
+    padding: 20px;
+    background: #e2e8f0;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.btn-soporte {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    background: #24344d;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* Estilos para el Footer */
+.app-footer {
+    padding: 40px 20px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.8rem;
+}
+
+.footer-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px; /* Espacio entre los enlaces */
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.footer-links a {
+    text-decoration: none;
+    color: #94a3b8; /* Color gris suave como los otros */
+    font-size: 0.9em;
+}
+
+.footer-links a:hover {
+    text-decoration: underline;
+    color: #ffffff; /* Se ilumina al pasar el ratón */
+}
+/* Estilos para el Modal Legal con más espacio */
+.legal-content {
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.legal-scroll {
+    overflow-y: auto;
+    margin-bottom: 30px; /* AQUÍ: Espacio extra antes del botón */
+    padding-right: 10px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #475569;
+    text-align: left;
+}
+
+.legal-scroll h4 {
+    margin-top: 20px;
+    color: #1e293b;
+}

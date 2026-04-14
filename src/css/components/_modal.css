@@ -1,0 +1,244 @@
+#auth-modal, #modal-horas-extra {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.7); /* Fondo oscuro con profundidad */
+    backdrop-filter: blur(8px); /* Efecto cristal de fondo */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-content {
+    background: white;
+    padding: 40px 30px; /* Más espacio interno */
+    border-radius: 24px;
+    width: 100%;
+    max-width: 450px; /* Tamaño más cómodo */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    text-align: center;
+}
+
+.modal-content h2 {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    color: var(--bg-dark);
+}
+
+.modal-subtitle {
+    color: var(--text-muted);
+    margin-bottom: 30px;
+    font-size: 1rem;
+}
+
+/* Inputs del modal */
+.modal-content input {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 15px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 1rem;
+    background: #f8fafc;
+}
+
+/* Botón de Google */
+.btn-google {
+    width: 100%;
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    color: #475569;
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+    transition: var(--transition);
+}
+
+.btn-google:hover {
+    background: #f1f5f9;
+}
+
+/* Texto para cambiar entre Login/Registro */
+.toggle-auth {
+    margin-top: 25px;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+.toggle-auth a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 700;
+}
+
+/* Botón cancelar */
+.btn-cancel {
+    background: transparent;
+    color: #94a3b8;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    text-decoration: underline;
+}
+
+.modal-overlay {
+    position: fixed !important; /* Se ancla a la ventana del navegador */
+    top: 0;
+    left: 0;
+    width: 100vw; /* Ancho total de la pantalla */
+    height: 100vh; /* Alto total de la pantalla */
+    background: rgba(15, 23, 42, 0.9) !important; /* Fondo oscuro opaco */
+    backdrop-filter: blur(8px); /* Desenfoque de lo que hay detrás */
+    
+    /* Centrado absoluto del contenido */
+    display: none; /* Se activa con JS como 'flex' */
+    justify-content: center;
+    align-items: center;
+    
+    z-index: 99999 !important; /* El número más alto para que nada lo tape */
+}/* Contenedor horizontal de los planes */
+.plans-container {
+    display: flex;
+    flex-direction: row; /* Alineación horizontal */
+    gap: 15px;
+    margin: 25px 0;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Caja/Tarjeta de cada plan */
+.plan-card {
+    flex: 1;
+    background: #f8fafc; /* Gris muy suave */
+    border: 2px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 20px 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+/* Resalte para el plan anual */
+.plan-card.popular {
+    border-color: #fbbf24; /* Borde dorado */
+    background: #fffdf0;
+    transform: scale(1.03); /* Ligeramente más grande */
+    box-shadow: 0 10px 15px -3px rgba(251, 191, 36, 0.1);
+}
+
+/* Estilo de los botones amarillos "bonitos" */
+/* Botones de Elegir: Efecto Dorado Premium */
+.btn-plan, .btn-plan-yellow {
+    background: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C) !important;
+    background-size: 200% auto !important;
+    color: #1a202c !important;
+    border: none !important;
+    padding: 12px 20px !important;
+    border-radius: 12px !important; /* Bordes suavizados */
+    font-weight: 800 !important;
+    font-size: 0.85rem !important;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 15px;
+    box-shadow: 0 4px 15px rgba(179, 135, 40, 0.3);
+    transition: 0.3s;
+}
+
+.btn-plan:hover, .btn-plan-yellow:hover {
+    background-position: right center !important; /* Animación de brillo */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(179, 135, 40, 0.4);
+}
+
+/* Botón Seguir Gratis: Redondeado y Elegante */
+.btn-link-cancel {
+    background: #f1f5f9 !important; /* Gris muy suave */
+    border: 1px solid #e2e8f0 !important;
+    color: #64748b !important;
+    padding: 10px 24px !important;
+    border-radius: 50px !important; /* TOTALMENTE REDONDEADO (Tipo pastilla) */
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    margin-top: 25px;
+    width: auto !important; /* No ocupa todo el ancho */
+    display: inline-block;
+    transition: all 0.2s;
+}
+
+.btn-link-cancel:hover {
+    background: #e2e8f0 !important;
+    color: #475569 !important;
+    text-decoration: none !important;
+}
+/* --- AJUSTES MURO DE REGISTRO --- */
+.muro-container {
+    max-width: 800px !important; /* Más ancho para que quepan 3 */
+    width: 95%;
+    padding: 25px !important;
+}
+
+.planes-grid {
+    display: flex;
+    gap: 12px;
+    margin: 20px 0;
+    flex-wrap: wrap; /* Para que bajen en móviles */
+    justify-content: center;
+}
+
+.plan-card {
+    flex: 1;
+    min-width: 180px; /* Tamaño mínimo para que no se compriman */
+    max-width: 240px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    transition: transform 0.2s;
+}
+
+.premium-card { border: 2px solid #e0b13b; background: #fffdf5; }
+.destacada { transform: scale(1.05); z-index: 1; border-width: 3px; }
+
+/* Botones Redondeados */
+.btn-muro {
+    width: 100%;
+    padding: 12px;
+    border-radius: 50px; /* Redondeado total */
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin-top: auto;
+}
+
+.btn-gold {
+    background-color: #dfba15;
+    color: #000;
+}
+
+.btn-gratis {
+    background-color: #64748b;
+    color: #fff;
+}
+
+/* Ajuste móvil */
+@media (max-width: 600px) {
+    .planes-grid { flex-direction: column; align-items: center; }
+    .plan-card { width: 100%; max-width: 100%; }
+    .destacada { transform: none; }
+}

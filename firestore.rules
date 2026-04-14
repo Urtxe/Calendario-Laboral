@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. REGLA PARA FESTIVOS (PÚBLICA)
+    match /festivos_oficiales/{document=**} {
+      allow read: if true;
+    }
+
+    // 2. REGLA PARA USUARIOS (PRIVADA)
+    match /usuarios/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      match /{allSubcollections=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // 3. REGLA PARA VISITAS ANÓNIMAS (NUEVA)
+    match /visitasAnonimas/{docId} {
+      // Permite que usuarios no registrados "se apunten" (creen el documento)
+      allow create: if request.resource.data.keys().hasOnly([
+        "modo_acceso",
+        "resolucion",
+        "idioma",
+        "tema_visual",
+        "tiempo_carga_ms",
+        "version_app",
+        "timestamp"
+      ])
+      && request.resource.data.modo_acceso is string
+      && request.resource.data.resolucion is string
+      && request.resource.data.idioma is string
+      && request.resource.data.tema_visual is string
+      && request.resource.data.tiempo_carga_ms is number
+      && request.resource.data.version_app is string
+      && request.resource.data.timestamp == request.time;
+      // Por seguridad, nadie puede leer la lista completa ni borrar visitas
+      allow read, update, delete: if false;
+    }
+
+  } 
+} 

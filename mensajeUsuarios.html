@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balance Laboral - La App del Trabajador</title>
+    <style>
+        :root {
+            --primary: #24344d; /* Azul corporativo */
+            --accent: #fbbf24; /* Dorado Premium */
+            --success: #10b981;
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-600: #475569;
+            --slate-900: #0f172a;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0; padding: 0;
+            background-color: var(--slate-50);
+            color: var(--slate-900);
+            line-height: 1.6;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            background-color: var(--primary);
+            background-image: radial-gradient(circle at 20% 30%, #2d415f 0%, var(--primary) 100%);
+            color: white;
+            padding: 90px 20px 120px;
+            text-align: center;
+        }
+
+        .badge {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--accent);
+            padding: 6px 16px;
+            border-radius: 99px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-bottom: 24px;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        h1 { font-size: 3rem; margin: 0 0 20px; font-weight: 800; line-height: 1.1; }
+        .hero p { font-size: 1.25rem; opacity: 0.9; max-width: 750px; margin: 0 auto 40px; }
+
+        /* --- MAIN CARD --- */
+        .main-card {
+            background: white;
+            border-radius: 32px;
+            margin-top: -80px;
+            padding: 60px 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--slate-100);
+        }
+
+        /* --- CITIES GRID (NUEVA SECCIÓN ARRIBA) --- */
+        .cities-section {
+            text-align: center;
+            margin-bottom: 50px;
+            padding-bottom: 40px;
+            border-bottom: 1px solid var(--slate-100);
+        }
+        
+        .cities-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .city-tag {
+            background: var(--slate-50);
+            color: var(--primary);
+            padding: 8px 18px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid var(--slate-200);
+            transition: all 0.2s;
+        }
+
+        .city-tag:hover {
+            border-color: var(--accent);
+            background: white;
+        }
+
+        /* --- FEATURES --- */
+        .section-title { text-align: center; font-size: 2rem; font-weight: 800; margin-bottom: 40px; color: var(--primary); }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 60px;
+        }
+
+        .feature-card {
+            padding: 30px;
+            border-radius: 20px;
+            background: var(--slate-50);
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+            background: white;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        }
+
+        .icon-box { font-size: 2rem; margin-bottom: 20px; display: block; }
+        .feature-card h3 { font-size: 1.25rem; margin-bottom: 10px; }
+        .feature-card p { color: var(--slate-600); font-size: 0.95rem; margin: 0; }
+
+        /* --- HOW IT WORKS --- */
+        .steps-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            text-align: center;
+            margin: 40px 0 80px;
+        }
+
+        .step-item .number {
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--slate-100);
+            margin-bottom: -20px;
+            display: block;
+        }
+
+        .step-item h4 { font-size: 1.2rem; position: relative; z-index: 1; margin-bottom: 10px; }
+        .step-item p { font-size: 0.9rem; color: var(--slate-600); }
+
+        /* --- PRICING --- */
+        .pricing-box {
+            background: var(--primary);
+            color: white;
+            border-radius: 24px;
+            padding: 50px 30px;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .pricing-grid {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+
+        .price-card {
+            background: rgba(255,255,255,0.05);
+            padding: 30px;
+            border-radius: 20px;
+            min-width: 250px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .price-card.popular {
+            border: 2px solid var(--accent);
+            background: rgba(255,255,255,0.1);
+            transform: scale(1.05);
+        }
+
+        .price-value { font-size: 3rem; font-weight: 800; margin: 10px 0; }
+        .price-value span { font-size: 1rem; opacity: 0.7; }
+
+        /* --- INSTALLATION --- */
+        .install-guide {
+            background: var(--slate-100);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .install-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.2rem; }
+            .pricing-grid { flex-direction: column; align-items: center; }
+            .price-card.popular { transform: none; }
+            .install-grid { grid-template-columns: 1fr; }
+            .main-card { padding: 40px 20px; }
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 18px 45px;
+            border-radius: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s;
+            font-size: 1.1rem;
+            background: var(--accent);
+            color: var(--primary);
+            box-shadow: 0 10px 20px rgba(251, 191, 36, 0.2);
+        }
+
+        .btn:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(251, 191, 36, 0.3); }
+
+        .footer { text-align: center; padding: 60px 20px; color: var(--slate-600); font-size: 0.9rem; }
+
+        .boton-cerrar-guia {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border: 1px solid var(--slate-200);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 100;
+            font-weight: 600;
+            color: var(--primary);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+    <button class="boton-cerrar-guia" onclick="window.close();">✕ Cerrar</button>
+
+<header class="hero">
+    <div class="container">
+        <span class="badge">La primera app diseñada para el trabajador</span>
+        <h1>Tu registro, tus reglas.<br>Tu jornada bajo tu control.</h1>
+        <p>A diferencia de los sistemas de empresa, <b>Balance Laboral</b> es tu herramienta personal e independiente para certificar tu tiempo y proteger tus derechos.</p>
+        <a href="https://balancelaboral.es" class="btn" target="_blank" rel="noopener noreferrer">Acceder a mi Registro</a>
+    </div>
+</header>
+
+<main class="container">
+    <div class="main-card">
+        
+        <div class="cities-section">
+            <h3 style="color: var(--slate-600); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px;">Festivos Oficiales 2026 Disponibles</h3>
+            <div class="cities-grid">
+                <span class="city-tag">Madrid</span>
+                <span class="city-tag">Barcelona</span>
+                <span class="city-tag">Valencia</span>
+                <span class="city-tag">Sevilla</span>
+                <span class="city-tag">Zaragoza</span>
+                <span class="city-tag">Málaga</span>
+                <span class="city-tag">Donostia-San Sebastián</span>
+                <span class="city-tag">Bilbo-Bilbao</span>
+                <span class="city-tag">Gasteiz-Vitoria</span>
+                <span class="city-tag">Iruña-Pamplona</span>
+            </div>
+        </div>
+
+        <h2 class="section-title">¿Por qué Balance Laboral?</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <span class="icon-box">✊</span>
+                <h3>Independencia Total</h3>
+                <p>La mayoría de apps son para que el jefe te controle. Esta es para que <b>tú tengas tus propias pruebas</b> inalterables frente a cualquier duda o conflicto.</p>
+            </div>
+            <div class="feature-card">
+                <span class="icon-box">🛡️</span>
+                <h3>Tranquilidad Jurídica</h3>
+                <p>Cumple estrictamente con el <b>RDL 8/2019</b>. Genera informes oficiales con sello digital, listos para presentar ante una inspección o el sindicato.</p>
+            </div>
+            <div class="feature-card">
+                <span class="icon-box">📅</span>
+                <h3>Calendario Inteligente</h3>
+                <p>Sincronización de festivos nacionales y locales. Gestiona tus horas extra y compensaciones con el rigor que merece tu esfuerzo diario.</p>
+            </div>
+        </div>
+
+        <h2 class="section-title">Tu registro en 3 pasos</h2>
+        <div class="steps-container">
+            <div class="step-item">
+                <span class="number">1</span>
+                <h4>Define tu jornada</h4>
+                <p>Tú configuras tu convenio y sector. Nosotros cargamos tus festivos y objetivos anuales de forma automática.</p>
+            </div>
+            <div class="step-item">
+                <span class="number">2</span>
+                <h4>Marca tus días</h4>
+                <p>Registra entradas, salidas y horas extraordinarias con un solo toque. Tu balance, siempre actualizado.</p>
+            </div>
+            <div class="step-item">
+                <span class="number">3</span>
+                <h4>Certifica tu mes</h4>
+                <p>Exporta tu resumen en PDF con sello de autenticidad. Un documento profesional que pone en valor tu trabajo.</p>
+            </div>
+        </div>
+
+        <div class="pricing-box">
+            <h2 style="color: white; margin-bottom: 10px;">Planes de Gestión</h2>
+            <p style="opacity: 0.8;">Herramientas profesionales para quienes valoran su tiempo.</p>
+            <div class="pricing-grid">
+                <div class="price-card">
+                    <h4>Gestión Mensual</h4>
+                    <div class="price-value">0,99€<span>/mes</span></div>
+                    <p style="font-size: 0.8rem; opacity: 0.7;">Flexibilidad mes a mes</p>
+                </div>
+                <div class="price-card popular">
+                    <div style="color: var(--accent); font-weight: 800; font-size: 0.7rem; margin-bottom: 10px;">PLAN RECOMENDADO</div>
+                    <h4>Gestión Anual</h4>
+                    <div class="price-value">9,99€<span>/año</span></div>
+                    <p style="color: var(--success); font-weight: bold; font-size: 0.9rem;">EL CONTROL COMPLETO</p>
+                </div>
+            </div>
+            <ul style="text-align: left; display: inline-block; list-style: none; padding: 0; font-size: 0.95rem;">
+                <li style="margin-bottom: 8px;">✅ Informes PDF oficiales con sello digital</li>
+                <li style="margin-bottom: 8px;">✅ Registro de horas extra y festivos trabajados</li>
+                <li style="margin-bottom: 8px;">✅ Histórico de jornada ilimitado</li>
+            </ul>
+        </div>
+
+        <div class="install-guide">
+            <h3 style="margin-top:0;">📱 Instalación como Aplicación</h3>
+            <p style="color: var(--slate-600); font-size: 0.95rem;">Lleva tu registro siempre encima. Añade Balance Laboral a tu inicio para fichar en segundos.</p>
+            <div class="install-grid">
+                <div>
+                    <h4 style="margin-bottom:5px;">iPhone (Safari)</h4>
+                    <p style="font-size:0.85rem; margin:0;">Pulsa <b>Compartir</b> y selecciona <b>"Añadir a pantalla de inicio"</b>.</p>
+                </div>
+                <div>
+                    <h4 style="margin-bottom:5px;">Android (Chrome)</h4>
+                    <p style="font-size:0.85rem; margin:0;">Menú <b>tres puntos (⋮)</b> y selecciona <b>"Instalar aplicación"</b>.</p>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <a href="https://balancelaboral.es" class="btn" target="_blank" rel="noopener noreferrer">Ir a BalanceLaboral.es →</a>
+        </div>
+    </div>
+</main>
+
+<footer class="footer">
+    <p><b>Balance Laboral</b> &copy; 2026. Por fin, una herramienta del lado del trabajador.</p>
+    <p>Soporte técnico: <a href="mailto:soporte@balancelaboral.es" style="color: var(--primary); font-weight: 600; text-decoration: none;">soporte@balancelaboral.es</a></p>
+    <a href="docs/guia.pdf" target="_blank">Descargar Guía de Usuario (PDF)</a>
+</footer>
+
+</body>
+</html>

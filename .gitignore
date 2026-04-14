@@ -68,3 +68,6 @@ functions/.env
 
 # dataconnect generated files
 .dataconnect
+
+# Marketing assets
+Marketing/

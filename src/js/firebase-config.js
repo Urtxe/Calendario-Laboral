@@ -45,6 +45,30 @@ window.toggleAuthMode = () => {
 
 window.cerrarModal = () => document.getElementById('auth-modal').style.display = 'none';
 
+function mostrarErrorAuth(mensaje) {
+    const errorDiv = document.getElementById('error-message');
+    if (!errorDiv) return;
+    errorDiv.textContent = mensaje;
+    errorDiv.style.display = 'block';
+}
+
+function traducirErrorGoogle(error) {
+    if (!error || !error.code) return 'No se pudo iniciar sesión con Google.';
+
+    switch (error.code) {
+        case 'auth/popup-closed-by-user':
+            return 'Has cerrado la ventana de Google antes de terminar el inicio de sesión.';
+        case 'auth/popup-blocked':
+            return 'El navegador ha bloqueado la ventana emergente de Google.';
+        case 'auth/unauthorized-domain':
+            return 'Este dominio no está autorizado en Firebase Auth.';
+        case 'auth/operation-not-supported-in-this-environment':
+            return 'Google Login necesita ejecutarse en http o https, no desde file://.';
+        default:
+            return error.message || 'No se pudo iniciar sesión con Google.';
+    }
+}
+
 window.autenticar = () => {
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
@@ -83,9 +107,9 @@ window.autenticar = () => {
         // LÓGICA DE CONVERSIÓN: Si se acaba de registrar y eligió Premium
         if (isRegister && planSeleccionado === 'premium') {
             setTimeout(() => {
-                // Llamamos a la función que muestra la elección de Mensual/Anual
-                if (typeof mostrarPreciosPremium === "function") {
-                    mostrarPreciosPremium();
+                // Reabrimos el modal de precios para continuar con el alta premium
+                if (typeof abrirModalPremium === "function") {
+                    abrirModalPremium();
                 }
             }, 1000);
         }
@@ -124,13 +148,14 @@ window.autenticarConGoogle = () => {
         // 2. Si es nuevo y pulsó el botón de "Premium" en el muro, lanzamos los precios
         if (esNuevoUsuario && planSeleccionado === 'premium') {
             setTimeout(() => {
-                if (typeof mostrarPreciosPremium === "function") {
-                    mostrarPreciosPremium();
+                if (typeof abrirModalPremium === "function") {
+                    abrirModalPremium();
                 }
             }, 1000);
         }
     }).catch((error) => {
         console.error("Error en Google Auth:", error);
+        mostrarErrorAuth(traducirErrorGoogle(error));
     });
 };
 

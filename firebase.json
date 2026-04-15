@@ -14,7 +14,7 @@
       ".firebaserc",
       "docs/**",
       "README.md",
-      "marketing/**"
+      "Marketing/**"
     ],
     "rewrites": [
       {

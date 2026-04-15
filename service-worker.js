@@ -1,23 +1,24 @@
 const CACHE_VERSION = 'v1.3.0'; 
 const CACHE_NAME = `balance-laboral-${CACHE_VERSION}`;
+const APP_BASE = new URL('./', self.location);
 
 // Lista actualizada con los nombres de tus archivos reales
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/src/css/main.css', // Corregido: antes era styles.css
-  '/src/js/firebase-config.js',
-  '/src/js/app/state.js',
-  '/src/js/app/calendar.js',
-  '/src/js/app/sync.js',
-  '/src/js/app/ui.js',
-  '/src/js/app/pdf.js',
-  '/src/js/analytics.js',
-  '/manifest.json',
-  '/assets/images/logo.png',
-  '/assets/icons/apple-touch-icon.png',
-  '/assets/icons/icon-192.png',
-  '/assets/icons/icon-512.png'
+  new URL('./', APP_BASE).href,
+  new URL('index.html', APP_BASE).href,
+  new URL('src/css/main.css', APP_BASE).href,
+  new URL('src/js/firebase-config.js', APP_BASE).href,
+  new URL('src/js/app/state.js', APP_BASE).href,
+  new URL('src/js/app/calendar.js', APP_BASE).href,
+  new URL('src/js/app/sync.js', APP_BASE).href,
+  new URL('src/js/app/ui.js', APP_BASE).href,
+  new URL('src/js/app/pdf.js', APP_BASE).href,
+  new URL('src/js/analytics.js', APP_BASE).href,
+  new URL('manifest.json', APP_BASE).href,
+  new URL('assets/images/logo.png', APP_BASE).href,
+  new URL('assets/icons/apple-touch-icon.png', APP_BASE).href,
+  new URL('assets/icons/icon-192.png', APP_BASE).href,
+  new URL('assets/icons/icon-512.png', APP_BASE).href
 ];
 
 self.addEventListener('install', event => {

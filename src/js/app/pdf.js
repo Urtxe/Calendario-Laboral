@@ -32,8 +32,15 @@ async function generarInformePDF() {
     const filas = [];
     let totalHorasMes = 0;
     let totalExtrasMes = 0;
+    let totalExtrasAnio = 0;
     let festivosTrabajadosMes = 0;
     const diasMes = new Date(anioActual, mesActual + 1, 0).getDate();
+
+    for (const clave in horasExtraPorDia) {
+        if (clave.startsWith(String(anioActual))) {
+            totalExtrasAnio += horasExtraPorDia[clave];
+        }
+    }
 
     for (let d = 1; d <= diasMes; d++) {
         const f = new Date(anioActual, mesActual, d);
@@ -57,22 +64,16 @@ async function generarInformePDF() {
         theme: 'striped',
         styles: { fontSize: 9 },
         didDrawPage: function (data) {
-            let totalExtrasInforme = 0;
-            filas.forEach(f => {
-                let h = parseFloat(f[2]);
-                if (!isNaN(h)) totalExtrasInforme += h;
-            });
-
             let finalY = data.cursor.y + 10;
             doc.setFontSize(10);
             doc.setFont(undefined, 'bold');
 
-            if (totalExtrasInforme > 80) {
+            if (totalExtrasAnio > 80) {
                 doc.setTextColor(200, 0, 0);
-                doc.text(`TOTAL HORAS EXTRA ANUAL: ${totalExtrasInforme}h (EXCEDE LÍMITE LEGAL 80h)`, 14, finalY);
+                doc.text(`TOTAL HORAS EXTRA ANUAL: ${totalExtrasAnio}h (EXCEDE LÍMITE LEGAL 80h)`, 14, finalY);
             } else {
                 doc.setTextColor(0, 0, 0);
-                doc.text(`TOTAL HORAS EXTRA ANUAL: ${totalExtrasInforme}h / 80h`, 14, finalY);
+                doc.text(`TOTAL HORAS EXTRA ANUAL: ${totalExtrasAnio}h / 80h`, 14, finalY);
             }
         }
     });
@@ -92,9 +93,11 @@ async function generarInformePDF() {
     yPos += 12;
     doc.text(`• Total Horas Ordinarias: ${Math.round(totalHorasMes)}h`, 25, yPos);
     yPos += 8;
-    doc.text(`• Total Horas Extraordinarias: ${totalExtrasMes}h`, 25, yPos);
+    doc.text(`• Total Horas Extraordinarias del mes: ${totalExtrasMes}h`, 25, yPos);
     yPos += 8;
     doc.text(`• Días Festivos Trabajados: ${festivosTrabajadosMes}`, 25, yPos);
+    yPos += 8;
+    doc.text(`• Total Horas Extraordinarias del año: ${totalExtrasAnio}h`, 25, yPos);
 
     yPos += 30;
     doc.setDrawColor(200);

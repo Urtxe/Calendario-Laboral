@@ -68,9 +68,11 @@ exports.limpiarDatosAlBorrarUsuario = functionsV1.auth.user().onDelete(async (us
 
     const userRef = db.collection('usuarios').doc(uid);
     const yearsSnap = await userRef.collection('years').get();
+    const visitasSnap = await userRef.collection('visitas').get();
     const deletes = [];
 
     yearsSnap.forEach((doc) => deletes.push(doc.ref.delete()));
+    visitasSnap.forEach((doc) => deletes.push(doc.ref.delete()));
 
     await Promise.all(deletes);
 

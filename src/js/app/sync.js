@@ -3,6 +3,12 @@ window.cargarDatosDesdeFirebase = function() {
     mostrarSync(true);
     var userRef = obtenerReferenciaUsuario();
 
+    diasMarcados = {};
+    objetivosAnuales = {};
+    tipoJornadaPorAnio = {};
+    horasExtraPorDia = {};
+    horasExtraCompensadas = {};
+
     Promise.all([
         userRef.get(),
         userRef.collection('years').get()
@@ -22,12 +28,6 @@ window.cargarDatosDesdeFirebase = function() {
             if (d.horasExtraPorDia) horasExtraPorDia = Object.assign({}, horasExtraPorDia, d.horasExtraPorDia);
             if (d.horasExtraCompensadas) horasExtraCompensadas = Object.assign({}, horasExtraCompensadas, d.horasExtraCompensadas);
         }
-
-        diasMarcados = {};
-        objetivosAnuales = {};
-        tipoJornadaPorAnio = {};
-        horasExtraPorDia = {};
-        horasExtraCompensadas = {};
 
         yearsSnap.forEach(function(yearDoc) {
             combinarDatosDeAnio(yearDoc.data(), yearDoc.id);

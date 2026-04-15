@@ -113,6 +113,8 @@ function actualizarInterfazPremium(activar) {
 }
 
 window.seleccionarPlan = function(tipo) {
+    planSeleccionado = 'premium';
+
     if (!usuarioActual) {
         alert("Debes iniciar sesión primero para elegir un plan.");
         if (typeof cerrarModalPricing === 'function') cerrarModalPricing();

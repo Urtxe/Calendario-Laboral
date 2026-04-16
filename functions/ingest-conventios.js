@@ -1,17 +1,21 @@
 const fs = require("fs/promises");
 const path = require("path");
 const admin = require("firebase-admin");
-const pdfParseModule = require("pdf-parse");
+const { PDFParse } = require("pdf-parse");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
-
-const pdfParse = pdfParseModule.default || pdfParseModule;
 const CONVENIOS_DIR = path.join(__dirname, "convenios");
 const COLLECTION_NAME = "vectores_convenios";
-const EMBEDDING_MODEL = "text-embedding-004";
-const BATCH_SIZE = 16;
+const EMBEDDING_MODEL = "gemini-embedding-001";
+const BATCH_SIZE = 10;
 const CHUNK_SIZE = 1000;
 const CHUNK_OVERLAP = 200;
+const BATCH_PAUSE_MS = 6500;
+const MAX_RETRIES = 5;
+const PROJECT_ID =
+  process.env.FIREBASE_PROJECT_ID ||
+  process.env.GCLOUD_PROJECT ||
+  "calendario-laboral-252b1";
 
 const apiKey =
   process.env.GEMINI_API_KEY ||
@@ -26,7 +30,7 @@ if (!apiKey) {
 }
 
 if (!admin.apps.length) {
-  admin.initializeApp();
+  admin.initializeApp({ projectId: PROJECT_ID });
 }
 
 const db = admin.firestore();
@@ -38,6 +42,25 @@ function sanitizeId(value) {
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .slice(0, 120) || "convenio";
+}
+
+function pause(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function extractRetryDelayMs(error) {
+  const retryInfo = Array.isArray(error && error.errorDetails)
+    ? error.errorDetails.find((detail) => detail && detail["@type"] === "type.googleapis.com/google.rpc.RetryInfo")
+    : null;
+
+  if (retryInfo && typeof retryInfo.retryDelay === "string") {
+    const seconds = parseInt(retryInfo.retryDelay, 10);
+    if (Number.isFinite(seconds) && seconds > 0) {
+      return seconds * 1000;
+    }
+  }
+
+  return 60000;
 }
 
 async function findPdfFiles(dir) {
@@ -58,7 +81,8 @@ async function findPdfFiles(dir) {
 
 async function loadPdfText(filePath) {
   const buffer = await fs.readFile(filePath);
-  const parsed = await pdfParse(buffer);
+  const parser = new PDFParse({ data: buffer });
+  const parsed = await parser.getText();
   const rawText = (parsed && parsed.text ? parsed.text : "")
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+/g, " ")
@@ -86,19 +110,42 @@ async function embedChunks(model, chunks, title) {
 
   for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
     const batch = chunks.slice(i, i + BATCH_SIZE);
-    const response = await model.batchEmbedContents({
-      requests: batch.map((chunk) => ({
-        content: {
-          parts: [{ text: chunk }],
-        },
-        taskType: "RETRIEVAL_DOCUMENT",
-        title,
-      })),
-    });
+    let attempt = 0;
 
-    response.embeddings.forEach((embedding) => {
-      embeddings.push(embedding.values);
-    });
+    while (true) {
+      try {
+        const response = await model.batchEmbedContents({
+          requests: batch.map((chunk) => ({
+            content: {
+              parts: [{ text: chunk }],
+            },
+            taskType: "RETRIEVAL_DOCUMENT",
+            title,
+          })),
+        });
+
+        response.embeddings.forEach((embedding) => {
+          embeddings.push(embedding.values);
+        });
+
+        break;
+      } catch (error) {
+        const status = error && (error.status || error.code);
+        if (String(status) === "429" && attempt < MAX_RETRIES) {
+          attempt += 1;
+          const waitMs = extractRetryDelayMs(error);
+          console.warn(`  ⚠️  Límite temporal de Gemini. Reintentando en ${Math.round(waitMs / 1000)}s...`);
+          await pause(waitMs);
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    if (i + BATCH_SIZE < chunks.length) {
+      await pause(BATCH_PAUSE_MS);
+    }
   }
 
   return embeddings;

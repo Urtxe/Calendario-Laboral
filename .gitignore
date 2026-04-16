@@ -71,3 +71,7 @@ functions/.env
 
 # Marketing assets
 Marketing/
+
+# Local convenio PDFs
+functions/convenios/*.pdf
+functions/convenios/*.PDF

@@ -154,83 +154,6 @@ function inyectarEstilosAsesorLegal() {
     const style = document.createElement('style');
     style.id = 'asesor-legal-styles';
     style.textContent = `
-        .legal-ai-fab {
-            position: fixed;
-            right: 18px;
-            bottom: 18px;
-            z-index: 9999;
-            border: 0;
-            border-radius: 22px;
-            padding: 14px 16px 14px 14px;
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
-            color: #fff;
-            background: linear-gradient(135deg, #132238, #24344d 42%, #34608f 75%, #4f8be8);
-            box-shadow: 0 18px 40px rgba(17, 24, 39, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-            font-weight: 700;
-            letter-spacing: 0.2px;
-            min-width: 260px;
-            text-align: left;
-            position: fixed;
-            overflow: hidden;
-            animation: legal-ai-breathe 4s ease-in-out infinite;
-        }
-        .legal-ai-fab::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.16) 50%, transparent 100%);
-            transform: translateX(-120%);
-            animation: legal-ai-sheen 6s ease-in-out infinite;
-        }
-        .legal-ai-fab > * {
-            position: relative;
-        }
-        .legal-ai-fab:hover {
-            transform: translateY(-1px);
-        }
-        .legal-ai-fab-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.14);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex: 0 0 auto;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
-        }
-        .legal-ai-fab-copy {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            min-width: 0;
-        }
-        .legal-ai-fab-title {
-            font-size: 0.96rem;
-            line-height: 1.1;
-            white-space: nowrap;
-        }
-        .legal-ai-fab-subtitle {
-            font-size: 0.75rem;
-            opacity: 0.8;
-            line-height: 1.2;
-            font-weight: 500;
-        }
-        .legal-ai-fab-badge {
-            min-width: 24px;
-            height: 24px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.16);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            padding: 0 7px;
-            margin-left: auto;
-        }
         .legal-ai-shell {
             position: fixed;
             inset: 0;
@@ -385,20 +308,6 @@ function inyectarEstilosAsesorLegal() {
                 height: 100vh;
                 border-radius: 0;
             }
-            .legal-ai-fab {
-                right: 14px;
-                bottom: 14px;
-                min-width: calc(100vw - 28px);
-            }
-        }
-        @keyframes legal-ai-breathe {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-2px); }
-        }
-        @keyframes legal-ai-sheen {
-            0% { transform: translateX(-120%); }
-            58% { transform: translateX(120%); }
-            100% { transform: translateX(120%); }
         }
     `;
     document.head.appendChild(style);
@@ -502,24 +411,6 @@ function montarAsesorLegal() {
 
     inyectarEstilosAsesorLegal();
 
-    const fab = document.createElement('button');
-    fab.id = 'legal-ai-fab';
-    fab.className = 'legal-ai-fab';
-    fab.type = 'button';
-    fab.innerHTML = `
-        <span class="legal-ai-fab-icon" aria-hidden="true">
-            <i data-lucide="scale" width="18" height="18"></i>
-        </span>
-        <span class="legal-ai-fab-copy">
-            <span class="legal-ai-fab-title">Asesor legal IA</span>
-            <span class="legal-ai-fab-subtitle">Pregunta sobre tu convenio en 3 clics</span>
-        </span>
-        <span class="legal-ai-fab-badge" id="legal-ai-fab-badge">3</span>
-    `;
-    fab.addEventListener('click', function() {
-        window.abrirAsesorLegal();
-    });
-
     const shell = document.createElement('div');
     shell.id = 'legal-ai-shell';
     shell.className = 'legal-ai-shell';
@@ -544,17 +435,21 @@ function montarAsesorLegal() {
         </div>
     `;
 
-    document.body.appendChild(fab);
     document.body.appendChild(shell);
 
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
 
+    const trigger = document.getElementById('btn-ai-legal');
     const closeBtn = shell.querySelector('#legal-ai-close');
     const sendBtn = shell.querySelector('#legal-ai-send');
     const input = shell.querySelector('#legal-ai-input');
 
+    if (trigger && !trigger.dataset.bound) {
+        trigger.dataset.bound = 'true';
+        trigger.addEventListener('click', window.abrirAsesorLegal);
+    }
     if (closeBtn) closeBtn.addEventListener('click', window.cerrarAsesorLegal);
     if (sendBtn) sendBtn.addEventListener('click', enviarConsultaLegal);
     if (input) {
@@ -592,11 +487,16 @@ window.cerrarAsesorLegal = function() {
 };
 
 window.actualizarAsesorLegalUI = function() {
-    const badge = document.getElementById('legal-ai-fab-badge');
-    if (!badge) return;
-
     const restantes = getConsultasRestantes();
-    badge.textContent = window.esPremium ? '∞' : String(restantes);
+    const badge = document.getElementById('legal-ai-header-badge');
+    const trigger = document.getElementById('btn-ai-legal');
+
+    if (badge) {
+        badge.textContent = window.esPremium ? 'Consultas ilimitadas' : `${restantes} gratis`;
+    }
+    if (trigger) {
+        trigger.disabled = !window.esPremium && restantes <= 0;
+    }
     actualizarTextoEstadoLegal();
 };
 

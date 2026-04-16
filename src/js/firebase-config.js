@@ -175,9 +175,11 @@ auth.onAuthStateChanged(user => {
         setTimeout(() => { 
             if(window.cargarDatosDesdeFirebase) window.cargarDatosDesdeFirebase(); 
             if(window.verificarNivelPremium) window.verificarNivelPremium(user.uid);
+            if(window.actualizarAsesorLegalUI) window.actualizarAsesorLegalUI();
         }, 500);
     } else {
         if(authButtons) authButtons.style.display = 'flex';
         if(userInfo) userInfo.style.display = 'none';
+        if(window.actualizarAsesorLegalUI) window.actualizarAsesorLegalUI();
     }
 });

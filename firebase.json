@@ -22,6 +22,10 @@
         "function": "stripeWebhook"
       },
       {
+        "source": "/consultarConvenio",
+        "function": "consultarConvenio"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

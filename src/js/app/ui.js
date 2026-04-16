@@ -37,6 +37,8 @@ document.addEventListener('DOMContentLoaded', function() {
     gestionarJornadaPersonalizada();
     renderTodo();
     if (typeof lucide !== 'undefined') lucide.createIcons();
+    montarAsesorLegal();
+    actualizarTextoEstadoLegal();
 
     document.addEventListener('touchstart', function(event) {
         const tooltip = document.querySelector('.info-tooltip');
@@ -110,7 +112,393 @@ function actualizarInterfazPremium(activar) {
     }
     const info80 = document.getElementById('info-limite-80');
     if (info80) info80.style.display = esPremium ? 'inline' : 'none';
+
+    if (typeof window.actualizarAsesorLegalUI === 'function') {
+        window.actualizarAsesorLegalUI();
+    }
 }
+
+// ============================================
+// 8.2 ASESOR LEGAL IA (RAG)
+// ============================================
+
+const LIMITE_CONSULTAS_GRATIS = 3;
+const ASESOR_LEGAL_STORAGE_PREFIX = 'balance_laboral_asesor_legal_';
+
+function getAsesorLegalStorageKey() {
+    if (window.usuarioActual && window.usuarioActual.uid) {
+        return ASESOR_LEGAL_STORAGE_PREFIX + window.usuarioActual.uid;
+    }
+
+    return ASESOR_LEGAL_STORAGE_PREFIX + 'anonimo';
+}
+
+function getConsultasUsadas() {
+    const raw = localStorage.getItem(getAsesorLegalStorageKey());
+    const value = parseInt(raw, 10);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function setConsultasUsadas(valor) {
+    localStorage.setItem(getAsesorLegalStorageKey(), String(Math.max(0, valor)));
+}
+
+function getConsultasRestantes() {
+    if (window.esPremium) return Infinity;
+    return Math.max(0, LIMITE_CONSULTAS_GRATIS - getConsultasUsadas());
+}
+
+function inyectarEstilosAsesorLegal() {
+    if (document.getElementById('asesor-legal-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'asesor-legal-styles';
+    style.textContent = `
+        .legal-ai-shell {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: none;
+            align-items: flex-end;
+            justify-content: flex-end;
+            background: rgba(8, 15, 30, 0.38);
+            backdrop-filter: blur(6px);
+            padding: 18px;
+        }
+        .legal-ai-shell.is-open {
+            display: flex;
+        }
+        .legal-ai-panel {
+            width: min(420px, calc(100vw - 24px));
+            height: min(78vh, 760px);
+            background: #f7f5ef;
+            border-radius: 22px;
+            box-shadow: 0 26px 70px rgba(15, 23, 42, 0.32);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(36, 52, 77, 0.08);
+        }
+        .legal-ai-header {
+            padding: 16px 18px;
+            background: linear-gradient(135deg, #24344d, #36597b);
+            color: #fff;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .legal-ai-title {
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.2;
+        }
+        .legal-ai-subtitle {
+            margin: 4px 0 0;
+            font-size: 0.8rem;
+            opacity: 0.82;
+        }
+        .legal-ai-close {
+            border: 0;
+            background: rgba(255, 255, 255, 0.14);
+            color: #fff;
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+        }
+        .legal-ai-status {
+            padding: 10px 18px;
+            font-size: 0.82rem;
+            color: #4b5563;
+            background: rgba(255, 255, 255, 0.72);
+            border-bottom: 1px solid rgba(36, 52, 77, 0.08);
+        }
+        .legal-ai-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .legal-ai-message {
+            max-width: 92%;
+            padding: 12px 14px;
+            border-radius: 18px;
+            white-space: pre-wrap;
+            line-height: 1.45;
+            font-size: 0.94rem;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+        }
+        .legal-ai-message.user {
+            align-self: flex-end;
+            background: #24344d;
+            color: #fff;
+            border-bottom-right-radius: 6px;
+        }
+        .legal-ai-message.assistant {
+            align-self: flex-start;
+            background: #fff;
+            color: #1f2937;
+            border-bottom-left-radius: 6px;
+        }
+        .legal-ai-message.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .legal-ai-inputbar {
+            padding: 14px;
+            border-top: 1px solid rgba(36, 52, 77, 0.08);
+            background: #fff;
+            display: grid;
+            gap: 10px;
+        }
+        .legal-ai-input {
+            width: 100%;
+            min-height: 88px;
+            resize: vertical;
+            border: 1px solid #d6dbe4;
+            border-radius: 16px;
+            padding: 12px 14px;
+            font-family: inherit;
+            font-size: 0.94rem;
+            outline: none;
+            background: #fbfbfd;
+        }
+        .legal-ai-input:focus {
+            border-color: #3d7bd9;
+            box-shadow: 0 0 0 4px rgba(61, 123, 217, 0.12);
+        }
+        .legal-ai-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .legal-ai-note {
+            font-size: 0.78rem;
+            color: #6b7280;
+        }
+        .legal-ai-send {
+            border: 0;
+            border-radius: 999px;
+            padding: 12px 16px;
+            color: #fff;
+            background: linear-gradient(135deg, #3d7bd9, #2f64ba);
+            font-weight: 700;
+            cursor: pointer;
+            min-width: 118px;
+        }
+        .legal-ai-send:disabled,
+        .legal-ai-input:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+        @media (max-width: 640px) {
+            .legal-ai-shell {
+                padding: 0;
+                align-items: stretch;
+                justify-content: stretch;
+            }
+            .legal-ai-panel {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function crearMensajeLegal(texto, tipo) {
+    const messages = document.getElementById('legal-ai-messages');
+    if (!messages) return null;
+
+    const el = document.createElement('div');
+    el.className = `legal-ai-message ${tipo}`;
+    el.textContent = texto;
+    messages.appendChild(el);
+    messages.scrollTop = messages.scrollHeight;
+    return el;
+}
+
+function actualizarTextoEstadoLegal() {
+    const status = document.getElementById('legal-ai-status');
+    const note = document.getElementById('legal-ai-note');
+    const sendBtn = document.getElementById('legal-ai-send');
+    const input = document.getElementById('legal-ai-input');
+
+    if (!status || !note || !sendBtn || !input) return;
+
+    const restantes = getConsultasRestantes();
+
+    if (window.esPremium) {
+        status.textContent = 'Modo PREMIUM activo. Consultas ilimitadas.';
+        note.textContent = 'Respuestas basadas en convenio y sin límite de consultas.';
+        sendBtn.disabled = false;
+        input.disabled = false;
+    } else if (restantes > 0) {
+        status.textContent = `Modo gratuito: te quedan ${restantes} consultas.`;
+        note.textContent = `Límite gratuito: ${LIMITE_CONSULTAS_GRATIS} consultas.`;
+        sendBtn.disabled = false;
+        input.disabled = false;
+    } else {
+        status.textContent = 'Has alcanzado el límite gratuito de consultas.';
+        note.textContent = 'Hazte Premium para seguir consultando el convenio sin límite.';
+        sendBtn.disabled = true;
+        input.disabled = true;
+    }
+}
+
+async function enviarConsultaLegal() {
+    const input = document.getElementById('legal-ai-input');
+    const sendBtn = document.getElementById('legal-ai-send');
+    const pregunta = input ? input.value.trim() : '';
+
+    if (!pregunta) {
+        crearMensajeLegal('Escribe una pregunta para consultar el convenio.', 'error');
+        return;
+    }
+
+    if (!window.esPremium && getConsultasRestantes() <= 0) {
+        actualizarTextoEstadoLegal();
+        crearMensajeLegal('Has agotado las 3 consultas gratuitas. Hazte Premium para continuar.', 'error');
+        return;
+    }
+
+    crearMensajeLegal(pregunta, 'user');
+    if (input) input.value = '';
+    if (sendBtn) sendBtn.disabled = true;
+
+    const typing = crearMensajeLegal('Consultando el convenio...', 'assistant');
+
+    try {
+        const response = await fetch('/consultarConvenio', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ pregunta }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data && data.error ? data.error : 'No se pudo consultar el convenio.');
+        }
+
+        if (typing) typing.remove();
+        crearMensajeLegal(data.respuesta || 'No he podido generar una respuesta.', 'assistant');
+
+        if (!window.esPremium) {
+            setConsultasUsadas(getConsultasUsadas() + 1);
+        }
+    } catch (error) {
+        if (typing) typing.remove();
+        crearMensajeLegal(error.message || 'Ha ocurrido un error al consultar el convenio.', 'error');
+    } finally {
+        actualizarTextoEstadoLegal();
+        if (input && !input.disabled) input.focus();
+        if (sendBtn && !sendBtn.disabled) sendBtn.disabled = false;
+    }
+}
+
+function montarAsesorLegal() {
+    if (document.getElementById('legal-ai-shell')) return;
+
+    inyectarEstilosAsesorLegal();
+
+    const shell = document.createElement('div');
+    shell.id = 'legal-ai-shell';
+    shell.className = 'legal-ai-shell';
+    shell.innerHTML = `
+        <div class="legal-ai-panel" role="dialog" aria-modal="true" aria-labelledby="legal-ai-title">
+            <div class="legal-ai-header">
+                <div>
+                    <h3 class="legal-ai-title" id="legal-ai-title">Asesoría Legal sobre Convenios</h3>
+                    <p class="legal-ai-subtitle">RAG con Firestore Vector Search y Gemini 2.5 Pro</p>
+                </div>
+                <button type="button" class="legal-ai-close" id="legal-ai-close" aria-label="Cerrar asesor legal">×</button>
+            </div>
+            <div class="legal-ai-status" id="legal-ai-status"></div>
+            <div class="legal-ai-messages" id="legal-ai-messages"></div>
+            <div class="legal-ai-inputbar">
+                <textarea id="legal-ai-input" class="legal-ai-input" placeholder="Escribe tu duda sobre el convenio colectivo..."></textarea>
+                <div class="legal-ai-actions">
+                    <div class="legal-ai-note" id="legal-ai-note"></div>
+                    <button type="button" id="legal-ai-send" class="legal-ai-send">Preguntar</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(shell);
+
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+
+    const trigger = document.getElementById('btn-ai-legal');
+    const closeBtn = shell.querySelector('#legal-ai-close');
+    const sendBtn = shell.querySelector('#legal-ai-send');
+    const input = shell.querySelector('#legal-ai-input');
+
+    if (trigger && !trigger.dataset.bound) {
+        trigger.dataset.bound = 'true';
+        trigger.addEventListener('click', window.abrirAsesorLegal);
+    }
+    if (closeBtn) closeBtn.addEventListener('click', window.cerrarAsesorLegal);
+    if (sendBtn) sendBtn.addEventListener('click', enviarConsultaLegal);
+    if (input) {
+        input.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                enviarConsultaLegal();
+            }
+        });
+    }
+
+    window.actualizarAsesorLegalUI();
+}
+
+window.abrirAsesorLegal = function() {
+    montarAsesorLegal();
+    const shell = document.getElementById('legal-ai-shell');
+    if (!shell) return;
+
+    shell.classList.add('is-open');
+    actualizarTextoEstadoLegal();
+
+    const messages = document.getElementById('legal-ai-messages');
+    if (messages && messages.childElementCount === 0) {
+        crearMensajeLegal('Hola. Pregúntame sobre tu convenio y responderé usando solo los fragmentos recuperados.', 'assistant');
+    }
+
+    const input = document.getElementById('legal-ai-input');
+    if (input && !input.disabled) input.focus();
+};
+
+window.cerrarAsesorLegal = function() {
+    const shell = document.getElementById('legal-ai-shell');
+    if (shell) shell.classList.remove('is-open');
+};
+
+window.actualizarAsesorLegalUI = function() {
+    const restantes = getConsultasRestantes();
+    const badge = document.getElementById('legal-ai-header-badge');
+    const trigger = document.getElementById('btn-ai-legal');
+
+    if (badge) {
+        badge.textContent = window.esPremium ? 'Consultas ilimitadas' : `${restantes} gratis`;
+    }
+    if (trigger) {
+        trigger.disabled = !window.esPremium && restantes <= 0;
+    }
+    actualizarTextoEstadoLegal();
+};
 
 window.seleccionarPlan = function(tipo) {
     planSeleccionado = 'premium';

@@ -5,6 +5,8 @@ const { PDFParse } = require("pdf-parse");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 const CONVENIOS_DIR = path.join(__dirname, "convenios");
+const INBOX_DIR = path.join(CONVENIOS_DIR, "inbox");
+const PROCESSED_DIR = path.join(CONVENIOS_DIR, "processed");
 const COLLECTION_NAME = "vectores_convenios";
 const EMBEDDING_MODEL = "gemini-embedding-001";
 const BATCH_SIZE = 10;
@@ -44,6 +46,15 @@ function sanitizeId(value) {
     .slice(0, 120) || "convenio";
 }
 
+async function fileExists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function pause(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -69,9 +80,7 @@ async function findPdfFiles(dir) {
 
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      results.push(...await findPdfFiles(fullPath));
-    } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".pdf")) {
+    if (entry.isFile() && entry.name.toLowerCase().endsWith(".pdf")) {
       results.push(fullPath);
     }
   }
@@ -187,6 +196,30 @@ async function saveChunks({
   await batch.commit();
 }
 
+async function ensureDir(dir) {
+  await fs.mkdir(dir, { recursive: true });
+}
+
+async function buildProcessedPath(filePath) {
+  const fileName = path.basename(filePath);
+  const baseName = path.basename(fileName, path.extname(fileName));
+  let destination = path.join(PROCESSED_DIR, fileName);
+  let counter = 1;
+
+  while (await fileExists(destination)) {
+    const suffix = `_${String(counter).padStart(2, "0")}`;
+    destination = path.join(PROCESSED_DIR, `${baseName}${suffix}${path.extname(fileName)}`);
+    counter += 1;
+  }
+
+  return destination;
+}
+
+async function moveToProcessed(filePath, destination) {
+  await fs.rename(filePath, destination);
+  return destination;
+}
+
 async function processFile(model, filePath) {
   const fileName = path.basename(filePath);
   console.log(`\n📄 Procesando ${fileName}`);
@@ -206,22 +239,30 @@ async function processFile(model, filePath) {
     throw new Error(`No se pudieron generar todos los embeddings para ${fileName}`);
   }
 
+  const processedPath = await buildProcessedPath(filePath);
+
   await saveChunks({
     fileName,
-    filePath,
+    filePath: processedPath,
     pageCount,
     chunks,
     embeddings,
   });
 
+  await moveToProcessed(filePath, processedPath);
+  console.log(`  - MOVIDO A: ${processedPath}`);
+
   return { chunks: chunks.length };
 }
 
 async function main() {
-  const files = await findPdfFiles(CONVENIOS_DIR);
+  await ensureDir(INBOX_DIR);
+  await ensureDir(PROCESSED_DIR);
+
+  const files = await findPdfFiles(INBOX_DIR);
 
   if (!files.length) {
-    console.log(`No hay PDFs en ${CONVENIOS_DIR}. Añade convenios y vuelve a ejecutar.`);
+    console.log(`No hay PDFs en ${INBOX_DIR}. Añade convenios ahí y vuelve a ejecutar.`);
     return;
   }
 

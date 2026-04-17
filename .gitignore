@@ -73,5 +73,5 @@ functions/.env
 Marketing/
 
 # Local convenio PDFs
-functions/convenios/*.pdf
-functions/convenios/*.PDF
+functions/convenios/**/*.pdf
+functions/convenios/**/*.PDF

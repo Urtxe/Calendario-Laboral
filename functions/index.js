@@ -24,6 +24,7 @@ const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 const embeddingModel = genAI ? genAI.getGenerativeModel({ model: "gemini-embedding-001" }) : null;
 const chatModel = genAI ? genAI.getGenerativeModel({ model: "gemini-2.5-pro" }) : null;
 const COLLECTION_VECTORES = "vectores_convenios";
+const EMBEDDING_DIMENSIONS = 768;
 
 function setCorsHeaders(res) {
     res.set("Access-Control-Allow-Origin", "*");
@@ -48,6 +49,7 @@ async function generarEmbeddingPregunta(pregunta) {
             parts: [{ text: pregunta }],
         },
         taskType: "RETRIEVAL_QUERY",
+        outputDimensionality: EMBEDDING_DIMENSIONS,
     });
 
     return response.embedding.values;

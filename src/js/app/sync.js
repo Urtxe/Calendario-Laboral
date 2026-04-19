@@ -20,7 +20,7 @@ window.cargarDatosDesdeFirebase = function() {
             var d = doc.data();
             ciudadActual = d.ciudadActual || 'Donostia';
             sectorUsuario = d.sectorUsuario || (d.esHosteleria ? 'hosteleria' : 'general');
-            esHosteleria = (sectorUsuario === 'hosteleria');
+            esHosteleria = (sectorUsuario === 'hosteleria' || sectorUsuario === 'alojamientos');
 
             if (d.diasMarcados) diasMarcados = Object.assign({}, diasMarcados, d.diasMarcados);
             if (d.objetivosAnuales) objetivosAnuales = Object.assign({}, objetivosAnuales, d.objetivosAnuales);
@@ -89,7 +89,7 @@ function guardarTodoEnFirebase() {
         userRef.set({
             ciudadActual: ciudadActual,
             sectorUsuario: sectorUsuario,
-            esHosteleria: sectorUsuario === 'hosteleria',
+            esHosteleria: (sectorUsuario === 'hosteleria' || sectorUsuario === 'alojamientos'),
             tipoCuenta: esPremium ? 'premium' : 'free',
             diasMarcados: firebase.firestore.FieldValue.delete(),
             objetivosAnuales: firebase.firestore.FieldValue.delete(),

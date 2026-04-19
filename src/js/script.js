@@ -86,7 +86,7 @@ window.cargarDatosDesdeFirebase = function() {
             var d = doc.data();
             ciudadActual = d.ciudadActual || 'Donostia';
             sectorUsuario = d.sectorUsuario || (d.esHosteleria ? 'hosteleria' : 'general');
-            esHosteleria = (sectorUsuario === 'hosteleria');
+            esHosteleria = (sectorUsuario === 'hosteleria' || sectorUsuario === 'alojamientos');
 
             if (d.diasMarcados) {
                 diasMarcados = Object.assign({}, diasMarcados, d.diasMarcados);
@@ -171,7 +171,7 @@ function guardarTodoEnFirebase() {
         userRef.set({
             ciudadActual: ciudadActual,
             sectorUsuario: sectorUsuario,
-            esHosteleria: sectorUsuario === 'hosteleria',
+            esHosteleria: (sectorUsuario === 'hosteleria' || sectorUsuario === 'alojamientos'),
             tipoCuenta: esPremium ? 'premium' : 'free',
             diasMarcados: firebase.firestore.FieldValue.delete(),
             objetivosAnuales: firebase.firestore.FieldValue.delete(),
@@ -699,8 +699,8 @@ function esFestivo(f) {
     // Transporte: San Cristóbal (10 de Julio)
     if (sectorUsuario === 'transporte' && k.endsWith('-07-10')) return true;
     
-    // Hostelería o Limpieza: Santa Marta (29 de Julio)
-    if ((sectorUsuario === 'hosteleria' || sectorUsuario === 'limpieza') && k.endsWith('-07-29')) return true;
+    // Alojamientos, Hostelería o Limpieza: Santa Marta (29 de Julio)
+    if ((sectorUsuario === 'alojamientos' || sectorUsuario === 'hosteleria' || sectorUsuario === 'limpieza') && k.endsWith('-07-29')) return true;
     }
 
     // --- FESTIVOS OFICIALES (BASE DE DATOS) ---

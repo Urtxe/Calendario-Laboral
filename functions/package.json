@@ -7,7 +7,8 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "ingest:convenios": "node ingest-conventios.js"
+    "ingest:convenios": "node ingest-conventios.js",
+    "migrate:doc-type": "node migrate-doc-type.js"
   },
   "engines": {
     "node": "22"

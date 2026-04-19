@@ -39,6 +39,47 @@ function extraerTextoRespuesta(result) {
     return "";
 }
 
+function detectarIdiomaPregunta(pregunta) {
+    const texto = String(pregunta || "").toLowerCase();
+    const pistasEuskera = [
+        /\beta\b/,
+        /\bzein\b/,
+        /\bzer\b/,
+        /\bnola\b/,
+        /\bnire\b/,
+        /\bzuen\b/,
+        /\bdu\b/,
+        /\bdago\b/,
+        /\blan\b/,
+        /\bopor\b/,
+        /\bsoldata\b/,
+        /\bordaindu\b/,
+        /\banitz\b/,
+    ];
+
+    return pistasEuskera.some((regex) => regex.test(texto)) ? "euskera" : "castellano";
+}
+
+function obtenerReferenciaConvenio(reqBody) {
+    const valor =
+        (reqBody && (
+            reqBody.convenioFileName ||
+            reqBody.file_name ||
+            reqBody.fileName ||
+            reqBody.convenioNombre ||
+            reqBody.convenioId
+        )) || "";
+
+    return String(valor).trim();
+}
+
+function construirBloqueContexto(chunks, etiqueta) {
+    return chunks.map((chunk, index) => {
+        const fuente = chunk.file_name || chunk.fileName || chunk.convenioId || `Fragmento ${index + 1}`;
+        return `[${etiqueta}]\nFuente: ${fuente}\n${chunk.texto}`;
+    }).join("\n\n---\n\n");
+}
+
 async function generarEmbeddingPregunta(pregunta) {
     if (!embeddingModel) {
         throw new Error("Gemini no está configurado. Falta la API key.");
@@ -55,12 +96,14 @@ async function generarEmbeddingPregunta(pregunta) {
     return response.embedding.values;
 }
 
-async function buscarChunksRelevantes(vectorPregunta) {
-    const vectorQuery = db.collection(COLLECTION_VECTORES).findNearest({
+async function buscarChunksBase(vectorPregunta) {
+    const vectorQuery = db.collection(COLLECTION_VECTORES)
+        .where("doc_type", "==", "base")
+        .findNearest({
         vectorField: "vector",
         queryVector: vectorPregunta,
         distanceMeasure: "COSINE",
-        limit: 3,
+        limit: 2,
         distanceResultField: "distancia",
     });
 
@@ -70,6 +113,64 @@ async function buscarChunksRelevantes(vectorPregunta) {
         id: doc.id,
         ...doc.data(),
     }));
+}
+
+async function buscarTopConvenioEspecifico(vectorPregunta) {
+    const vectorQuery = db.collection(COLLECTION_VECTORES)
+        .where("doc_type", "==", "especifico")
+        .findNearest({
+            vectorField: "vector",
+            queryVector: vectorPregunta,
+            distanceMeasure: "COSINE",
+            limit: 1,
+            distanceResultField: "distancia",
+        });
+
+    const snapshot = await vectorQuery.get();
+    const doc = snapshot.docs[0];
+
+    if (!doc) {
+        return null;
+    }
+
+    return {
+        id: doc.id,
+        ...doc.data(),
+    };
+}
+
+async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
+    const baseQuery = db.collection(COLLECTION_VECTORES).where("doc_type", "==", "especifico");
+    const referencias = [];
+
+    if (convenioReferencia) {
+        referencias.push(convenioReferencia);
+        if (!convenioReferencia.toLowerCase().endsWith(".pdf")) {
+            referencias.push(`${convenioReferencia}.pdf`);
+        }
+    }
+
+    for (const referencia of referencias) {
+        const snapshot = await baseQuery
+            .where("file_name", "==", referencia)
+            .findNearest({
+                vectorField: "vector",
+                queryVector: vectorPregunta,
+                distanceMeasure: "COSINE",
+                limit: 3,
+                distanceResultField: "distancia",
+            })
+            .get();
+
+        if (!snapshot.empty) {
+            return snapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+        }
+    }
+
+    return [];
 }
 
 // 1. WEBHOOK DE STRIPE (V2)
@@ -139,27 +240,43 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
         }
 
         const vectorPregunta = await generarEmbeddingPregunta(pregunta);
-        const chunks = await buscarChunksRelevantes(vectorPregunta);
+        const idiomaRespuesta = detectarIdiomaPregunta(pregunta);
+        const convenioReferencia = obtenerReferenciaConvenio(req.body);
+        const chunksBase = await buscarChunksBase(vectorPregunta);
 
-        if (!chunks.length) {
+        let convenioFileName = convenioReferencia;
+        if (!convenioFileName) {
+            const topConvenio = await buscarTopConvenioEspecifico(vectorPregunta);
+            convenioFileName = topConvenio ? (topConvenio.file_name || topConvenio.fileName || "") : "";
+        }
+
+        const chunksEspecificos = await buscarChunksEspecificos(vectorPregunta, convenioFileName);
+
+        if (!chunksBase.length && !chunksEspecificos.length) {
             return res.status(404).json({
                 error: "No se encontraron fragmentos relevantes del convenio para responder.",
             });
         }
 
-        const contexto = chunks
-            .map((chunk, index) => {
-                const etiqueta = chunk.fileName || chunk.convenioId || `Fragmento ${index + 1}`;
-                return `Fragmento ${index + 1} - ${etiqueta}\n${chunk.texto}`;
-            })
-            .join("\n\n---\n\n");
+        const bloquesContexto = [];
+        if (chunksBase.length) {
+            bloquesContexto.push(construirBloqueContexto(chunksBase, "NORMA BASE - ESTATUTO"));
+        }
+        if (chunksEspecificos.length) {
+            bloquesContexto.push(construirBloqueContexto(chunksEspecificos, "NORMA ESPECÍFICA - CONVENIO"));
+        }
+
+        const contexto = bloquesContexto.join("\n\n===\n\n");
 
         const promptSistema = [
-            "Eres un asesor legal laboral especializado en convenios colectivos.",
-            "Responde únicamente con la información incluida en el contexto facilitado.",
-            "Si el contexto no contiene la respuesta, indica claramente que no puedes confirmarlo con el convenio aportado.",
-            "No inventes artículos, no completes con conocimiento externo y no des consejos jurídicos genéricos fuera del convenio.",
-            "Responde en español claro, breve y útil para un trabajador.",
+            "Eres un abogado laboralista experto en España. Tu misión es comparar la Norma Base y la Norma Específica enviada.",
+            "REGLA DE ORO: El Estatuto de los Trabajadores es el mínimo legal. Si el Convenio mejora al Estatuto, aplica el Convenio. Si el Convenio no dice nada o es peor, aplica el Estatuto.",
+            "Responde siempre citando la fuente: 'Según el Estatuto tienes derecho a X, pero tu convenio lo mejora a Y, por lo tanto te corresponde Y'.",
+            idiomaRespuesta === "euskera"
+                ? "Responde siempre en euskera. Si hay una comparación entre norma base y convenio, mantén el mismo idioma."
+                : "Responde siempre en castellano. Si hay una comparación entre norma base y convenio, mantén el mismo idioma.",
+            "No inventes artículos, no completes con conocimiento externo y no des consejos jurídicos genéricos fuera del contexto facilitado.",
+            "Si el contexto no contiene la respuesta, indica claramente que no puedes confirmarlo con la norma aportada.",
         ].join(" ");
 
         const result = await chatModel.generateContent({
@@ -168,7 +285,9 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                 {
                     role: "user",
                     parts: [
-                        { text: `Pregunta: ${pregunta}\n\nContexto del convenio:\n${contexto}` },
+                        {
+                            text: `Idioma de respuesta: ${idiomaRespuesta}\nPregunta: ${pregunta}\n\nContexto para comparar:\n${contexto}`,
+                        },
                     ],
                 },
             ],
@@ -182,13 +301,29 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
 
         return res.json({
             respuesta: respuesta || "No he podido generar una respuesta basada en el convenio.",
-            fuentes: chunks.map((chunk) => ({
-                id: chunk.id,
-                fileName: chunk.fileName,
-                convenioId: chunk.convenioId,
-                chunkIndex: chunk.chunkIndex,
-                distancia: chunk.distancia ?? null,
-            })),
+            convenioUsado: convenioFileName || null,
+            fuentes: [
+                ...chunksBase.map((chunk) => ({
+                    id: chunk.id,
+                    fileName: chunk.fileName,
+                    file_name: chunk.file_name,
+                    convenioId: chunk.convenioId,
+                    chunkIndex: chunk.chunkIndex,
+                    doc_type: chunk.doc_type,
+                    fuente: "base",
+                    distancia: chunk.distancia ?? null,
+                })),
+                ...chunksEspecificos.map((chunk) => ({
+                    id: chunk.id,
+                    fileName: chunk.fileName,
+                    file_name: chunk.file_name,
+                    convenioId: chunk.convenioId,
+                    chunkIndex: chunk.chunkIndex,
+                    doc_type: chunk.doc_type,
+                    fuente: "especifica",
+                    distancia: chunk.distancia ?? null,
+                })),
+            ],
         });
     } catch (error) {
         console.error("❌ Error en consultarConvenio:", error);

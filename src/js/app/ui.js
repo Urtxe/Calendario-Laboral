@@ -381,7 +381,10 @@ async function enviarConsultaLegal() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ pregunta }),
+            body: JSON.stringify({
+                pregunta,
+                convenioFileName: window.convenioFileName || localStorage.getItem('convenioFileName') || localStorage.getItem('file_name') || '',
+            }),
         });
 
         const data = await response.json();

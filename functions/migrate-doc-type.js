@@ -27,10 +27,17 @@ async function main() {
   for (const doc of snapshot.docs) {
     const data = doc.data() || {};
     if (data.doc_type != null) {
+      if (data.file_name == null && data.fileName) {
+        await doc.ref.update({ file_name: data.fileName });
+        updated += 1;
+      }
       continue;
     }
 
-    await doc.ref.update({ doc_type: "especifico" });
+    await doc.ref.update({
+      doc_type: "especifico",
+      file_name: data.fileName || data.file_name || null,
+    });
     updated += 1;
   }
 

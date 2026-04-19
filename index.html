@@ -54,6 +54,9 @@
                 Abrir chat
             </button>
         </div>
+        <div class="ai-legal-soon-overlay" aria-hidden="true">
+            <span>Próximamente</span>
+        </div>
     </div>
 
     <div id="user-info" class="header-card user-card" style="display: none;">
@@ -482,6 +485,7 @@
 
     <script>
         window.APP_CONFIG = window.APP_CONFIG || {};
+        window.APP_CONFIG.legalAiEnabled = window.APP_CONFIG.legalAiEnabled ?? false;
         window.APP_CONFIG.consultarConvenioUrl = window.APP_CONFIG.consultarConvenioUrl || (
             (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname === '::1')
                 ? 'https://us-central1-calendario-laboral-252b1.cloudfunctions.net/consultarConvenio'

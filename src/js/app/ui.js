@@ -179,6 +179,45 @@ function inyectarEstilosAsesorLegal() {
             flex-direction: column;
             border: 1px solid rgba(36, 52, 77, 0.08);
         }
+        .ai-legal-card {
+            position: relative;
+            overflow: hidden;
+        }
+        .ai-legal-card.is-coming-soon {
+            cursor: default;
+        }
+        .ai-legal-card.is-coming-soon .ai-legal-actions {
+            opacity: 0.28;
+            filter: blur(1px);
+        }
+        .ai-legal-card.is-coming-soon .ai-legal-copy {
+            opacity: 0.78;
+        }
+        .ai-legal-soon-overlay {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(245, 245, 240, 0.45), rgba(233, 236, 243, 0.28));
+            backdrop-filter: blur(6px);
+            color: #24344d;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            border-radius: 22px;
+            pointer-events: none;
+        }
+        .ai-legal-card.is-coming-soon .ai-legal-soon-overlay {
+            display: flex;
+        }
+        .ai-legal-soon-overlay span {
+            padding: 10px 16px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.68);
+            border: 1px solid rgba(36, 52, 77, 0.1);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+        }
         .legal-ai-header {
             padding: 16px 18px;
             background: linear-gradient(135deg, #24344d, #36597b);
@@ -480,6 +519,10 @@ function montarAsesorLegal() {
 }
 
 window.abrirAsesorLegal = function() {
+    if (window.APP_CONFIG && window.APP_CONFIG.legalAiEnabled === false) {
+        return;
+    }
+
     montarAsesorLegal();
     const shell = document.getElementById('legal-ai-shell');
     if (!shell) return;
@@ -505,12 +548,22 @@ window.actualizarAsesorLegalUI = function() {
     const restantes = getConsultasRestantes();
     const badge = document.getElementById('legal-ai-header-badge');
     const trigger = document.getElementById('btn-ai-legal');
+    const aiCard = document.getElementById('ai-legal-card');
+    const legalEnabled = !(window.APP_CONFIG && window.APP_CONFIG.legalAiEnabled === false);
 
     if (badge) {
-        badge.textContent = window.esPremium ? 'Consultas ilimitadas' : `${restantes} gratis`;
+        badge.textContent = legalEnabled
+            ? (window.esPremium ? 'Consultas ilimitadas' : `${restantes} gratis`)
+            : 'Próximamente';
     }
     if (trigger) {
-        trigger.disabled = !window.esPremium && restantes <= 0;
+        trigger.disabled = !legalEnabled || (!window.esPremium && restantes <= 0);
+        trigger.textContent = legalEnabled
+            ? (window.esPremium ? 'Abrir chat' : 'Abrir chat')
+            : 'Próximamente';
+    }
+    if (aiCard) {
+        aiCard.classList.toggle('is-coming-soon', !legalEnabled);
     }
     actualizarTextoEstadoLegal();
 };

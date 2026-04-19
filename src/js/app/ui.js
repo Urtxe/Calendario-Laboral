@@ -179,45 +179,6 @@ function inyectarEstilosAsesorLegal() {
             flex-direction: column;
             border: 1px solid rgba(36, 52, 77, 0.08);
         }
-        .ai-legal-card {
-            position: relative;
-            overflow: hidden;
-        }
-        .ai-legal-card.is-coming-soon {
-            cursor: default;
-        }
-        .ai-legal-card.is-coming-soon .ai-legal-actions {
-            opacity: 0.56;
-            filter: blur(0.35px);
-        }
-        .ai-legal-card.is-coming-soon .ai-legal-copy {
-            opacity: 0.92;
-        }
-        .ai-legal-soon-overlay {
-            position: absolute;
-            inset: 0;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, rgba(245, 245, 240, 0.18), rgba(233, 236, 243, 0.10));
-            backdrop-filter: blur(2px);
-            color: rgba(36, 52, 77, 0.78);
-            font-weight: 800;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            border-radius: 22px;
-            pointer-events: none;
-        }
-        .ai-legal-card.is-coming-soon .ai-legal-soon-overlay {
-            display: flex;
-        }
-        .ai-legal-soon-overlay span {
-            padding: 8px 14px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.34);
-            border: 1px solid rgba(36, 52, 77, 0.07);
-            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-        }
         .legal-ai-header {
             padding: 16px 18px;
             background: linear-gradient(135deg, #24344d, #36597b);
@@ -548,7 +509,6 @@ window.actualizarAsesorLegalUI = function() {
     const restantes = getConsultasRestantes();
     const badge = document.getElementById('legal-ai-header-badge');
     const trigger = document.getElementById('btn-ai-legal');
-    const aiCard = document.getElementById('ai-legal-card');
     const legalEnabled = !(window.APP_CONFIG && window.APP_CONFIG.legalAiEnabled === false);
 
     if (badge) {
@@ -557,13 +517,10 @@ window.actualizarAsesorLegalUI = function() {
             : 'Próximamente';
     }
     if (trigger) {
-        trigger.disabled = !legalEnabled || (!window.esPremium && restantes <= 0);
+        trigger.disabled = legalEnabled ? (!window.esPremium && restantes <= 0) : false;
         trigger.textContent = legalEnabled
             ? (window.esPremium ? 'Abrir chat' : 'Abrir chat')
             : 'Próximamente';
-    }
-    if (aiCard) {
-        aiCard.classList.toggle('is-coming-soon', !legalEnabled);
     }
     actualizarTextoEstadoLegal();
 };

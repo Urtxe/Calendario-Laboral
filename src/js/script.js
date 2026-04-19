@@ -699,7 +699,7 @@ function esFestivo(f) {
     // Transporte: San Cristóbal (10 de Julio)
     if (sectorUsuario === 'transporte' && k.endsWith('-07-10')) return true;
     
-    // Alojamientos, Hostelería y Restauración o Limpieza: Santa Marta (29 de Julio)
+    // Alojamientos, Hostelería y Restauración o Limpieza de Edificios y Locales: Santa Marta (29 de Julio)
     if ((sectorUsuario === 'alojamientos' || sectorUsuario === 'hosteleria' || sectorUsuario === 'limpieza') && k.endsWith('-07-29')) return true;
     }
 

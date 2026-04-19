@@ -480,6 +480,14 @@
 </div>
 </div>
 
+    <script>
+        window.APP_CONFIG = window.APP_CONFIG || {};
+        window.APP_CONFIG.consultarConvenioUrl = window.APP_CONFIG.consultarConvenioUrl || (
+            (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname === '::1')
+                ? 'https://us-central1-calendario-laboral-252b1.cloudfunctions.net/consultarConvenio'
+                : '/consultarConvenio'
+        );
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>

@@ -376,7 +376,11 @@ async function enviarConsultaLegal() {
     const typing = crearMensajeLegal('Consultando el convenio...', 'assistant');
 
     try {
-        const response = await fetch('/consultarConvenio', {
+        const consultarConvenioUrl = (window.APP_CONFIG && window.APP_CONFIG.consultarConvenioUrl)
+            || localStorage.getItem('consultarConvenioUrl')
+            || '/consultarConvenio';
+
+        const response = await fetch(consultarConvenioUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -387,7 +391,15 @@ async function enviarConsultaLegal() {
             }),
         });
 
-        const data = await response.json();
+        const contentType = response.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+        const data = isJson
+            ? await response.json()
+            : { error: await response.text() };
+
+        if (!isJson) {
+            throw new Error('La consulta no devolvió JSON. Revisa la URL del backend o el despliegue de la función.');
+        }
 
         if (!response.ok) {
             throw new Error(data && data.error ? data.error : 'No se pudo consultar el convenio.');

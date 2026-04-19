@@ -187,11 +187,11 @@ function inyectarEstilosAsesorLegal() {
             cursor: default;
         }
         .ai-legal-card.is-coming-soon .ai-legal-actions {
-            opacity: 0.28;
-            filter: blur(1px);
+            opacity: 0.56;
+            filter: blur(0.35px);
         }
         .ai-legal-card.is-coming-soon .ai-legal-copy {
-            opacity: 0.78;
+            opacity: 0.92;
         }
         .ai-legal-soon-overlay {
             position: absolute;
@@ -199,11 +199,11 @@ function inyectarEstilosAsesorLegal() {
             display: none;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, rgba(245, 245, 240, 0.45), rgba(233, 236, 243, 0.28));
-            backdrop-filter: blur(6px);
-            color: #24344d;
+            background: linear-gradient(135deg, rgba(245, 245, 240, 0.18), rgba(233, 236, 243, 0.10));
+            backdrop-filter: blur(2px);
+            color: rgba(36, 52, 77, 0.78);
             font-weight: 800;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.06em;
             text-transform: uppercase;
             border-radius: 22px;
             pointer-events: none;
@@ -212,11 +212,11 @@ function inyectarEstilosAsesorLegal() {
             display: flex;
         }
         .ai-legal-soon-overlay span {
-            padding: 10px 16px;
+            padding: 8px 14px;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.68);
-            border: 1px solid rgba(36, 52, 77, 0.1);
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+            background: rgba(255, 255, 255, 0.34);
+            border: 1px solid rgba(36, 52, 77, 0.07);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
         }
         .legal-ai-header {
             padding: 16px 18px;

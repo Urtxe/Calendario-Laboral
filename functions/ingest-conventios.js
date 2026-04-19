@@ -53,6 +53,11 @@ function sanitizeId(value) {
     .slice(0, 120) || "convenio";
 }
 
+function getDocType(fileName) {
+  const baseName = path.basename(fileName, path.extname(fileName)).toLowerCase();
+  return baseName === "estatuto_trabajadores" ? "base" : "especifico";
+}
+
 async function ensureDir(dir) {
   await fs.mkdir(dir, { recursive: true });
 }
@@ -158,9 +163,37 @@ async function embedBatch(model, batch, title) {
   }
 }
 
+async function deleteExistingChunksForFileName(fileName) {
+  const snapshot = await db.collection(COLLECTION_NAME).where("fileName", "==", fileName).get();
+
+  if (snapshot.empty) {
+    console.log(`  - No hay chunks previos para ${fileName}`);
+    return 0;
+  }
+
+  let deleted = 0;
+  const docs = snapshot.docs;
+
+  for (let offset = 0; offset < docs.length; offset += 450) {
+    const batch = db.batch();
+    const slice = docs.slice(offset, offset + 450);
+
+    for (const doc of slice) {
+      batch.delete(doc.ref);
+    }
+
+    await batch.commit();
+    deleted += slice.length;
+  }
+
+  console.log(`  - Eliminados ${deleted} chunks previos de ${fileName}`);
+  return deleted;
+}
+
 async function writeChunkGroup({
   convenioId,
   fileName,
+  docType,
   filePath,
   pageCount,
   chunks,
@@ -186,6 +219,8 @@ async function writeChunkGroup({
         batch.set(docRef, {
           convenioId,
           fileName,
+          file_name: fileName,
+          doc_type: docType,
           filePath,
           pageCount,
           chunkIndex: globalIndex,
@@ -230,7 +265,9 @@ async function moveToProcessed(filePath, destination) {
 
 async function processFile(filePath) {
   const fileName = path.basename(filePath);
+  const docType = getDocType(fileName);
   console.log(`\n📄 Procesando ${fileName}`);
+  console.log(`  - Tipo de documento: ${docType}`);
 
   const { text, pageCount } = await loadPdfText(filePath);
   if (!text) {
@@ -245,6 +282,8 @@ async function processFile(filePath) {
   const totalBatches = Math.ceil(chunks.length / GEMINI_BATCH_SIZE);
   const convenioId = sanitizeId(path.basename(fileName, path.extname(fileName)));
   const processedPath = await buildProcessedPath(filePath);
+
+  await deleteExistingChunksForFileName(fileName);
 
   for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
     const start = batchIndex * GEMINI_BATCH_SIZE;
@@ -261,6 +300,7 @@ async function processFile(filePath) {
     await writeChunkGroup({
       convenioId,
       fileName,
+      docType,
       filePath: processedPath,
       pageCount,
       chunks: batchChunks,

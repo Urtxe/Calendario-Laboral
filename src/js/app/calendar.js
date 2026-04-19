@@ -319,7 +319,7 @@ function esFestivo(f) {
 
     if (ciudadActual === 'Donostia') {
         if (sectorUsuario === 'transporte' && k.endsWith('-07-10')) return true;
-        if ((sectorUsuario === 'hosteleria' || sectorUsuario === 'limpieza') && k.endsWith('-07-29')) return true;
+        if ((sectorUsuario === 'alojamientos' || sectorUsuario === 'hosteleria' || sectorUsuario === 'limpieza') && k.endsWith('-07-29')) return true;
     }
 
     if (festivosCargados.includes(k)) return true;

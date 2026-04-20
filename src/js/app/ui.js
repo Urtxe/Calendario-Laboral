@@ -506,14 +506,13 @@ window.cerrarAsesorLegal = function() {
 };
 
 window.actualizarAsesorLegalUI = function() {
-    const restantes = getConsultasRestantes();
     const badge = document.getElementById('legal-ai-header-badge');
     const trigger = document.getElementById('btn-ai-legal');
     const legalEnabled = !(window.APP_CONFIG && window.APP_CONFIG.legalAiEnabled === false);
 
     if (badge) {
         badge.textContent = legalEnabled
-            ? (window.esPremium ? 'Consultas ilimitadas' : `${restantes} gratis`)
+            ? 'PREMIUM'
             : 'Próximamente';
     }
     if (trigger) {

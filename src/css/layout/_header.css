@@ -100,6 +100,10 @@
     white-space: nowrap;
 }
 
+.ai-legal-actions .premium-tag {
+    margin: 0;
+}
+
 .btn-ai-legal {
     background: linear-gradient(135deg, #f8fafc, #dbeafe);
     color: #24344d;

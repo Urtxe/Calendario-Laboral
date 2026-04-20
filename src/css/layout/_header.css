@@ -125,6 +125,7 @@
 }
 
 /* En premium dejamos solo el mensaje principal del bloque legal */
+body.is-premium .ai-legal-kicker,
 body.is-premium .ai-legal-copy p:last-of-type,
 body.is-premium .ai-legal-actions {
     display: none !important;

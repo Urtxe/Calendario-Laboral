@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
     montarAsesorLegal();
     actualizarTextoEstadoLegal();
+    if (typeof window.actualizarAsesorLegalUI === 'function') window.actualizarAsesorLegalUI();
 
     document.addEventListener('touchstart', function(event) {
         const tooltip = document.querySelector('.info-tooltip');
@@ -113,8 +114,50 @@ function actualizarInterfazPremium(activar) {
     const info80 = document.getElementById('info-limite-80');
     if (info80) info80.style.display = esPremium ? 'inline' : 'none';
 
+    actualizarTarjetaAsesorLegal(activar);
+
     if (typeof window.actualizarAsesorLegalUI === 'function') {
         window.actualizarAsesorLegalUI();
+    }
+}
+
+function actualizarTarjetaAsesorLegal(activar) {
+    const card = document.getElementById('ai-legal-card');
+    if (!card) return;
+
+    const kicker = card.querySelector('.ai-legal-kicker');
+    const copy = card.querySelector('.ai-legal-copy');
+    const paragraphs = copy ? copy.querySelectorAll('p') : [];
+    const actions = card.querySelector('.ai-legal-actions');
+    const badge = document.getElementById('legal-ai-header-badge');
+    const trigger = document.getElementById('btn-ai-legal');
+    const isPremiumUser = !!activar;
+    const legalEnabled = !(window.APP_CONFIG && window.APP_CONFIG.legalAiEnabled === false);
+
+    if (kicker) kicker.style.display = isPremiumUser ? 'none' : '';
+
+    if (paragraphs[0]) {
+        paragraphs[0].textContent = isPremiumUser
+            ? 'Preguntale a la IA sobre tu convenio.'
+            : 'Preguntale a la IA sobre tu convenio. 3 consultas gratis.';
+    }
+
+    if (paragraphs[1]) {
+        paragraphs[1].style.display = isPremiumUser ? 'none' : '';
+    }
+
+    if (actions) {
+        actions.style.display = (isPremiumUser && legalEnabled) ? 'none' : '';
+    }
+
+    if (badge) {
+        badge.textContent = legalEnabled ? 'PREMIUM' : 'Próximamente';
+        badge.style.display = (isPremiumUser && legalEnabled) ? 'none' : 'inline-flex';
+    }
+
+    if (trigger) {
+        trigger.textContent = legalEnabled ? 'Próximamente' : 'Próximamente';
+        trigger.disabled = false;
     }
 }
 
@@ -510,18 +553,18 @@ window.actualizarAsesorLegalUI = function() {
     const badge = document.getElementById('legal-ai-header-badge');
     const trigger = document.getElementById('btn-ai-legal');
     const legalEnabled = !(window.APP_CONFIG && window.APP_CONFIG.legalAiEnabled === false);
+    const esPremiumActivo = !!window.esPremium;
 
     if (badge) {
-        badge.textContent = legalEnabled
-            ? 'PREMIUM'
-            : 'Próximamente';
+        badge.textContent = legalEnabled ? 'PREMIUM' : 'Próximamente';
+        badge.style.display = (esPremiumActivo && legalEnabled) ? 'none' : 'inline-flex';
     }
     if (trigger) {
-        trigger.disabled = legalEnabled ? (!window.esPremium && restantes <= 0) : false;
-        trigger.textContent = legalEnabled
-            ? (window.esPremium ? 'Abrir chat' : 'Abrir chat')
-            : 'Próximamente';
+        trigger.disabled = legalEnabled ? (!esPremiumActivo && restantes <= 0) : false;
+        trigger.textContent = legalEnabled ? 'Próximamente' : 'Próximamente';
+        trigger.parentElement.style.display = (esPremiumActivo && legalEnabled) ? 'none' : '';
     }
+    actualizarTarjetaAsesorLegal(esPremiumActivo);
     actualizarTextoEstadoLegal();
 };
 

@@ -118,6 +118,12 @@
     box-shadow: 0 14px 26px rgba(8, 15, 30, 0.22);
 }
 
+/* En premium dejamos solo el mensaje principal del bloque legal */
+body.is-premium .ai-legal-copy p:last-of-type,
+body.is-premium .ai-legal-actions {
+    display: none !important;
+}
+
 /* ============================================
    SECCIÓN TÍTULO (RELOJ + TEXTO)
    ============================================ */

@@ -128,7 +128,6 @@ function actualizarTarjetaAsesorLegal(activar) {
     const kicker = card.querySelector('.ai-legal-kicker');
     const copy = card.querySelector('.ai-legal-copy');
     const paragraphs = copy ? copy.querySelectorAll('p') : [];
-    const actions = card.querySelector('.ai-legal-actions');
     const badge = document.getElementById('legal-ai-header-badge');
     const trigger = document.getElementById('btn-ai-legal');
     const isPremiumUser = !!activar;
@@ -144,10 +143,6 @@ function actualizarTarjetaAsesorLegal(activar) {
 
     if (paragraphs[1]) {
         paragraphs[1].style.display = isPremiumUser ? 'none' : '';
-    }
-
-    if (actions) {
-        actions.style.display = (isPremiumUser && legalEnabled) ? 'none' : '';
     }
 
     if (badge) {
@@ -562,7 +557,7 @@ window.actualizarAsesorLegalUI = function() {
     if (trigger) {
         trigger.disabled = legalEnabled ? (!esPremiumActivo && restantes <= 0) : false;
         trigger.textContent = legalEnabled ? 'Próximamente' : 'Próximamente';
-        trigger.parentElement.style.display = (esPremiumActivo && legalEnabled) ? 'none' : '';
+        trigger.style.display = 'inline-flex';
     }
     actualizarTarjetaAsesorLegal(esPremiumActivo);
     actualizarTextoEstadoLegal();

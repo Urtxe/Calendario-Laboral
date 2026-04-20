@@ -124,10 +124,10 @@
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
 }
 
-/* En premium dejamos solo el mensaje principal del bloque legal */
+/* En premium dejamos el mensaje principal y el botón, ocultando el kicker y la etiqueta */
 body.is-premium .ai-legal-kicker,
 body.is-premium .ai-legal-copy p:last-of-type,
-body.is-premium .ai-legal-actions {
+body.is-premium .ai-legal-tag {
     display: none !important;
 }
 

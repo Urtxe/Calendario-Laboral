@@ -18,6 +18,20 @@ var usuarioActual = null;
 
 var nombresMeses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
+function sincronizarEstadoPremium(valor) {
+    esPremium = !!valor;
+    window.esPremium = esPremium;
+    localStorage.setItem('esPremium', esPremium ? 'true' : 'false');
+}
+
+function usuarioTieneSesion() {
+    return !!(window.usuarioActual && window.usuarioActual.uid);
+}
+
+function usuarioPuedeUsarPremium() {
+    return usuarioTieneSesion() && !!window.esPremium;
+}
+
 function obtenerReferenciaUsuario() {
     return db.collection('usuarios').doc(usuarioActual.uid);
 }

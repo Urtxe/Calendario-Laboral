@@ -33,6 +33,14 @@ document.addEventListener('DOMContentLoaded', function() {
         guardarTodoEnFirebase();
     });
 
+    const datosUsuarioCard = document.getElementById('cargar-datos');
+    if (datosUsuarioCard) {
+        datosUsuarioCard.addEventListener('click', function(event) {
+            if (event.target && event.target.closest && event.target.closest('.card-header')) return;
+            if (typeof trackClickDatosUsuario === 'function') trackClickDatosUsuario();
+        });
+    }
+
     cargarFestivosOficiales(ciudadActual, anioActual);
     gestionarJornadaPersonalizada();
     renderTodo();
@@ -50,6 +58,19 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 window.abrirModalPremium = function() {
+    if (typeof trackAperturaPremium === 'function') trackAperturaPremium();
+
+    if (!usuarioTieneSesion()) {
+        alert('Necesitas registrarte o iniciar sesión para activar Premium.');
+        if (typeof mostrarLogin === 'function') mostrarLogin();
+        return;
+    }
+
+    if (usuarioPuedeUsarPremium()) {
+        return;
+    }
+
+    alert('Esta función es Premium. Hazte Premium para utilizarla.');
     const modal = document.getElementById('modal-pricing');
     if (modal) modal.style.display = 'flex';
 };
@@ -61,12 +82,12 @@ window.cerrarModalPricing = function() {
 
 function verificarNivelPremium(uid) {
     db.collection('usuarios').doc(uid).get().then(function(doc) {
-        esPremium = (doc.exists && doc.data().tipoCuenta === 'premium');
-        window.esPremium = esPremium;
-        localStorage.setItem('esPremium', esPremium.toString());
-        actualizarInterfazPremium(esPremium);
+        const premiumActivo = (doc.exists && doc.data().tipoCuenta === 'premium');
+        sincronizarEstadoPremium(premiumActivo);
+        actualizarInterfazPremium(premiumActivo);
     }).catch(e => {
         console.error("Error verificando premium:", e);
+        sincronizarEstadoPremium(false);
         actualizarInterfazPremium(false);
     });
 }
@@ -112,7 +133,7 @@ function actualizarInterfazPremium(activar) {
         }
     }
     const info80 = document.getElementById('info-limite-80');
-    if (info80) info80.style.display = esPremium ? 'inline' : 'none';
+    if (info80) info80.style.display = activar ? 'inline' : 'none';
 
     actualizarTarjetaAsesorLegal(activar);
 

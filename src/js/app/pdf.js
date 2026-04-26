@@ -1,5 +1,9 @@
 async function generarInformePDF() {
-    if (!esPremium || !usuarioActual) return;
+    if (typeof trackExportacionPDF === 'function') trackExportacionPDF('intento');
+    if (!usuarioPuedeUsarPremium()) {
+        if (typeof abrirModalPremium === 'function') abrirModalPremium();
+        return;
+    }
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
@@ -117,4 +121,6 @@ async function generarInformePDF() {
     doc.line(120, yPos + 20, 180, yPos + 20);
 
     doc.save(`Registro_Oficial_${nombreMes}_${idUsuario.split('@')[0]}.pdf`);
+
+    if (typeof trackExportacionPDF === 'function') trackExportacionPDF('exito');
 }

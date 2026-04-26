@@ -178,8 +178,10 @@ auth.onAuthStateChanged(user => {
             if(window.actualizarAsesorLegalUI) window.actualizarAsesorLegalUI();
         }, 500);
     } else {
+        if (typeof sincronizarEstadoPremium === 'function') sincronizarEstadoPremium(false);
         if(authButtons) authButtons.style.display = 'flex';
         if(userInfo) userInfo.style.display = 'none';
+        if (typeof actualizarInterfazPremium === 'function') actualizarInterfazPremium(false);
         if(window.actualizarAsesorLegalUI) window.actualizarAsesorLegalUI();
     }
 });

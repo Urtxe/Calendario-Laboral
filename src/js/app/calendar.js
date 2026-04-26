@@ -44,6 +44,7 @@ function renderCalendario() {
 function procesarClickDia(dia) {
     var fecha = new Date(anioActual, mesActual, dia);
     var key = getFechaKey(fecha);
+    if (typeof trackClickCalendario === 'function') trackClickCalendario();
     if (modoSeleccionado === 'horasExtra') { abrirModalHorasExtra(key); return; }
 
     var tipo = modoSeleccionado || 'trabajado';
@@ -57,7 +58,7 @@ function procesarClickDia(dia) {
 }
 
 window.seleccionarModo = function(tipo) {
-    if (tipo === 'horasExtra' && !esPremium) {
+    if (tipo === 'horasExtra' && !usuarioPuedeUsarPremium()) {
         abrirModalPremium();
         return;
     }
@@ -103,6 +104,12 @@ function abrirModalHorasExtra(key) {
 }
 
 window.guardarHorasExtra = function() {
+    if (!usuarioPuedeUsarPremium()) {
+        cerrarModalHorasExtra();
+        abrirModalPremium();
+        return;
+    }
+
     var v = parseFloat(document.getElementById('input-horas-extra').value) || 0;
     let anioCorte = fechaSeleccionadaParaExtras.split('-')[0];
     let totalAnualCalculado = 0;
@@ -129,6 +136,11 @@ window.guardarHorasExtra = function() {
 window.cerrarModalHorasExtra = function() { document.getElementById('modal-horas-extra').style.display = 'none'; };
 
 window.toggleCompensado = function(m) {
+    if (!usuarioPuedeUsarPremium()) {
+        abrirModalPremium();
+        return;
+    }
+
     var k = anioActual + '-' + m;
     horasExtraCompensadas[k] = !horasExtraCompensadas[k];
     guardarTodoEnFirebase();
@@ -181,9 +193,13 @@ function calcularBalance() {
 window.toggleCard = function(headerElement) {
     const card = headerElement.parentElement;
 
-    if (card.classList.contains('premium-locked') && !esPremium) {
+    if (card && card.id === 'cargar-datos' && typeof trackClickDatosUsuario === 'function') {
+        trackClickDatosUsuario();
+    }
+
+    if (card.classList.contains('premium-locked') && !usuarioPuedeUsarPremium()) {
         abrirModalPremium();
-        return;
+        return; 
     }
 
     card.classList.toggle('active');
@@ -276,9 +292,13 @@ function getFechaKey(f) {
 }
 
 window.cambiarMes = function(dir) {
+    const anioAnterior = anioActual;
     mesActual += dir;
     if (mesActual > 11) { mesActual = 0; anioActual++; }
     else if (mesActual < 0) { mesActual = 11; anioActual--; }
+
+    if (typeof trackCambioMes === 'function') trackCambioMes();
+    if (anioActual !== anioAnterior && typeof trackCambioAnio === 'function') trackCambioAnio();
 
     const anioInput = document.getElementById('inputAnio');
     if (anioInput) anioInput.value = anioActual;
@@ -289,6 +309,8 @@ window.cambiarMes = function(dir) {
 window.ajustarValor = function(id, cambio) {
     var input = document.getElementById(id);
     if (!input) return;
+
+    if (id === 'inputAnio' && typeof trackCambioAnio === 'function') trackCambioAnio();
     input.value = (parseInt(input.value) || 0) + cambio;
     input.dispatchEvent(new Event('input', { bubbles: true }));
 };

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.3.0'; 
+const CACHE_VERSION = 'v1.4.1'; 
 const CACHE_NAME = `balance-laboral-${CACHE_VERSION}`;
 const APP_BASE = new URL('./', self.location);
 
@@ -28,6 +28,7 @@ self.addEventListener('install', event => {
       return cache.addAll(urlsToCache);
     })
   );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
@@ -36,6 +37,7 @@ self.addEventListener('activate', event => {
       names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n))
     ))
   );
+  self.clients.claim();
 });
 
 // Estrategia: Network First (Red primero, si falla, usa el caché)

@@ -8,11 +8,15 @@
     "ignore": [
       "firebase.json",
       "**/.*",
+      ".git/**",
+      ".tmp.driveupload/**",
+      ".tmp.drivedownload/**",
       "**/node_modules/**",
       "firestore.rules",
       "firestore.indexes.json",
       ".firebaserc",
       "docs/**",
+      "functions/**",
       "README.md",
       "Marketing/**"
     ],

@@ -152,27 +152,31 @@ function actualizarTarjetaAsesorLegal(activar) {
     const badge = document.getElementById('legal-ai-header-badge');
     const trigger = document.getElementById('btn-ai-legal');
     const isPremiumUser = !!activar;
-    const legalEnabled = !(window.APP_CONFIG && window.APP_CONFIG.legalAiEnabled === false);
 
     if (kicker) kicker.style.display = isPremiumUser ? 'none' : '';
 
     if (paragraphs[0]) {
         paragraphs[0].textContent = isPremiumUser
-            ? 'Preguntale a la IA sobre tu convenio.'
-            : 'Preguntale a la IA sobre tu convenio. 3 consultas gratis.';
+            ? 'Preguntale a la IA sobre jornada, vacaciones, pluses o salario.'
+            : 'Preguntale a la IA sobre jornada, vacaciones, pluses o salario. 3 consultas gratis.';
     }
 
     if (paragraphs[1]) {
-        paragraphs[1].style.display = isPremiumUser ? 'none' : '';
+        paragraphs[1].textContent = 'Abre el panel y compara tu convenio con la norma base en un clic.';
     }
 
     if (badge) {
-        badge.textContent = legalEnabled ? 'PREMIUM' : 'Próximamente';
-        badge.style.display = (isPremiumUser && legalEnabled) ? 'none' : 'inline-flex';
+        if (isPremiumUser) {
+            badge.textContent = 'PREMIUM';
+            badge.style.display = 'none';
+        } else {
+            badge.textContent = 'IA ACTIVA';
+            badge.style.display = 'inline-flex';
+        }
     }
 
     if (trigger) {
-        trigger.textContent = legalEnabled ? 'Próximamente' : 'Próximamente';
+        trigger.textContent = 'Abrir asesor';
         trigger.disabled = false;
     }
 }
@@ -274,6 +278,62 @@ function inyectarEstilosAsesorLegal() {
             color: #4b5563;
             background: rgba(255, 255, 255, 0.72);
             border-bottom: 1px solid rgba(36, 52, 77, 0.08);
+        }
+        .legal-ai-intro {
+            padding: 16px 18px 0;
+            display: grid;
+            gap: 12px;
+        }
+        .legal-ai-intro-card {
+            border-radius: 18px;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, rgba(36, 52, 77, 0.96), rgba(61, 123, 217, 0.92));
+            color: #fff;
+            box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
+        }
+        .legal-ai-intro-label {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+        }
+        .legal-ai-intro-card h4 {
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.2;
+        }
+        .legal-ai-intro-card p {
+            margin: 6px 0 0;
+            font-size: 0.85rem;
+            line-height: 1.45;
+            color: rgba(255, 255, 255, 0.88);
+        }
+        .legal-ai-quick-prompts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .legal-ai-prompt {
+            border: 1px solid rgba(36, 52, 77, 0.12);
+            background: #fff;
+            color: #24344d;
+            border-radius: 999px;
+            padding: 9px 12px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+        .legal-ai-prompt:hover {
+            transform: translateY(-1px);
+            border-color: rgba(61, 123, 217, 0.3);
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
         }
         .legal-ai-messages {
             flex: 1;
@@ -472,7 +532,14 @@ async function enviarConsultaLegal() {
         }
     } catch (error) {
         if (typing) typing.remove();
-        crearMensajeLegal(error.message || 'Ha ocurrido un error al consultar el convenio.', 'error');
+        const mensaje = error && error.message ? error.message : '';
+        const esErrorDeConexion = /fetch|network|json|consultar el convenio|No se encontraron fragmentos/i.test(mensaje);
+
+        if (esErrorDeConexion) {
+            crearMensajeLegal('Ahora mismo el panel ya está listo para usar, pero el backend no me ha devuelto resultados aún. En cuanto ingresemos los convenios, responderé con la comparación real entre la norma base y el convenio. Mientras tanto, prueba con preguntas de jornada, vacaciones o pluses.', 'assistant');
+        } else {
+            crearMensajeLegal(mensaje || 'Ha ocurrido un error al consultar el convenio.', 'error');
+        }
     } finally {
         actualizarTextoEstadoLegal();
         if (input && !input.disabled) input.focus();
@@ -493,11 +560,24 @@ function montarAsesorLegal() {
             <div class="legal-ai-header">
                 <div>
                     <h3 class="legal-ai-title" id="legal-ai-title">Asesoría Legal sobre Convenios</h3>
-                    <p class="legal-ai-subtitle">RAG con Firestore Vector Search y Gemini 2.5 Pro</p>
+                    <p class="legal-ai-subtitle">Comparación guiada entre Estatuto y tu convenio</p>
                 </div>
                 <button type="button" class="legal-ai-close" id="legal-ai-close" aria-label="Cerrar asesor legal">×</button>
             </div>
             <div class="legal-ai-status" id="legal-ai-status"></div>
+            <div class="legal-ai-intro">
+                <div class="legal-ai-intro-card">
+                    <span class="legal-ai-intro-label">Vista de trabajo</span>
+                    <h4>Pregunta directo y recibe una comparación clara</h4>
+                    <p>Esta primera versión está pensada para probar el flujo real: escribes tu duda, el sistema busca contexto del convenio y te devuelve una respuesta corta, útil y sin rodeos.</p>
+                </div>
+                <div class="legal-ai-quick-prompts" id="legal-ai-quick-prompts">
+                    <button type="button" class="legal-ai-prompt" data-legal-prompt="¿Cuántas horas semanales me corresponden según mi jornada?">Jornada</button>
+                    <button type="button" class="legal-ai-prompt" data-legal-prompt="¿Qué vacaciones me corresponden y cómo se calculan?">Vacaciones</button>
+                    <button type="button" class="legal-ai-prompt" data-legal-prompt="¿Tengo derecho a plus de nocturnidad o transporte?">Pluses</button>
+                    <button type="button" class="legal-ai-prompt" data-legal-prompt="¿Cómo se compensan las horas extra en mi convenio?">Horas extra</button>
+                </div>
+            </div>
             <div class="legal-ai-messages" id="legal-ai-messages"></div>
             <div class="legal-ai-inputbar">
                 <textarea id="legal-ai-input" class="legal-ai-input" placeholder="Escribe tu duda sobre el convenio colectivo..."></textarea>
@@ -519,6 +599,7 @@ function montarAsesorLegal() {
     const closeBtn = shell.querySelector('#legal-ai-close');
     const sendBtn = shell.querySelector('#legal-ai-send');
     const input = shell.querySelector('#legal-ai-input');
+    const promptButtons = shell.querySelectorAll('[data-legal-prompt]');
 
     if (trigger && !trigger.dataset.bound) {
         trigger.dataset.bound = 'true';
@@ -534,15 +615,18 @@ function montarAsesorLegal() {
             }
         });
     }
+    promptButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            if (!input) return;
+            input.value = button.getAttribute('data-legal-prompt') || '';
+            input.focus();
+        });
+    });
 
     window.actualizarAsesorLegalUI();
 }
 
 window.abrirAsesorLegal = function() {
-    if (window.APP_CONFIG && window.APP_CONFIG.legalAiEnabled === false) {
-        return;
-    }
-
     montarAsesorLegal();
     const shell = document.getElementById('legal-ai-shell');
     if (!shell) return;
@@ -552,7 +636,7 @@ window.abrirAsesorLegal = function() {
 
     const messages = document.getElementById('legal-ai-messages');
     if (messages && messages.childElementCount === 0) {
-        crearMensajeLegal('Hola. Pregúntame sobre tu convenio y responderé usando solo los fragmentos recuperados.', 'assistant');
+        crearMensajeLegal('Hola. Pregúntame sobre tu convenio y te responderé comparando la norma base con el texto del convenio.', 'assistant');
     }
 
     const input = document.getElementById('legal-ai-input');
@@ -565,19 +649,22 @@ window.cerrarAsesorLegal = function() {
 };
 
 window.actualizarAsesorLegalUI = function() {
-    const restantes = getConsultasRestantes();
     const badge = document.getElementById('legal-ai-header-badge');
     const trigger = document.getElementById('btn-ai-legal');
-    const legalEnabled = !(window.APP_CONFIG && window.APP_CONFIG.legalAiEnabled === false);
     const esPremiumActivo = !!window.esPremium;
 
     if (badge) {
-        badge.textContent = legalEnabled ? 'PREMIUM' : 'Próximamente';
-        badge.style.display = (esPremiumActivo && legalEnabled) ? 'none' : 'inline-flex';
+        if (esPremiumActivo) {
+            badge.textContent = 'PREMIUM';
+            badge.style.display = 'none';
+        } else {
+            badge.textContent = 'IA ACTIVA';
+            badge.style.display = 'inline-flex';
+        }
     }
     if (trigger) {
-        trigger.disabled = legalEnabled ? (!esPremiumActivo && restantes <= 0) : false;
-        trigger.textContent = legalEnabled ? 'Próximamente' : 'Próximamente';
+        trigger.disabled = false;
+        trigger.textContent = 'Abrir asesor';
         trigger.style.display = 'inline-flex';
     }
     actualizarTarjetaAsesorLegal(esPremiumActivo);

@@ -44,15 +44,20 @@
                 <i data-lucide="scale" size="14"></i>
                 Asesor legal IA
             </span>
-            <h3>Resuelve tus dudas</h3>
-            <p>Preguntale a la IA sobre tu convenio. 3 consultas gratis.</p>
-            <p>Hazte premium y obtén consultas ilimitadas.</p>
+            <h3>Consulta tu convenio al momento</h3>
+            <p>Preguntale a la IA sobre jornada, vacaciones, pluses o salario.</p>
+            <p>Empieza con 3 consultas gratis y escala a Premium cuando quieras.</p>
+            <div class="ai-legal-meta" aria-label="Áreas de consulta">
+                <span class="ai-legal-pill">Jornada</span>
+                <span class="ai-legal-pill">Vacaciones</span>
+                <span class="ai-legal-pill">Pluses</span>
+            </div>
         </div>
         <div class="ai-legal-actions">
             <span class="premium-tag ai-legal-tag" id="legal-ai-header-badge">PREMIUM</span>
             <button type="button" id="btn-ai-legal" class="btn-ai-legal">
                 <i data-lucide="message-square" size="16"></i>
-                Próximamente
+                Abrir asesor
             </button>
         </div>
     </div>
@@ -483,7 +488,7 @@
 
     <script>
         window.APP_CONFIG = window.APP_CONFIG || {};
-        window.APP_CONFIG.legalAiEnabled = window.APP_CONFIG.legalAiEnabled ?? false;
+        window.APP_CONFIG.legalAiEnabled = window.APP_CONFIG.legalAiEnabled ?? true;
         window.APP_CONFIG.consultarConvenioUrl = window.APP_CONFIG.consultarConvenioUrl || (
             (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname === '::1')
                 ? 'https://us-central1-calendario-laboral-252b1.cloudfunctions.net/consultarConvenio'

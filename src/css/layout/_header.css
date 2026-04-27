@@ -79,7 +79,8 @@
 .ai-legal-actions {
     position: relative;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-end;
     gap: 10px;
     flex-shrink: 0;
 }
@@ -104,24 +105,53 @@
     margin: 0;
 }
 
+.ai-legal-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.ai-legal-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
 .btn-ai-legal {
-    background-color: var(--accent-yellow);
-    color: #000;
-    padding: 6px 12px;
-    border-radius: 8px;
+    background: linear-gradient(135deg, #ffd166, #fbbf24);
+    color: #1a202c;
+    padding: 10px 16px;
+    border-radius: 12px;
     font-size: 0.8rem;
     font-weight: 700;
     text-transform: uppercase;
     border: none;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 12px 28px rgba(251, 191, 36, 0.24);
+    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .btn-ai-legal:hover {
     transform: translateY(-1px);
-    background-color: #f59e0b;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
+    background: linear-gradient(135deg, #ffe08a, #f59e0b);
+    box-shadow: 0 16px 32px rgba(251, 191, 36, 0.32);
+}
+
+.btn-ai-legal:disabled {
+    opacity: 0.8;
+    cursor: pointer;
 }
 
 /* En premium dejamos el mensaje principal y el botón, ocultando el kicker y la etiqueta */
@@ -349,7 +379,7 @@ body.is-premium #btn-upgrade {
 
     .ai-legal-actions {
         width: 100%;
-        justify-content: space-between;
+        align-items: stretch;
     }
 
     .btn-ai-legal {

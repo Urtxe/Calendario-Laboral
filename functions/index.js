@@ -3,6 +3,11 @@ const { onRequest } = require("firebase-functions/v2/https");
 const functionsV1 = require("firebase-functions/v1"); 
 const admin = require("firebase-admin");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const {
+    CATALOGO_CONVENIOS,
+    detectConvenioCriteria,
+    resolveCatalogEntry,
+} = require("./convenio-metadata");
 require("dotenv").config({ path: __dirname + "/.env" });
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
@@ -143,12 +148,16 @@ async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
     const baseQuery = db.collection(COLLECTION_VECTORES).where("doc_type", "==", "especifico");
     const referencias = [];
 
-    if (convenioReferencia) {
-        referencias.push(convenioReferencia);
-        if (!convenioReferencia.toLowerCase().endsWith(".pdf")) {
-            referencias.push(`${convenioReferencia}.pdf`);
+    const referenciasEntrada = Array.isArray(convenioReferencia) ? convenioReferencia : [convenioReferencia];
+
+    referenciasEntrada.filter(Boolean).forEach((referencia) => {
+        referencias.push(referencia);
+        if (!referencia.toLowerCase().endsWith(".pdf")) {
+            referencias.push(`${referencia}.pdf`);
         }
-    }
+    });
+
+    const resultados = [];
 
     for (const referencia of referencias) {
         const snapshot = await baseQuery
@@ -163,14 +172,60 @@ async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
             .get();
 
         if (!snapshot.empty) {
-            return snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
+            snapshot.docs.forEach((doc) => {
+                resultados.push({
+                    id: doc.id,
+                    ...doc.data(),
+                });
+            });
         }
     }
 
+    if (resultados.length) {
+        return resultados
+            .sort((a, b) => {
+                const distA = typeof a.distancia === "number" ? a.distancia : Number.MAX_SAFE_INTEGER;
+                const distB = typeof b.distancia === "number" ? b.distancia : Number.MAX_SAFE_INTEGER;
+                return distA - distB;
+            })
+            .slice(0, 4);
+    }
+
     return [];
+}
+
+let catalogoCache = null;
+let catalogoCacheTs = 0;
+const CATALOGO_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function cargarCatalogoConvenios() {
+    const now = Date.now();
+    if (catalogoCache && (now - catalogoCacheTs) < CATALOGO_CACHE_TTL_MS) {
+        return catalogoCache;
+    }
+
+    const snapshot = await db.collection(CATALOGO_CONVENIOS).get();
+    catalogoCache = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+    }));
+    catalogoCacheTs = now;
+    return catalogoCache;
+}
+
+async function resolverConvenioDesdeEntrada(reqBody, pregunta) {
+    const catalogo = await cargarCatalogoConvenios();
+    if (!catalogo.length) {
+        return { status: "catalog_empty" };
+    }
+
+    const criteria = detectConvenioCriteria({
+        pregunta,
+        ciudad: reqBody && (reqBody.ciudad || reqBody.ciudadActual || reqBody.location || ""),
+        sector: reqBody && (reqBody.sector || reqBody.sectorUsuario || reqBody.profesion || ""),
+    });
+
+    return resolveCatalogEntry(catalogo, criteria);
 }
 
 // 1. WEBHOOK DE STRIPE (V2)
@@ -245,12 +300,35 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
         const chunksBase = await buscarChunksBase(vectorPregunta);
 
         let convenioFileName = convenioReferencia;
+        let conveniosFileName = convenioReferencia ? [convenioReferencia] : [];
+        let convenioResuelto = null;
+
+        if (!convenioFileName) {
+            const resolucionCatalogo = await resolverConvenioDesdeEntrada(req.body, pregunta);
+
+            if (resolucionCatalogo.status === "resolved" && resolucionCatalogo.entry) {
+                convenioResuelto = resolucionCatalogo.entry;
+                conveniosFileName = Array.isArray(resolucionCatalogo.entry.fileNames) ? resolucionCatalogo.entry.fileNames : [];
+                convenioFileName = conveniosFileName[0] || "";
+            } else if (resolucionCatalogo.status && resolucionCatalogo.status !== "catalog_empty") {
+                return res.json({
+                    respuesta: resolucionCatalogo.message,
+                    requiereAclaracion: true,
+                    opcionesConvenio: resolucionCatalogo.options || [],
+                    convenioUsado: null,
+                    conveniosUsados: [],
+                    fuentes: [],
+                });
+            }
+        }
+
         if (!convenioFileName) {
             const topConvenio = await buscarTopConvenioEspecifico(vectorPregunta);
             convenioFileName = topConvenio ? (topConvenio.file_name || topConvenio.fileName || "") : "";
+            conveniosFileName = convenioFileName ? [convenioFileName] : [];
         }
 
-        const chunksEspecificos = await buscarChunksEspecificos(vectorPregunta, convenioFileName);
+        const chunksEspecificos = await buscarChunksEspecificos(vectorPregunta, conveniosFileName);
 
         if (!chunksBase.length && !chunksEspecificos.length) {
             return res.status(404).json({
@@ -269,12 +347,14 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
         const contexto = bloquesContexto.join("\n\n===\n\n");
 
         const promptSistema = [
-            "Eres un abogado laboralista experto en España. Tu misión es comparar la Norma Base y la Norma Específica enviada.",
-            "REGLA DE ORO: El Estatuto de los Trabajadores es el mínimo legal. Si el Convenio mejora al Estatuto, aplica el Convenio. Si el Convenio no dice nada o es peor, aplica el Estatuto.",
-            "Responde siempre citando la fuente: 'Según el Estatuto tienes derecho a X, pero tu convenio lo mejora a Y, por lo tanto te corresponde Y'.",
+            "Eres un abogado laboralista experto en España.",
+            "Aplica siempre esta regla jurídica: el Estatuto de los Trabajadores es el mínimo legal.",
+            "Si el convenio mejora al Estatuto, prevalece el convenio en ese punto.",
+            "Si el convenio no regula ese punto o lo regula peor, prevalece el Estatuto.",
+            "Responde de forma práctica y profesional, indicando qué norma aplica y por qué.",
             idiomaRespuesta === "euskera"
-                ? "Responde siempre en euskera. Si hay una comparación entre norma base y convenio, mantén el mismo idioma."
-                : "Responde siempre en castellano. Si hay una comparación entre norma base y convenio, mantén el mismo idioma.",
+                ? "Responde siempre en euskera."
+                : "Responde siempre en castellano.",
             "No inventes artículos, no completes con conocimiento externo y no des consejos jurídicos genéricos fuera del contexto facilitado.",
             "Si el contexto no contiene la respuesta, indica claramente que no puedes confirmarlo con la norma aportada.",
         ].join(" ");
@@ -302,6 +382,13 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
         return res.json({
             respuesta: respuesta || "No he podido generar una respuesta basada en el convenio.",
             convenioUsado: convenioFileName || null,
+            conveniosUsados: conveniosFileName,
+            convenioDetectado: convenioResuelto ? {
+                province: convenioResuelto.province || null,
+                autonomousCommunity: convenioResuelto.autonomousCommunity || null,
+                sectorKeys: convenioResuelto.sectorKeys || [],
+                title: convenioResuelto.title || null,
+            } : null,
             fuentes: [
                 ...chunksBase.map((chunk) => ({
                     id: chunk.id,

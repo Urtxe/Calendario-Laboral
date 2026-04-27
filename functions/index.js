@@ -313,6 +313,8 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
             } else if (resolucionCatalogo.status && resolucionCatalogo.status !== "catalog_empty") {
                 return res.json({
                     respuesta: resolucionCatalogo.message,
+                    requiereAclaracion: true,
+                    opcionesConvenio: resolucionCatalogo.options || [],
                     convenioUsado: null,
                     conveniosUsados: [],
                     fuentes: [],

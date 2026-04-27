@@ -276,6 +276,25 @@ function resolveCatalogEntry(catalogEntries, criteria) {
     return yearB - yearA || a.title.localeCompare(b.title, "es");
   });
 
+  const sectorGroups = new Set(
+    sortedCandidates.map((candidate) =>
+      Array.isArray(candidate.sectorKeys) ? candidate.sectorKeys.slice().sort().join("|") : ""
+    )
+  );
+
+  if (sectorGroups.size > 1) {
+    return {
+      status: "ambiguous",
+      message: `He encontrado varios convenios posibles para esos datos: ${sortedCandidates.map((candidate) => candidate.title).join(", ")}. Indícame con más precisión el tipo de empresa o el sector exacto para decirte cuál te corresponde.`,
+      options: sortedCandidates.map((candidate) => ({
+        title: candidate.title,
+        province: candidate.province || null,
+        sectorKeys: candidate.sectorKeys || [],
+        fileNames: candidate.fileNames || [],
+      })),
+    };
+  }
+
   return {
     status: "resolved",
     entry: sortedCandidates[0],

@@ -586,12 +586,22 @@ async function enviarConsultaLegal() {
     }
 
     if (typing) typing.remove();
-    crearMensajeLegal(
-      data.respuesta || "No he podido generar una respuesta.",
-      "assistant",
-    );
+    let respuesta = data.respuesta || "No he podido generar una respuesta.";
+    if (data.requiereAclaracion && Array.isArray(data.opcionesConvenio) && data.opcionesConvenio.length) {
+      const sugerencias = data.opcionesConvenio
+        .slice(0, 3)
+        .map((opcion) => opcion && opcion.title ? `- ${opcion.title}` : "")
+        .filter(Boolean)
+        .join("\n");
 
-    if (!window.esPremium) {
+      if (sugerencias) {
+        respuesta = `${respuesta}\n\nPosibles convenios:\n${sugerencias}`;
+      }
+    }
+
+    crearMensajeLegal(respuesta, "assistant");
+
+    if (!window.esPremium && !data.requiereAclaracion) {
       setConsultasUsadas(getConsultasUsadas() + 1);
       actualizarTarjetaAsesorLegal(false);
     }

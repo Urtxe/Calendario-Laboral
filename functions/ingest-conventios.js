@@ -3,6 +3,12 @@ const path = require("path");
 const admin = require("firebase-admin");
 const { PDFParse } = require("pdf-parse");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const {
+  CATALOGO_CONVENIOS,
+  buildCatalogEntriesFromFileNames,
+  parseConvenioFileName,
+  sanitizeId,
+} = require("./convenio-metadata");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const CONVENIOS_DIR = path.join(__dirname, "convenios");
@@ -43,14 +49,6 @@ const embeddingModel = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
 
 function pause(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function sanitizeId(value) {
-  return String(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 120) || "convenio";
 }
 
 function getDocType(fileName) {
@@ -202,6 +200,7 @@ async function writeChunkGroup({
   startIndex,
 }) {
   const writePromises = [];
+  const convenioMetadata = parseConvenioFileName(fileName);
 
   for (let offset = 0; offset < chunks.length; offset += FIRESTORE_BATCH_SIZE) {
     const writeStart = offset;
@@ -223,6 +222,12 @@ async function writeChunkGroup({
           doc_type: docType,
           filePath,
           pageCount,
+          province: convenioMetadata.province,
+          autonomousCommunity: convenioMetadata.autonomousCommunity,
+          sectorKeys: convenioMetadata.sectorKeys,
+          catalogKey: convenioMetadata.catalogKey,
+          yearStart: convenioMetadata.yearStart,
+          yearEnd: convenioMetadata.yearEnd,
           chunkIndex: globalIndex,
           chunkTotal: totalChunks,
           texto: chunks[i],
@@ -242,6 +247,18 @@ async function writeChunkGroup({
   }
 
   await Promise.all(writePromises);
+}
+
+async function upsertCatalogForFileNames(fileNames) {
+  const entries = buildCatalogEntriesFromFileNames(fileNames);
+
+  for (const entry of entries) {
+    const docRef = db.collection(CATALOGO_CONVENIOS).doc(entry.id || sanitizeId(entry.title));
+    await docRef.set({
+      ...entry,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
 }
 
 async function buildProcessedPath(filePath) {
@@ -312,6 +329,10 @@ async function processFile(filePath) {
     if (batchIndex < totalBatches - 1) {
       await pause(BATCH_DELAY_MS);
     }
+  }
+
+  if (docType === "especifico") {
+    await upsertCatalogForFileNames([fileName]);
   }
 
   await moveToProcessed(filePath, processedPath);

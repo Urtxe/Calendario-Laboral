@@ -8,7 +8,8 @@
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
     "ingest:convenios": "node ingest-conventios.js",
-    "migrate:doc-type": "node migrate-doc-type.js"
+    "migrate:doc-type": "node migrate-doc-type.js",
+    "build:catalogo-convenios": "node build-convenio-catalog.js"
   },
   "engines": {
     "node": "22"

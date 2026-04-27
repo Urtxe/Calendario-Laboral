@@ -153,24 +153,41 @@ function actualizarTarjetaAsesorLegal(activar) {
     const trigger = document.getElementById('btn-ai-legal');
     const isPremiumUser = !!activar;
 
-    if (kicker) kicker.style.display = isPremiumUser ? 'none' : '';
+    if (kicker) kicker.style.display = '';
 
     if (paragraphs[0]) {
-        paragraphs[0].textContent = isPremiumUser
-            ? 'Preguntale a la IA sobre jornada, vacaciones, pluses o salario.'
-            : 'Preguntale a la IA sobre jornada, vacaciones, pluses o salario. 3 consultas gratis.';
+        if (isPremiumUser) {
+            paragraphs[0].textContent = 'Preguntale a la IA sobre jornada, vacaciones, pluses o salario.';
+        } else if (usuarioTieneSesion()) {
+            paragraphs[0].textContent = 'Preguntale a la IA sobre tu convenio. Tienes 3 consultas gratuitas.';
+        } else {
+            paragraphs[0].textContent = 'El asesor IA está visible para todos. Regístrate para empezar a consultar.';
+        }
     }
 
     if (paragraphs[1]) {
-        paragraphs[1].textContent = 'Abre el panel y compara tu convenio con la norma base en un clic.';
+        if (isPremiumUser) {
+            paragraphs[1].textContent = 'Abre el modal y consulta sin límites.';
+        } else if (usuarioTieneSesion()) {
+            const restantes = getConsultasRestantes();
+            paragraphs[1].textContent = restantes > 0
+                ? `Te quedan ${restantes} consultas gratuitas antes de pasar a Premium.`
+                : 'Has agotado las consultas gratuitas. Hazte Premium para seguir utilizándolo.';
+        } else {
+            paragraphs[1].textContent = 'Al clicar se abre el modal y te pedirá iniciar sesión para usar las consultas IA.';
+        }
     }
 
     if (badge) {
         if (isPremiumUser) {
             badge.textContent = 'PREMIUM';
-            badge.style.display = 'none';
+            badge.style.display = 'inline-flex';
+        } else if (usuarioTieneSesion()) {
+            const restantes = getConsultasRestantes();
+            badge.textContent = restantes > 0 ? `${restantes} GRATIS` : 'HAZTE PREMIUM';
+            badge.style.display = 'inline-flex';
         } else {
-            badge.textContent = 'IA ACTIVA';
+            badge.textContent = 'REGISTRATE';
             badge.style.display = 'inline-flex';
         }
     }
@@ -187,6 +204,12 @@ function actualizarTarjetaAsesorLegal(activar) {
 
 const LIMITE_CONSULTAS_GRATIS = 3;
 const ASESOR_LEGAL_STORAGE_PREFIX = 'balance_laboral_asesor_legal_';
+
+function getModoAsesorLegal() {
+    if (window.esPremium) return 'premium';
+    if (usuarioTieneSesion()) return 'free';
+    return 'anonimo';
+}
 
 function getAsesorLegalStorageKey() {
     if (window.usuarioActual && window.usuarioActual.uid) {
@@ -209,6 +232,35 @@ function setConsultasUsadas(valor) {
 function getConsultasRestantes() {
     if (window.esPremium) return Infinity;
     return Math.max(0, LIMITE_CONSULTAS_GRATIS - getConsultasUsadas());
+}
+
+function limpiarMensajesLegales() {
+    const messages = document.getElementById('legal-ai-messages');
+    if (messages) messages.innerHTML = '';
+}
+
+function crearMensajeBienvenidaLegal() {
+    const messages = document.getElementById('legal-ai-messages');
+    if (!messages || messages.childElementCount > 0) return;
+
+    const modo = getModoAsesorLegal();
+
+    if (modo === 'anonimo') {
+        crearMensajeLegal('Regístrate o inicia sesión para utilizar las consultas IA sobre convenios.', 'assistant');
+        return;
+    }
+
+    if (modo === 'free') {
+        const restantes = getConsultasRestantes();
+        if (restantes > 0) {
+            crearMensajeLegal(`Tienes ${restantes} consultas gratuitas disponibles. Pregúntame por jornada, vacaciones, pluses u horas extra.`, 'assistant');
+        } else {
+            crearMensajeLegal('Ya has agotado tus 3 consultas gratuitas. Hazte Premium para seguir consultando el convenio sin límite.', 'assistant');
+        }
+        return;
+    }
+
+    crearMensajeLegal('Pregúntame sobre tu convenio y te responderé comparando la norma base con el texto recuperado.', 'assistant');
 }
 
 function inyectarEstilosAsesorLegal() {
@@ -452,21 +504,33 @@ function actualizarTextoEstadoLegal() {
 
     if (!status || !note || !sendBtn || !input) return;
 
+    const modo = getModoAsesorLegal();
     const restantes = getConsultasRestantes();
 
-    if (window.esPremium) {
-        status.textContent = 'Modo PREMIUM activo. Consultas ilimitadas.';
-        note.textContent = 'Respuestas basadas en convenio y sin límite de consultas.';
+    if (modo === 'premium') {
+        status.style.display = 'none';
+        note.style.display = 'none';
         sendBtn.disabled = false;
         input.disabled = false;
+    } else if (modo === 'anonimo') {
+        status.style.display = 'block';
+        note.style.display = 'block';
+        status.textContent = 'Regístrate para utilizar las consultas IA sobre convenios.';
+        note.textContent = 'Crea una cuenta gratuita o inicia sesión para activar el asesor legal IA.';
+        sendBtn.disabled = true;
+        input.disabled = true;
     } else if (restantes > 0) {
-        status.textContent = `Modo gratuito: te quedan ${restantes} consultas.`;
-        note.textContent = `Límite gratuito: ${LIMITE_CONSULTAS_GRATIS} consultas.`;
+        status.style.display = 'block';
+        note.style.display = 'block';
+        status.textContent = `Modo gratuito: te quedan ${restantes} de ${LIMITE_CONSULTAS_GRATIS} consultas.`;
+        note.textContent = 'Cuando llegues a 0, tendrás que hacerte Premium para seguir consultando.';
         sendBtn.disabled = false;
         input.disabled = false;
     } else {
-        status.textContent = 'Has alcanzado el límite gratuito de consultas.';
-        note.textContent = 'Hazte Premium para seguir consultando el convenio sin límite.';
+        status.style.display = 'block';
+        note.style.display = 'block';
+        status.textContent = 'Has agotado tus 3 consultas gratuitas.';
+        note.textContent = 'Hazte Premium para seguir utilizando el asesor IA sin límite.';
         sendBtn.disabled = true;
         input.disabled = true;
     }
@@ -482,9 +546,15 @@ async function enviarConsultaLegal() {
         return;
     }
 
+    if (!usuarioTieneSesion()) {
+        actualizarTextoEstadoLegal();
+        crearMensajeLegal('Necesitas registrarte o iniciar sesión para utilizar las consultas IA.', 'assistant');
+        return;
+    }
+
     if (!window.esPremium && getConsultasRestantes() <= 0) {
         actualizarTextoEstadoLegal();
-        crearMensajeLegal('Has agotado las 3 consultas gratuitas. Hazte Premium para continuar.', 'error');
+        crearMensajeLegal('Has agotado las 3 consultas gratuitas. Hazte Premium para seguir utilizando el asesor IA.', 'assistant');
         return;
     }
 
@@ -529,6 +599,7 @@ async function enviarConsultaLegal() {
 
         if (!window.esPremium) {
             setConsultasUsadas(getConsultasUsadas() + 1);
+            actualizarTarjetaAsesorLegal(false);
         }
     } catch (error) {
         if (typing) typing.remove();
@@ -632,11 +703,14 @@ window.abrirAsesorLegal = function() {
     if (!shell) return;
 
     shell.classList.add('is-open');
+    limpiarMensajesLegales();
     actualizarTextoEstadoLegal();
+    crearMensajeBienvenidaLegal();
 
-    const messages = document.getElementById('legal-ai-messages');
-    if (messages && messages.childElementCount === 0) {
-        crearMensajeLegal('Hola. Pregúntame sobre tu convenio y te responderé comparando la norma base con el texto del convenio.', 'assistant');
+    if (!usuarioTieneSesion() && typeof mostrarLogin === 'function') {
+        setTimeout(function() {
+            mostrarLogin();
+        }, 250);
     }
 
     const input = document.getElementById('legal-ai-input');
@@ -652,13 +726,18 @@ window.actualizarAsesorLegalUI = function() {
     const badge = document.getElementById('legal-ai-header-badge');
     const trigger = document.getElementById('btn-ai-legal');
     const esPremiumActivo = !!window.esPremium;
+    const modo = getModoAsesorLegal();
 
     if (badge) {
-        if (esPremiumActivo) {
+        if (modo === 'premium') {
             badge.textContent = 'PREMIUM';
-            badge.style.display = 'none';
+            badge.style.display = 'inline-flex';
+        } else if (modo === 'free') {
+            const restantes = getConsultasRestantes();
+            badge.textContent = restantes > 0 ? `${restantes} GRATIS` : 'HAZTE PREMIUM';
+            badge.style.display = 'inline-flex';
         } else {
-            badge.textContent = 'IA ACTIVA';
+            badge.textContent = 'REGISTRATE';
             badge.style.display = 'inline-flex';
         }
     }

@@ -16,8 +16,7 @@ Pendiente antes de generar la app final:
 
 - Instalar/configurar Android SDK en el entorno local.
 - Generar keystore de release.
-- Obtener SHA-256 del certificado.
-- Crear y desplegar `/.well-known/assetlinks.json`.
+- Desplegar `/.well-known/assetlinks.json`.
 - Verificar Digital Asset Links.
 
 ## Estado del proyecto Android
@@ -181,21 +180,19 @@ Contenido:
 ```json
 [
   {
-    "relation": [
-      "delegate_permission/common.handle_all_urls"
-    ],
+    "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
       "package_name": "es.balancelaboral.app",
       "sha256_cert_fingerprints": [
-        "SHA256:REEMPLAZAR:POR:FINGERPRINT:REAL"
+        "07:B1:D7:F2:B5:C3:22:3B:CC:53:4B:8D:E5:7A:1A:84:B6:97:24:B8:1C:5A:D9:D8:2D:5A:A9:7C:5D:C6:24:7F"
       ]
     }
   }
 ]
 ```
 
-No crear el archivo real hasta tener el SHA-256 definitivo. Un `assetlinks.json` con fingerprint incorrecto provoca que la TWA no quede validada.
+El archivo real ya esta creado con el SHA-256 de la keystore release. Un `assetlinks.json` con fingerprint incorrecto provoca que la TWA no quede validada.
 
 Bubblewrap tambien puede generar el archivo desde su configuracion:
 

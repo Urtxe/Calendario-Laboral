@@ -47,8 +47,8 @@ button {
 /* Botón de Ayuda Flotante */
 .btn-ayuda-flotante {
     position: fixed;
-    bottom: 25px;
-    right: 25px;
+    bottom: calc(25px + var(--safe-area-bottom));
+    right: calc(25px + var(--safe-area-right));
     width: 50px;
     height: 50px;
     background-color: #fbbf24; /* El color --accent (dorado) de tu marca */
@@ -74,8 +74,8 @@ button {
 /* Ajuste para móviles: un poco más pequeño para que no estorbe */
 @media (max-width: 480px) {
     .btn-ayuda-flotante {
-        bottom: 20px;
-        right: 20px;
+        bottom: calc(20px + var(--safe-area-bottom));
+        right: calc(20px + var(--safe-area-right));
         width: 45px;
         height: 45px;
         font-size: 20px;
@@ -83,8 +83,8 @@ button {
 }
 .boton-cerrar-guia {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    top: calc(20px + var(--safe-area-top));
+    right: calc(20px + var(--safe-area-right));
     background-color: #f1f5f9; /* Un gris muy clarito y limpio */
     color: #1e293b;
     border: 1px solid #e2e8f0;
@@ -106,16 +106,16 @@ button {
 /* En móviles lo hacemos un pelín más grande para que sea fácil darle con el pulgar */
 @media (max-width: 480px) {
     .boton-cerrar-guia {
-        top: 15px;
-        right: 15px;
+        top: calc(15px + var(--safe-area-top));
+        right: calc(15px + var(--safe-area-right));
         padding: 12px 20px;
     }
 }
 /* --- CONTENEDOR Y BOTONES FLOTANTES --- */
 .floating-buttons-container {
     position: fixed;
-    bottom: 25px;
-    right: 20px;
+    bottom: calc(25px + var(--safe-area-bottom));
+    right: calc(20px + var(--safe-area-right));
     display: flex;
     flex-direction: row; /* Uno al lado del otro */
     gap: 12px;

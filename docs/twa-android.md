@@ -14,11 +14,45 @@ La PWA ya tiene los requisitos base para iniciar TWA:
 
 Pendiente antes de generar la app final:
 
-- Confirmar dominio de produccion definitivo.
+- Instalar/configurar Android SDK en el entorno local.
 - Generar keystore de release.
 - Obtener SHA-256 del certificado.
 - Crear y desplegar `/.well-known/assetlinks.json`.
 - Verificar Digital Asset Links.
+
+## Estado del proyecto Android
+
+Proyecto Bubblewrap creado en:
+
+```text
+android/twa
+```
+
+Manifest web usado:
+
+```text
+https://balancelaboral.es/manifest.json
+```
+
+Valores fijados en `android/twa/twa-manifest.json`:
+
+```text
+Package name: es.balancelaboral.app
+Host: balancelaboral.es
+App name: Balance Laboral
+Launcher name: Balance
+Start URL: /
+Display mode: standalone
+Orientation: portrait
+Theme color: #24344D
+Background color: #FFFFFF
+Version code: 1
+Version name: 1.0.0
+Signing key path: C:/keys/balance-laboral/balance-laboral-release.jks
+Signing key alias: balance-laboral-release
+```
+
+La keystore no existe todavia y no se ha generado dentro del repositorio. La ruta anterior es externa al repo y debe crearse manualmente solo en la maquina segura de release.
 
 ## Package name
 
@@ -41,13 +75,7 @@ Antes de publicarlo en Google Play hay que confirmar:
 Usar el manifest real desplegado en HTTPS:
 
 ```text
-https://TU_DOMINIO_FINAL/manifest.json
-```
-
-Para pruebas preliminares se puede usar Firebase Hosting:
-
-```text
-https://calendario-laboral-252b1.web.app/manifest.json
+https://balancelaboral.es/manifest.json
 ```
 
 No inicializar la app final contra un dominio temporal si luego se va a publicar con dominio propio. En TWA, el origen validado con Digital Asset Links es parte critica de la experiencia.
@@ -75,12 +103,12 @@ npx @bubblewrap/cli doctor
 
 ## Inicializar el proyecto Android
 
-Crear el proyecto generado fuera del frontend web, por ejemplo:
+El proyecto ya se ha generado en `android/twa`. Para regenerarlo desde cero en otra maquina, partir de la rama correcta y usar:
 
 ```powershell
 mkdir android
 cd android
-bubblewrap init --manifest https://TU_DOMINIO_FINAL/manifest.json --directory twa
+bubblewrap init --manifest https://balancelaboral.es/manifest.json --directory twa
 ```
 
 Valores recomendados durante `init`:
@@ -98,11 +126,7 @@ Background color: #ffffff
 Signing key alias: balance-laboral-release
 ```
 
-Si se genera contra Firebase Hosting temporal:
-
-```powershell
-bubblewrap init --manifest https://calendario-laboral-252b1.web.app/manifest.json --directory twa
-```
+No generar la keystore dentro de `android/twa`. Si Bubblewrap pregunta si debe crearla, responder `No` y crearla fuera del repositorio siguiendo la seccion siguiente.
 
 ## Keystore de release
 
@@ -149,7 +173,7 @@ Si Google Play App Signing esta activado, usar tambien el SHA-256 del certificad
 Ruta publica obligatoria:
 
 ```text
-https://TU_DOMINIO_FINAL/.well-known/assetlinks.json
+https://balancelaboral.es/.well-known/assetlinks.json
 ```
 
 Contenido:
@@ -195,7 +219,7 @@ Invoke-WebRequest https://TU_DOMINIO_FINAL/.well-known/assetlinks.json
 Verificar con la API de Digital Asset Links:
 
 ```text
-https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://TU_DOMINIO_FINAL&relation=delegate_permission/common.handle_all_urls
+https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://balancelaboral.es&relation=delegate_permission/common.handle_all_urls
 ```
 
 Tambien se puede usar:
@@ -212,6 +236,13 @@ Desde el proyecto Bubblewrap:
 cd android\twa
 bubblewrap build
 ```
+
+No ejecutar `bubblewrap build` definitivo hasta tener:
+
+- Android SDK configurado.
+- Keystore de release creada fuera del repositorio.
+- Passwords disponibles solo en entorno seguro o introducidas manualmente.
+- SHA-256 preparado para `assetlinks.json`.
 
 Salidas esperadas:
 

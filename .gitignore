@@ -98,3 +98,8 @@ google-play-service-account*.json
 **/app-release-bundle.aab
 **/*-release.apk
 **/*-release.aab
+**/.idea/
+**/*.iml
+**/.kotlin/
+**/.cxx/
+**/captures/

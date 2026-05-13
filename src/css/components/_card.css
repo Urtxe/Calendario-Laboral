@@ -212,7 +212,7 @@ body.is-premium .premium-locked {
 .legal-content {
     max-width: 500px;
     width: 90%;
-    max-height: 80vh;
+    max-height: calc(var(--app-modal-height) - var(--safe-area-top) - var(--safe-area-bottom) - 40px);
     display: flex;
     flex-direction: column;
 }

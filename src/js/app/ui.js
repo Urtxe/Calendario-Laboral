@@ -1,4 +1,35 @@
+function actualizarViewportVisible() {
+  const viewport = window.visualViewport;
+  const root = document.documentElement;
+  const height = viewport && viewport.height ? viewport.height : window.innerHeight;
+  const top = viewport && viewport.offsetTop ? viewport.offsetTop : 0;
+
+  if (height) root.style.setProperty("--app-visible-height", `${height}px`);
+  root.style.setProperty("--app-modal-height", height ? `${height}px` : "100dvh");
+  root.style.setProperty("--app-modal-top", `${top}px`);
+}
+
+function inicializarViewportIOS() {
+  actualizarViewportVisible();
+
+  if (!window.visualViewport) {
+    window.addEventListener("resize", actualizarViewportVisible, { passive: true });
+    window.addEventListener("orientationchange", actualizarViewportVisible, { passive: true });
+    return;
+  }
+
+  window.visualViewport.addEventListener("resize", actualizarViewportVisible, { passive: true });
+  window.visualViewport.addEventListener("scroll", actualizarViewportVisible, { passive: true });
+  window.addEventListener("orientationchange", actualizarViewportVisible, { passive: true });
+}
+
+function puedeAutoenfocarCampo() {
+  return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+}
+
 document.addEventListener("DOMContentLoaded", function () {
+  inicializarViewportIOS();
+
   const setupListener = (id, event, fn) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener(event, fn);
@@ -300,26 +331,35 @@ function inyectarEstilosAsesorLegal() {
         .legal-ai-shell {
             position: fixed;
             inset: 0;
+            top: var(--app-modal-top, 0px);
+            bottom: auto;
             z-index: 10000;
             display: none;
             align-items: flex-end;
             justify-content: flex-end;
             background: rgba(8, 15, 30, 0.38);
             backdrop-filter: blur(6px);
-            padding: 18px;
+            height: var(--app-modal-height);
+            padding:
+                calc(18px + var(--safe-area-top))
+                calc(18px + var(--safe-area-right))
+                calc(18px + var(--safe-area-bottom))
+                calc(18px + var(--safe-area-left));
+            overflow: hidden;
         }
         .legal-ai-shell.is-open {
             display: flex;
         }
         .legal-ai-panel {
             width: min(420px, calc(100vw - 24px));
-            height: min(78vh, 760px);
+            height: min(calc(var(--app-modal-height) - var(--safe-area-top) - var(--safe-area-bottom) - 36px), 760px);
             background: #f7f5ef;
             border-radius: 22px;
             box-shadow: 0 26px 70px rgba(15, 23, 42, 0.32);
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            min-height: 0;
             border: 1px solid rgba(36, 52, 77, 0.08);
         }
         .legal-ai-header {
@@ -330,6 +370,7 @@ function inyectarEstilosAsesorLegal() {
             align-items: flex-start;
             justify-content: space-between;
             gap: 12px;
+            flex-shrink: 0;
         }
         .legal-ai-title {
             margin: 0;
@@ -353,10 +394,14 @@ function inyectarEstilosAsesorLegal() {
             color: #4b5563;
             background: rgba(255, 255, 255, 0.72);
             border-bottom: 1px solid rgba(36, 52, 77, 0.08);
+            flex-shrink: 0;
         }
         .legal-ai-messages {
             flex: 1;
+            min-height: 0;
             overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
             padding: 18px;
             display: flex;
             flex-direction: column;
@@ -393,10 +438,12 @@ function inyectarEstilosAsesorLegal() {
             background: #fff;
             display: grid;
             gap: 10px;
+            flex-shrink: 0;
         }
         .legal-ai-input {
             width: 100%;
             min-height: 88px;
+            max-height: 34svh;
             resize: vertical;
             border: 1px solid #d6dbe4;
             border-radius: 16px;
@@ -443,8 +490,29 @@ function inyectarEstilosAsesorLegal() {
             }
             .legal-ai-panel {
                 width: 100vw;
-                height: 100vh;
+                height: var(--app-modal-height);
                 border-radius: 0;
+                border: 0;
+            }
+            .legal-ai-header {
+                padding-top: calc(14px + var(--safe-area-top));
+                padding-left: calc(16px + var(--safe-area-left));
+                padding-right: calc(16px + var(--safe-area-right));
+            }
+            .legal-ai-messages {
+                padding-left: calc(16px + var(--safe-area-left));
+                padding-right: calc(16px + var(--safe-area-right));
+            }
+            .legal-ai-inputbar {
+                padding:
+                    12px
+                    calc(14px + var(--safe-area-right))
+                    calc(12px + var(--safe-area-bottom))
+                    calc(14px + var(--safe-area-left));
+            }
+            .legal-ai-input {
+                min-height: 72px;
+                max-height: 28svh;
             }
         }
     `;
@@ -626,7 +694,7 @@ async function enviarConsultaLegal() {
     }
   } finally {
     actualizarTextoEstadoLegal();
-    if (input && !input.disabled) input.focus();
+    if (input && !input.disabled && puedeAutoenfocarCampo()) input.focus();
     if (sendBtn && !sendBtn.disabled) sendBtn.disabled = false;
   }
 }
@@ -705,7 +773,7 @@ window.abrirAsesorLegal = function () {
   }
 
   const input = document.getElementById("legal-ai-input");
-  if (input && !input.disabled) input.focus();
+  if (input && !input.disabled && puedeAutoenfocarCampo()) input.focus();
 };
 
 window.cerrarAsesorLegal = function () {

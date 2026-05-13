@@ -7,10 +7,14 @@
     "public": ".",
     "ignore": [
       "firebase.json",
-      "**/.*",
       ".git/**",
+      ".firebase/**",
       ".tmp.driveupload/**",
       ".tmp.drivedownload/**",
+      ".gitignore",
+      "**/.env",
+      "**/.env.*",
+      "**/*.log",
       "**/node_modules/**",
       "firestore.rules",
       "firestore.indexes.json",
@@ -45,16 +49,20 @@
         ]
       },
       {
-        "source": "/**",
+        "source": "/.well-known/assetlinks.json",
         "headers": [
           {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
             "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
+            "value": "no-cache, must-revalidate"
           }
         ]
       },
       {
-        "source": "service-worker.js",
+        "source": "/service-worker.js",
         "headers": [
           {
             "key": "Cache-Control",
@@ -63,6 +71,69 @@
           {
             "key": "Service-Worker-Allowed",
             "value": "/"
+          }
+        ]
+      },
+      {
+        "source": "/manifest.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/mensajeUsuarios.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/**/*.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/src/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400"
           }
         ]
       }

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Politica de privacidad de Balance Laboral. Informacion sobre datos, Firebase, funciones premium, IA y derechos del usuario.">
+    <meta name="theme-color" content="#24344d">
+    <meta name="robots" content="index, follow">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <title>Politica de Privacidad | Balance Laboral</title>
+    <style>
+        :root {
+            --primary: #24344d;
+            --primary-soft: #eef3f8;
+            --accent: #14b8a6;
+            --ink: #172033;
+            --muted: #64748b;
+            --line: #d9e2ec;
+            --surface: #ffffff;
+            --page: #f5f7fb;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--page);
+            color: var(--ink);
+            line-height: 1.65;
+        }
+
+        a {
+            color: #0f766e;
+        }
+
+        .privacy-header {
+            background: var(--primary);
+            color: #ffffff;
+            padding: 28px 20px;
+        }
+
+        .privacy-header-inner,
+        .privacy-main,
+        .privacy-footer-inner {
+            width: min(980px, calc(100% - 40px));
+            margin: 0 auto;
+        }
+
+        .brand-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 800;
+        }
+
+        .brand img {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: #ffffff;
+        }
+
+        .app-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 42px;
+            padding: 0 16px;
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 8px;
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .hero {
+            padding: 48px 0 28px;
+        }
+
+        .hero p {
+            max-width: 720px;
+            color: #dbeafe;
+            margin: 12px 0 0;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(2rem, 5vw, 3.25rem);
+            line-height: 1.08;
+            letter-spacing: 0;
+        }
+
+        h2 {
+            margin: 36px 0 12px;
+            font-size: 1.35rem;
+            line-height: 1.25;
+            color: var(--primary);
+        }
+
+        h3 {
+            margin: 24px 0 8px;
+            font-size: 1rem;
+            color: var(--ink);
+        }
+
+        .privacy-main {
+            padding: 34px 0 56px;
+        }
+
+        .policy-shell {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: clamp(22px, 4vw, 42px);
+            box-shadow: 0 20px 60px rgba(36, 52, 77, 0.08);
+        }
+
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 26px;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            min-height: 32px;
+            padding: 0 10px;
+            border-radius: 999px;
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li + li {
+            margin-top: 8px;
+        }
+
+        .notice {
+            margin: 24px 0;
+            padding: 18px;
+            border-left: 4px solid var(--accent);
+            background: #f0fdfa;
+            border-radius: 6px;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 34px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 0 18px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 800;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+        }
+
+        .btn-secondary {
+            border: 1px solid var(--line);
+            color: var(--primary);
+            background: #ffffff;
+        }
+
+        .privacy-footer {
+            padding: 30px 20px 44px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 640px) {
+            .privacy-header-inner,
+            .privacy-main,
+            .privacy-footer-inner {
+                width: min(100% - 28px, 980px);
+            }
+
+            .brand-row {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .app-link,
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="privacy-header">
+        <div class="privacy-header-inner">
+            <div class="brand-row">
+                <a class="brand" href="/" aria-label="Volver a Balance Laboral">
+                    <img src="assets/images/logo.png" alt="">
+                    <span>Balance Laboral</span>
+                </a>
+                <a class="app-link" href="/">Volver a la app</a>
+            </div>
+            <div class="hero">
+                <h1>Politica de Privacidad</h1>
+                <p>Informacion sobre como Balance Laboral trata los datos necesarios para registrar jornadas, sincronizar la cuenta, generar informes y ofrecer funciones de ayuda.</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="privacy-main">
+        <article class="policy-shell">
+            <div class="meta">
+                <span class="tag">Balance Laboral</span>
+                <span>Ultima actualizacion: 14 de mayo de 2026</span>
+            </div>
+
+            <p>
+                Esta Politica de Privacidad describe como se recogen, usan y protegen los datos personales y laborales introducidos en Balance Laboral, aplicacion disponible en <a href="https://balancelaboral.es">https://balancelaboral.es</a>.
+            </p>
+
+            <h2>1. Responsable y contacto</h2>
+            <p>
+                El responsable del tratamiento asociado a la aplicacion Balance Laboral atiende las consultas de privacidad, soporte y ejercicio de derechos en el correo <a href="mailto:soporte@balancelaboral.es">soporte@balancelaboral.es</a>.
+            </p>
+
+            <h2>2. Datos que puede tratar la aplicacion</h2>
+            <p>Balance Laboral trata los datos que el usuario introduce o genera al utilizar la aplicacion, entre ellos:</p>
+            <ul>
+                <li>Datos de cuenta e identificacion tecnica necesarios para iniciar sesion mediante Firebase Auth, como correo electronico, identificadores de usuario y metadatos de autenticacion.</li>
+                <li>Datos de configuracion laboral introducidos por el usuario, como localidad, sector, tipo de jornada, horas anuales, calendario, festivos, vacaciones, permisos, horas trabajadas y horas extra.</li>
+                <li>Datos derivados del uso de la aplicacion, como balances de jornada, historicos, ajustes de calendario y preferencias necesarias para prestar el servicio.</li>
+                <li>Informacion incluida en informes PDF generados o exportados por el usuario.</li>
+                <li>Consultas que el usuario envie a la funcion de IA integrada para preguntas sobre convenios colectivos, cuando esta funcion este disponible o activada.</li>
+                <li>Informacion tecnica basica del servicio, como registros de funcionamiento, errores, seguridad y llamadas a Cloud Functions.</li>
+            </ul>
+
+            <h2>3. Finalidades del tratamiento</h2>
+            <p>Los datos se utilizan para las siguientes finalidades:</p>
+            <ul>
+                <li>Permitir el registro, calculo y consulta del balance de jornada laboral.</li>
+                <li>Sincronizar la cuenta y los datos entre dispositivos mediante Firebase y Firestore.</li>
+                <li>Generar, descargar o exportar informes PDF y datos asociados a la jornada.</li>
+                <li>Gestionar funciones premium actuales o futuras, incluyendo pagos o validaciones mediante proveedores externos cuando sea aplicable.</li>
+                <li>Responder consultas del usuario mediante la IA integrada sobre convenios o informacion laboral relacionada.</li>
+                <li>Mantener la seguridad, prevenir abusos, resolver incidencias tecnicas y mejorar la estabilidad del servicio.</li>
+                <li>Atender solicitudes de soporte, privacidad, exportacion o eliminacion de datos.</li>
+            </ul>
+
+            <h2>4. Firebase, Firestore y Cloud Functions</h2>
+            <p>
+                Balance Laboral utiliza servicios tecnicos de Google Firebase para autenticacion, almacenamiento y ejecucion de funcionalidades del servicio. Firebase Auth permite iniciar sesion y mantener la cuenta; Firestore almacena los datos de jornada y configuracion asociados al usuario; Cloud Functions permite ejecutar procesos del backend, como consultas, integraciones o tareas necesarias para el funcionamiento de la aplicacion.
+            </p>
+
+            <h2>5. IA integrada para consultas sobre convenios</h2>
+            <p>
+                La aplicacion puede incluir una funcion de inteligencia artificial para ayudar a interpretar consultas sobre convenios colectivos o informacion laboral. Las preguntas enviadas por el usuario pueden ser procesadas para generar una respuesta orientativa.
+            </p>
+            <div class="notice">
+                La IA ofrece informacion de apoyo y no sustituye el asesoramiento profesional, sindical, juridico o administrativo. Las respuestas pueden contener errores, estar incompletas o no ajustarse a un caso concreto. El usuario debe verificar la informacion antes de tomar decisiones laborales o legales.
+            </div>
+
+            <h2>6. Pagos y funciones premium</h2>
+            <p>
+                Algunas funciones pueden ser premium o requerir pago. Cuando se utilicen proveedores externos como Stripe u otros procesadores de pago, el tratamiento de los datos de pago se realizara en la plataforma del proveedor correspondiente. Balance Laboral no necesita almacenar el numero completo de tarjeta bancaria. El proveedor puede tratar datos necesarios para procesar la transaccion, prevenir fraude, emitir justificantes o gestionar suscripciones.
+            </p>
+
+            <h2>7. Conservacion de los datos</h2>
+            <p>
+                Los datos se conservaran mientras la cuenta permanezca activa o mientras sean necesarios para prestar el servicio solicitado. El usuario puede solicitar la eliminacion de su cuenta y de sus datos escribiendo a <a href="mailto:soporte@balancelaboral.es">soporte@balancelaboral.es</a> o usando las opciones disponibles en la aplicacion. Algunos datos podrian conservarse durante plazos adicionales cuando exista una obligacion legal, una incidencia pendiente, una necesidad de seguridad o una relacion contractual que lo justifique.
+            </p>
+
+            <h2>8. Seguridad</h2>
+            <p>
+                Balance Laboral aplica medidas tecnicas y organizativas razonables para proteger los datos, incluyendo autenticacion de usuarios, reglas de acceso en Firebase, comunicaciones cifradas mediante HTTPS y limitacion de accesos tecnicos. Ningun sistema conectado a Internet puede garantizar seguridad absoluta, pero se trabaja para reducir riesgos y mantener la informacion protegida.
+            </p>
+
+            <h2>9. Proveedores tecnicos</h2>
+            <p>
+                Para prestar el servicio pueden intervenir proveedores tecnicos como Google Firebase, Google Cloud, Stripe u otros servicios equivalentes necesarios para autenticacion, almacenamiento, funciones cloud, pagos, analitica tecnica, seguridad, soporte o infraestructura. Estos proveedores actuan bajo sus propias condiciones y politicas, y solo deberian tratar los datos necesarios para prestar sus servicios.
+            </p>
+
+            <h2>10. Derechos del usuario</h2>
+            <p>
+                El usuario puede solicitar el acceso, rectificacion, supresion, oposicion, limitacion del tratamiento y portabilidad de sus datos cuando proceda. Tambien puede solicitar la eliminacion de la cuenta o la exportacion de los datos disponibles. Para ejercer estos derechos, debe escribir a <a href="mailto:soporte@balancelaboral.es">soporte@balancelaboral.es</a>, indicando la solicitud y el correo asociado a la cuenta.
+            </p>
+
+            <h2>11. Eliminacion de cuenta y datos</h2>
+            <p>
+                Balance Laboral incluye opciones para exportar datos y eliminar la cuenta desde el footer de la aplicacion cuando el usuario esta autenticado o cuando la funcionalidad este disponible. Si el usuario no puede completar el proceso desde la app, puede solicitarlo por correo en <a href="mailto:soporte@balancelaboral.es">soporte@balancelaboral.es</a>.
+            </p>
+
+            <h2>12. Cambios en esta politica</h2>
+            <p>
+                Esta Politica de Privacidad puede actualizarse para reflejar cambios legales, tecnicos o funcionales. La fecha de ultima actualizacion indicara la version vigente. Si los cambios son relevantes, se procurara informar al usuario mediante la aplicacion o por otros medios razonables.
+            </p>
+
+            <h2>13. Contacto</h2>
+            <p>
+                Para cualquier consulta sobre privacidad, soporte, proteccion de datos, eliminacion de cuenta o funcionamiento de Balance Laboral, puede contactar en <a href="mailto:soporte@balancelaboral.es">soporte@balancelaboral.es</a>.
+            </p>
+
+            <div class="actions">
+                <a class="btn btn-primary" href="/">Volver a Balance Laboral</a>
+                <a class="btn btn-secondary" href="mailto:soporte@balancelaboral.es">Contactar con soporte</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="privacy-footer">
+        <div class="privacy-footer-inner">
+            <p><b>Balance Laboral</b> &copy; 2026. Politica de privacidad publica.</p>
+        </div>
+    </footer>
+</body>
+</html>

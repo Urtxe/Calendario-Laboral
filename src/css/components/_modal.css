@@ -263,3 +263,99 @@
         padding: 28px 20px;
     }
 }
+
+@media (min-width: 1024px) {
+    .modal-overlay {
+        overflow: hidden;
+        padding: clamp(16px, 3vh, 28px);
+    }
+
+    .modal-content.pricing-content {
+        width: min(92vw, 760px);
+        max-width: 760px;
+        max-height: min(92vh, calc(var(--app-modal-height) - clamp(32px, 6vh, 56px)));
+        padding: clamp(20px, 3vh, 30px);
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .pricing-content h2 {
+        font-size: clamp(1.55rem, 3.3vh, 2.05rem);
+        line-height: 1.1;
+        margin-bottom: clamp(6px, 1vh, 10px);
+    }
+
+    .pricing-content .modal-subtitle {
+        margin-bottom: clamp(14px, 2vh, 22px);
+        font-size: clamp(0.9rem, 1.8vh, 1rem);
+    }
+
+    .perks-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: clamp(8px, 1.25vh, 12px);
+        margin: 0;
+    }
+
+    .perk-item {
+        display: grid;
+        grid-template-columns: 26px minmax(0, 1fr);
+        align-items: start;
+        gap: 10px;
+        text-align: left;
+        padding: clamp(8px, 1.1vh, 10px);
+        border-radius: 12px;
+        background: #f8fafc;
+    }
+
+    .perk-item p {
+        margin: 0;
+        font-size: clamp(0.78rem, 1.6vh, 0.92rem);
+        line-height: 1.3;
+    }
+
+    .perk-icon {
+        width: 22px;
+        height: 22px;
+    }
+
+    .plans-container {
+        gap: 14px;
+        margin: clamp(14px, 2vh, 20px) 0 0;
+        flex: 0 0 auto;
+    }
+
+    .plans-container .plan-card {
+        min-width: 0;
+        max-width: none;
+        min-height: 0;
+        padding: clamp(12px, 1.7vh, 16px);
+        border-radius: 14px;
+    }
+
+    .plan-card.popular {
+        transform: none;
+    }
+
+    .plan-name {
+        font-size: clamp(0.9rem, 1.8vh, 1rem);
+    }
+
+    .plan-price {
+        font-size: clamp(1rem, 2.2vh, 1.25rem);
+        margin-top: 8px;
+    }
+
+    .btn-plan,
+    .btn-plan-yellow {
+        min-height: clamp(36px, 5vh, 44px);
+        margin-top: clamp(10px, 1.5vh, 14px);
+        padding: 8px 14px !important;
+    }
+
+    .btn-link-cancel {
+        margin-top: clamp(12px, 1.8vh, 18px);
+        padding: 9px 20px !important;
+    }
+}

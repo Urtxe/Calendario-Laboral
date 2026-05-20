@@ -120,6 +120,17 @@
             <span>Ayuda y Soporte</span>
         </button>
     </nav>
+
+    <div class="sidebar-footer-links" aria-label="Legal y cuenta">
+        <a href="/privacy">Privacidad</a>
+        <a href="#" onclick="mostrarLegal('terminos'); return false;">Términos</a>
+        <a href="#" onclick="mostrarLegal('cookies'); return false;">Cookies</a>
+        <a href="#" class="link-cancelar-sub" onclick="redirigirPortalStripe(); return false;" style="display: none;">
+            Darse de baja
+        </a>
+        <a href="#" onclick="exportarMisDatos(); return false;">Exportar datos</a>
+        <a href="#" onclick="eliminarCuentaTotalmente(); return false;">Eliminar cuenta</a>
+    </div>
 </aside>
 
 
@@ -556,7 +567,7 @@
         <a href="#" onclick="mostrarLegal('terminos'); return false;">Términos</a>
         <a href="#" onclick="mostrarLegal('cookies'); return false;">Cookies</a>
         
-        <a href="#" id="link-cancelar-sub" onclick="redirigirPortalStripe(); return false;" style="display: none;">
+        <a href="#" id="link-cancelar-sub" class="link-cancelar-sub" onclick="redirigirPortalStripe(); return false;" style="display: none;">
             Darse de baja
         </a>
 

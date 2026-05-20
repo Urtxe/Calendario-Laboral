@@ -209,14 +209,16 @@ function actualizarInterfazPremium(activar) {
   const btnP = document.getElementById("btnPDF");
   const emailContenedor = document.querySelector(".user-profile-info");
   const btnUpgrade = document.getElementById("btn-upgrade");
-  const linkCancel = document.getElementById("link-cancelar-sub");
+  const linksCancel = document.querySelectorAll(".link-cancelar-sub");
   const oldBadge = document.querySelector(".pro-badge-email");
   if (oldBadge) oldBadge.remove();
 
   if (activar) {
     document.body.classList.add("is-premium");
     if (btnUpgrade) btnUpgrade.style.display = "none";
-    if (linkCancel) linkCancel.style.display = "inline";
+    linksCancel.forEach((link) => {
+      link.style.display = "inline";
+    });
     if (sE) sE.classList.remove("premium-locked");
     if (sH) sH.classList.remove("premium-locked");
     if (sP) sP.classList.remove("premium-locked");
@@ -233,7 +235,9 @@ function actualizarInterfazPremium(activar) {
   } else {
     document.body.classList.remove("is-premium");
     if (btnUpgrade) btnUpgrade.style.display = "block";
-    if (linkCancel) linkCancel.style.display = "none";
+    linksCancel.forEach((link) => {
+      link.style.display = "none";
+    });
     if (sE) sE.classList.add("premium-locked");
     if (sH) sH.classList.add("premium-locked");
     if (sP) sP.classList.add("premium-locked");

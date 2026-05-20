@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2.0.1';
+const CACHE_VERSION = 'v2.0.2';
 const SHELL_CACHE = `balance-laboral-shell-${CACHE_VERSION}`;
 const STATIC_CACHE = `balance-laboral-static-${CACHE_VERSION}`;
 const APP_BASE = new URL('./', self.location);

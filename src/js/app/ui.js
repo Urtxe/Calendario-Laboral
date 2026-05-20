@@ -75,7 +75,7 @@ function inicializarNavegacionDashboard() {
   const sincronizarModo = () => {
     if (desktopQuery.matches) {
       const activeItem = document.querySelector(".sidebar-nav-item.active");
-      activarSeccion(activeItem?.dataset.dashboardTarget || "card-resumen", { skipScroll: true });
+      activarSeccion(activeItem?.dataset.dashboardTarget || "cargar-datos", { skipScroll: true });
     } else {
       sections.forEach((section) => section.classList.remove("dashboard-section-active"));
     }

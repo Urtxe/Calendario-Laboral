@@ -29,7 +29,8 @@ h1 {
         background:
             linear-gradient(135deg, rgba(236, 244, 255, 0.92), rgba(248, 250, 252, 0.98) 42%),
             var(--bg-page);
-        overflow-x: hidden;
+        height: var(--app-visible-height);
+        overflow: hidden;
     }
 
     .app-shell {

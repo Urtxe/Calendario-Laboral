@@ -406,8 +406,20 @@ body.is-premium #btn-upgrade {
         padding: calc(18px + var(--safe-area-top)) clamp(10px, 1.1vw, 18px) calc(18px + var(--safe-area-bottom)) clamp(10px, 1.1vw, 18px) !important;
         border-right: 1px solid rgba(255, 255, 255, 0.08);
         box-shadow: 18px 0 45px rgba(15, 23, 42, 0.14);
-        overflow: hidden;
+        overflow-x: hidden;
+        overflow-y: auto;
         gap: clamp(8px, 1.2vh, 12px);
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.36) transparent;
+    }
+
+    #app-header-container::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #app-header-container::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.30);
+        border-radius: 999px;
     }
 
     .main-title-card {
@@ -445,6 +457,7 @@ body.is-premium #btn-upgrade {
         padding: clamp(10px, 1.5vh, 14px);
         border-radius: 14px;
         box-shadow: none;
+        flex-shrink: 0;
     }
 
     .ai-legal-copy h3 {
@@ -461,7 +474,7 @@ body.is-premium #btn-upgrade {
 
     .btn-ai-legal {
         width: 100%;
-        min-height: 38px;
+        min-height: clamp(34px, 4.8vh, 38px);
         border-radius: 10px;
     }
 
@@ -473,6 +486,7 @@ body.is-premium #btn-upgrade {
         padding: clamp(9px, 1.25vh, 12px) !important;
         border-radius: 14px;
         min-height: 0;
+        flex-shrink: 0;
     }
 
     .user-details-group,

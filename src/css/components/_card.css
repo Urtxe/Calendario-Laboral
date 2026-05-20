@@ -312,7 +312,6 @@ body.is-premium .premium-locked {
     }
 
     .app-footer {
-        padding-left: 332px;
-        background: transparent;
+        display: none;
     }
 }

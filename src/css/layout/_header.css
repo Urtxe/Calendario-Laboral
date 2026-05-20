@@ -14,6 +14,10 @@
     display: none;
 }
 
+.sidebar-footer-links {
+    display: none;
+}
+
 /* Tarjetas base */
 .header-card {
     border-radius: 16px;
@@ -566,5 +570,27 @@ body.is-premium #btn-upgrade {
         padding: 3px 6px;
         font-size: 0.5rem;
         border-radius: 5px;
+    }
+
+    .sidebar-footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        margin-top: auto;
+        padding-top: clamp(10px, 1.4vh, 16px);
+        border-top: 1px solid rgba(255, 255, 255, 0.10);
+    }
+
+    .sidebar-footer-links a {
+        color: rgba(255, 255, 255, 0.64);
+        font-size: clamp(0.68rem, 0.78vw, 0.76rem);
+        font-weight: 600;
+        line-height: 1.2;
+        text-decoration: none;
+    }
+
+    .sidebar-footer-links a:hover {
+        color: #ffffff;
+        text-decoration: underline;
     }
 }

@@ -1,551 +1,901 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description" content="Registro de jornada laboral, balance de horas, sincronización en la nube y exportación de informes.">
-    <meta name="application-name" content="Balance Laboral">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Balance">
-    <meta name="theme-color" content="#24344d">
-    
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
-    <link rel="manifest" href="manifest.json">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="Registro de jornada laboral, balance de horas, sincronización en la nube y exportación de informes."
+    />
+    <meta name="application-name" content="Balance Laboral" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="Balance" />
+    <meta name="theme-color" content="#24344d" />
 
-    <link rel="stylesheet" href="src/css/main.css">
-    
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="assets/icons/favicon-32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="assets/icons/icon-192.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="assets/icons/apple-touch-icon.png"
+    />
+    <link rel="manifest" href="manifest.json" />
+
+    <link rel="stylesheet" href="src/css/main.css" />
+
     <script src="https://unpkg.com/lucide@1.14.0"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
     <title>Balance Laboral</title>
-</head>
-<body>
-
-<div class="app-shell">
-<aside id="app-header-container">
-    <div class="header-card main-title-card">
-        <div class="header-info">
-    <div class="header-icon-main">
-    <img src="assets/images/logo.png" alt="Logo App" class="app-logo-header" onclick="mostrarLogoGrande()" style="cursor: zoom-in;">
-    </div>            
-
-    <div class="header-text-group">
-                <h2 >Balance Laboral</h2>
-                <p>Gestión de Jornada</p>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside id="app-header-container">
+        <div class="header-card main-title-card">
+          <div class="header-info">
+            <div class="header-icon-main">
+              <img
+                src="assets/images/logo.png"
+                alt="Logo App"
+                class="app-logo-header"
+                onclick="mostrarLogoGrande()"
+                style="cursor: zoom-in"
+              />
             </div>
+
+            <div class="header-text-group">
+              <h2>Balance Laboral</h2>
+              <p>Gestión de Jornada</p>
+            </div>
+          </div>
         </div>
 
-      
-</div>
-
-    <div id="ai-legal-card" class="header-card ai-legal-card">
-        <div class="ai-legal-copy">
+        <div id="ai-legal-card" class="header-card ai-legal-card">
+          <div class="ai-legal-copy">
             <span class="ai-legal-kicker">
-                <i data-lucide="scale" size="14"></i>
-                Asesor legal IA
+              <i data-lucide="scale" size="14"></i>
+              Asesor legal IA
             </span>
             <h3>Consulta tu convenio al momento</h3>
-            <p>Preguntale a la IA sobre jornada, vacaciones, pluses o salario.</p>
-            <p>Empieza con 3 consultas gratis y escala a Premium cuando quieras.</p>
-        </div>
-        <div class="ai-legal-actions">
-            <span class="premium-tag ai-legal-tag" id="legal-ai-header-badge">REGISTRATE</span>
+            <p>
+              Preguntale a la IA sobre jornada, vacaciones, pluses o salario.
+            </p>
+            <p>
+              Empieza con 3 consultas gratis y escala a Premium cuando quieras.
+            </p>
+          </div>
+          <div class="ai-legal-actions">
+            <span class="premium-tag ai-legal-tag" id="legal-ai-header-badge"
+              >REGISTRATE</span
+            >
             <button type="button" id="btn-ai-legal" class="btn-ai-legal">
-                <i data-lucide="message-square" size="16"></i>
-                Abrir asesor
+              <i data-lucide="message-square" size="16"></i>
+              Abrir asesor
             </button>
+          </div>
         </div>
-    </div>
 
-    <div id="user-info" class="header-card user-card" style="display: none;">
-        <div class="user-profile-info">
+        <div id="user-info" class="header-card user-card" style="display: none">
+          <div class="user-profile-info">
             <div class="user-details-group">
-                <span id="user-email" class="text-white-figma"></span>
-                <button id="btn-upgrade" onclick="abrirModalPremium()" class="btn-upgrade-minimal">
-                    Hazte Premium ✨
-                </button>
+              <span id="user-email" class="text-white-figma"></span>
+              <button
+                id="btn-upgrade"
+                onclick="abrirModalPremium()"
+                class="btn-upgrade-minimal"
+              >
+                Hazte Premium ✨
+              </button>
             </div>
-        </div>
-        <button onclick="cerrarSesion()" class="btn-logout-figma">
+          </div>
+          <button onclick="cerrarSesion()" class="btn-logout-figma">
             <i data-lucide="log-out" size="14"></i> Salir
-        </button>
-    </div>
-
-    <div id="auth-buttons" class="header-card auth-card">
-        <p class="auth-message">Sincroniza tus datos</p>
-        <div class="auth-actions">
-            <button onclick="mostrarLogin()" class="btn-login-figma">Iniciar Sesion</button>
-            <button onclick="mostrarRegistro()" class="btn-register-figma">Registrarse</button>
+          </button>
         </div>
-    </div>
 
-    <nav class="dashboard-sidebar-nav" aria-label="Secciones principales">
-        <button type="button" class="sidebar-nav-item active" data-dashboard-target="cargar-datos">
+        <div id="auth-buttons" class="header-card auth-card">
+          <p class="auth-message">Sincroniza tus datos</p>
+          <div class="auth-actions">
+            <button onclick="mostrarLogin()" class="btn-login-figma">
+              Iniciar Sesion
+            </button>
+            <button onclick="mostrarRegistro()" class="btn-register-figma">
+              Registrarse
+            </button>
+          </div>
+        </div>
+
+        <nav class="dashboard-sidebar-nav" aria-label="Secciones principales">
+          <button
+            type="button"
+            class="sidebar-nav-item active"
+            data-dashboard-target="cargar-datos"
+          >
             <i data-lucide="user"></i>
             <span>Datos Usuario</span>
-        </button>
-        <button type="button" class="sidebar-nav-item" data-dashboard-target="card-calendario">
+          </button>
+          <button
+            type="button"
+            class="sidebar-nav-item"
+            data-dashboard-target="card-calendario"
+          >
             <i data-lucide="calendar"></i>
             <span>Calendario</span>
-        </button>
-        <button type="button" class="sidebar-nav-item" data-dashboard-target="card-resumen">
+          </button>
+          <button
+            type="button"
+            class="sidebar-nav-item"
+            data-dashboard-target="card-resumen"
+          >
             <i data-lucide="list"></i>
             <span>Resumen</span>
-        </button>
-        <button type="button" class="sidebar-nav-item" data-dashboard-target="seccion-horas-extra">
+          </button>
+          <button
+            type="button"
+            class="sidebar-nav-item"
+            data-dashboard-target="seccion-horas-extra"
+          >
             <i data-lucide="clock-9"></i>
             <span>Horas Extra</span>
             <span class="premium-tag">PREMIUM</span>
-        </button>
-        <button type="button" class="sidebar-nav-item" data-dashboard-target="seccion-pdf">
+          </button>
+          <button
+            type="button"
+            class="sidebar-nav-item"
+            data-dashboard-target="seccion-pdf"
+          >
             <i data-lucide="file-down"></i>
             <span>Exportación PDF</span>
             <span class="premium-tag">PREMIUM</span>
-        </button>
-        <button type="button" class="sidebar-nav-item" data-dashboard-target="card-balance">
+          </button>
+          <button
+            type="button"
+            class="sidebar-nav-item"
+            data-dashboard-target="card-balance"
+          >
             <i data-lucide="award"></i>
             <span>Balance Final</span>
-        </button>
-        <button type="button" class="sidebar-nav-item" data-dashboard-target="seccion-historial">
+          </button>
+          <button
+            type="button"
+            class="sidebar-nav-item"
+            data-dashboard-target="seccion-historial"
+          >
             <i data-lucide="hourglass"></i>
             <span>Histórico Anual</span>
             <span class="premium-tag">PREMIUM</span>
-        </button>
-        <button type="button" class="sidebar-nav-item" data-dashboard-target="card-ayuda">
+          </button>
+          <button
+            type="button"
+            class="sidebar-nav-item"
+            data-dashboard-target="card-ayuda"
+          >
             <i data-lucide="help-circle"></i>
             <span>Ayuda y Soporte</span>
-        </button>
-    </nav>
+          </button>
+        </nav>
 
-    <div class="sidebar-footer-links" aria-label="Legal y cuenta">
-        <a href="/privacy">Privacidad</a>
-        <a href="#" onclick="mostrarLegal('terminos'); return false;">Términos</a>
-        <a href="#" onclick="mostrarLegal('cookies'); return false;">Cookies</a>
-        <a href="#" class="link-cancelar-sub" onclick="redirigirPortalStripe(); return false;" style="display: none;">
+        <div class="sidebar-footer-links" aria-label="Legal y cuenta">
+          <a href="/privacy">Privacidad</a>
+          <a
+            href="#"
+            onclick="
+              mostrarLegal('terminos');
+              return false;
+            "
+            >Términos</a
+          >
+          <a
+            href="#"
+            onclick="
+              mostrarLegal('cookies');
+              return false;
+            "
+            >Cookies</a
+          >
+          <a
+            href="#"
+            class="link-cancelar-sub"
+            onclick="
+              redirigirPortalStripe();
+              return false;
+            "
+            style="display: none"
+          >
             Darse de baja
-        </a>
-        <a href="#" onclick="exportarMisDatos(); return false;">Exportar datos</a>
-        <a href="#" onclick="eliminarCuentaTotalmente(); return false;">Eliminar cuenta</a>
-    </div>
-</aside>
-
-
-
-
-<main class="app-main">
-<div id="app-container">
-        <div id="cargar-datos" class="collapsible-card"> <div class="card-header" onclick="toggleCard(this)">
-                <span>
-                    <div class="card-icon-container"><i data-lucide="user"></i></div>
-                    Datos Usuario
-                </span>
-                <i data-lucide="chevron-down" class="toggle-icon"></i>
-         </div>
-            <div class="card-body">
-                <div class="config-panel">
-                    <div class="config-card">
-                        <span class="card-title"><i data-lucide="map-pin" size="14"></i> Localidad</span>
-                        <select id="ciudadUsuario" class="select-standard">
-                            <option value="Donostia" selected>Donostia-San Sebastián</option>
-                            <option value="Bilbao">Bilbo-Bilbao</option>
-                            <option value="Gasteiz">Gasteiz-Vitoria</option>
-                            <option value="Iruña">Iruña-Pamplona</option>
-                            <option value="Madrid">Madrid</option>
-                            <option value="Barcelona">Barcelona</option>
-                            <option value="Zaragoza">Zaragoza</option>
-                            <option value="Valencia">Valencia</option>
-                            <option value="Sevilla">Sevilla</option>
-                            <option value="Malaga">Málaga</option>
-                        </select>
-                    </div>
-                    <div class="config-card">
-                        <span class="card-title"><i data-lucide="briefcase" size="14"></i> Sector Profesional</span>
-                        <select id="sectorUsuario" class="select-standard">
-                            <option value="general">Régimen General</option>
-                            <option value="alojamientos">Alojamientos</option>
-                            <option value="hosteleria">Hostelería y Restauración</option>
-                            <option value="transporte">Transporte y Logística</option>
-                            <option value="limpieza">Limpieza de Edificios y Locales</option>
-                        </select>
-                    </div>
-                    <div class="config-card">
-                        <span class="card-title"><i data-lucide="calendar-days" size="14"></i> Año Visualizado</span>
-                        <div class="stepper">
-                            <button type="button" class="step-btn" onclick="ajustarValor('inputAnio', -1)">−</button>
-                            <input type="number" id="inputAnio" value="2026" readonly>
-                            <button type="button" class="step-btn" onclick="ajustarValor('inputAnio', 1)">+</button>
-                        </div>
-                    </div>
-                    <div class="config-card">
-                        <span class="card-title">
-                            <i data-lucide="timer" size="14"></i> Horas Requeridas 
-                            <span class="info-tooltip" data-tooltip="Horas según convenio anual a jornada completa, compensar con el balance del año anterior.">
-                                <i data-lucide="info" size="14"></i>
-                            </span>
-                        </span>
-                        <input type="number" id="horasAnuales" class="input-standard" value="1719">
-                    </div>
-<div class="config-card">
-    <span class="card-title"><i data-lucide="calendar-clock" size="14"></i> Tipo de Jornada</span>
-    <select id="tipoJornada" class="select-standard" onchange="gestionarJornadaPersonalizada()">
-        <option value="1">8h / 8h (100%) Jornada Completa</option>
-        <option value="0.875">7h / 8h (87.5%)</option>
-        <option value="0.75">6h / 8h (75%)</option>
-        <option value="0.625">5h / 8h (62.5%)</option>
-        <option value="0.5">4h / 8h (50%) Media Jornada</option>
-        <option value="custom">Otro (Introducir %)</option>
-    </select>
-    
-    <input type="number" id="inputJornadaCustom" class="input-standard" 
-           step="0.01" min="0.1" max="1" placeholder="Ej: 0.66" 
-           style="display: none; margin-top: 10px;">
-</div>
-                </div>
-            </div>
+          </a>
+          <a
+            href="#"
+            onclick="
+              exportarMisDatos();
+              return false;
+            "
+            >Exportar datos</a
+          >
+          <a
+            href="#"
+            onclick="
+              eliminarCuentaTotalmente();
+              return false;
+            "
+            >Eliminar cuenta</a
+          >
         </div>
+      </aside>
 
-        <div id="card-calendario" class="collapsible-card">
+      <main class="app-main">
+        <div id="app-container">
+          <div id="cargar-datos" class="collapsible-card">
             <div class="card-header" onclick="toggleCard(this)">
-                <span>
-                    <div class="card-icon-container"><i data-lucide="calendar"></i></div>
-                    Calendario Laboral
-                </span>
-                <i data-lucide="chevron-down" class="toggle-icon"></i>
-            </div>
-            <div class="card-body">
-                <div class="calendar-container">
-                    <div class="calendar-header">
-                        <button onclick="cambiarMes(-1)" class="btn-step"><i data-lucide="chevron-left"></i></button>
-                        <h2 id="mesAnio"></h2>
-                        <button onclick="cambiarMes(1)" class="btn-step"><i data-lucide="chevron-right"></i></button>
-                    </div>
-                    <div class="calendar-grid" id="calendario"></div>
-                    
-<div class="action-buttons">
-    <button class="btn-trabajado" onclick="seleccionarModo('trabajado')">
-        <i data-lucide="check-circle" size="16"></i> Trabajo
-    </button>
-    <button class="btn-festivo" onclick="seleccionarModo('festivo')">
-        <i data-lucide="coffee" size="16"></i> Fiesta
-    </button>
-    <button class="btn-vacaciones" onclick="seleccionarModo('vacaciones')">
-        <i data-lucide="palmtree" size="16"></i> Vacaciones
-    </button>
-    <button class="btn-abonable" onclick="seleccionarModo('abonable')" >
-        <i data-lucide="home"></i> Abonable
-    </button>
-    <button class="btn-baja" onclick="seleccionarModo('baja')">
-        <i data-lucide="pill" size="16"></i> Baja
-    </button>
-    <button class="btn-horas-extra" onclick="seleccionarModo('horasExtra')">
-        <i data-lucide="plus-circle" size="16"></i> Horas Extra
-    </button>
-    <button class="btn-limpiar" onclick="limpiarCalendario()" style="grid-column: span 2;">
-        <i data-lucide="trash-2" size="16"></i> Resetear Mes
-    </button>
-</div>
+              <span>
+                <div class="card-icon-container">
+                  <i data-lucide="user"></i>
                 </div>
-            </div>
-        </div>
-
-        <div id="card-resumen" class="collapsible-card">
-            <div class="card-header" onclick="toggleCard(this)">
-                <span>
-                    <div class="card-icon-container"><i data-lucide="List"></i></div>
-                    Resumen
-                </span>
-                <i data-lucide="chevron-down" class="toggle-icon"></i>
+                Datos Usuario
+              </span>
+              <i data-lucide="chevron-down" class="toggle-icon"></i>
             </div>
             <div class="card-body">
-                <div class="stats-grid">
-                    <div class="stat-card blue">
-                        <span class="stat-label">Días Trabajados</span>
-                        <div class="stat-value" id="diasTrabajados">0</div>
-                    </div>
-                    <div class="stat-card orange">
-                        <span class="stat-label">Festivos</span>
-                        <div class="stat-value" id="festivosTrabajados">0</div>
-                    </div>
-                    <div class="stat-card green">
-                        <span class="stat-label">Horas Trabajadas</span>
-                        <div class="stat-value" id="horasTrabajadas">0h</div>
-                    </div>
-                    <div class="stat-card purple">
-                        <span class="stat-label">Objetivo</span>
-                        <div class="stat-value" id="horasRequeridas">0h</div>
-                    </div>
+              <div class="config-panel">
+                <div class="config-card">
+                  <span class="card-title"
+                    ><i data-lucide="map-pin" size="14"></i> Localidad</span
+                  >
+                  <select id="ciudadUsuario" class="select-standard">
+                    <option value="Donostia" selected>
+                      Donostia-San Sebastián
+                    </option>
+                    <option value="Bilbao">Bilbo-Bilbao</option>
+                    <option value="Gasteiz">Gasteiz-Vitoria</option>
+                    <option value="Iruña">Iruña-Pamplona</option>
+                    <option value="Madrid">Madrid</option>
+                    <option value="Barcelona">Barcelona</option>
+                    <option value="Zaragoza">Zaragoza</option>
+                    <option value="Valencia">Valencia</option>
+                    <option value="Sevilla">Sevilla</option>
+                    <option value="Malaga">Málaga</option>
+                  </select>
                 </div>
+                <div class="config-card">
+                  <span class="card-title"
+                    ><i data-lucide="briefcase" size="14"></i> Sector
+                    Profesional</span
+                  >
+                  <select id="sectorUsuario" class="select-standard">
+                    <option value="general">Régimen General</option>
+                    <option value="alojamientos">Alojamientos</option>
+                    <option value="hosteleria">
+                      Hostelería y Restauración
+                    </option>
+                    <option value="transporte">Transporte y Logística</option>
+                    <option value="limpieza">
+                      Limpieza de Edificios y Locales
+                    </option>
+                  </select>
+                </div>
+                <div class="config-card">
+                  <span class="card-title"
+                    ><i data-lucide="calendar-days" size="14"></i> Año
+                    Visualizado</span
+                  >
+                  <div class="stepper">
+                    <button
+                      type="button"
+                      class="step-btn"
+                      onclick="ajustarValor('inputAnio', -1)"
+                    >
+                      −
+                    </button>
+                    <input type="number" id="inputAnio" value="2026" readonly />
+                    <button
+                      type="button"
+                      class="step-btn"
+                      onclick="ajustarValor('inputAnio', 1)"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div class="config-card">
+                  <span class="card-title">
+                    <i data-lucide="timer" size="14"></i> Horas Requeridas
+                    <span
+                      class="info-tooltip"
+                      data-tooltip="Horas según convenio anual a jornada completa, compensar con el balance del año anterior."
+                    >
+                      <i data-lucide="info" size="14"></i>
+                    </span>
+                  </span>
+                  <input
+                    type="number"
+                    id="horasAnuales"
+                    class="input-standard"
+                    value="1719"
+                  />
+                </div>
+                <div class="config-card">
+                  <span class="card-title"
+                    ><i data-lucide="calendar-clock" size="14"></i> Tipo de
+                    Jornada</span
+                  >
+                  <select
+                    id="tipoJornada"
+                    class="select-standard"
+                    onchange="gestionarJornadaPersonalizada()"
+                  >
+                    <option value="1">8h / 8h (100%) Jornada Completa</option>
+                    <option value="0.875">7h / 8h (87.5%)</option>
+                    <option value="0.75">6h / 8h (75%)</option>
+                    <option value="0.625">5h / 8h (62.5%)</option>
+                    <option value="0.5">4h / 8h (50%) Media Jornada</option>
+                    <option value="custom">Otro (Introducir %)</option>
+                  </select>
+
+                  <input
+                    type="number"
+                    id="inputJornadaCustom"
+                    class="input-standard"
+                    step="0.01"
+                    min="0.1"
+                    max="1"
+                    placeholder="Ej: 0.66"
+                    style="display: none; margin-top: 10px"
+                  />
+                </div>
+              </div>
             </div>
-        </div>
+          </div>
 
-  <div id="seccion-horas-extra" class="collapsible-card premium-locked">
-    <div class="card-header" onclick="toggleCard(this)">
-        <span>
-            <div class="card-icon-container"><i data-lucide="clock-9"></i></div>
-            Control de Horas Extra <small id="info-limite-80" style="margin-left:8px; opacity:0.7;">(Máximo legal: 80h/año)</small>
-        </span>
-        <span class="premium-tag">PREMIUM</span>
-        <i data-lucide="chevron-down" class="toggle-icon"></i>
-    </div>
-    <div class="card-body">
-        <div class="table-wrapper">
-            <table id="tablaHorasExtra">
-                <thead>
-                    <tr>
-                        <th>Mes</th>
-                        <th>Total</th>
-                        <th>Compensado</th>
-                    </tr>
-                </thead>
-                <tbody id="cuerpoTablaHorasExtra"></tbody>
-                <tfoot id="pieTablaHorasExtra" style="background: rgba(0,0,0,0.05); font-weight: bold;">
-                    <tr>
-                        <td>TOTAL ANUAL</td>
-                        <td id="valor-total-anual">0h</td>
-                        <td>-</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-
-        <div id="alerta-80h" class="alerta-negativo" style="display: none; margin-top: 15px; padding: 12px; border-radius: 8px; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; font-size: 0.85rem;">
-            <i data-lucide="alert-triangle" style="width:14px; height:14px; vertical-align: middle;"></i>
-            <strong>¡Límite superado!</strong> Has excedido las 80h extras anuales permitidas por ley.
-        </div>
-    </div>
-</div>
-
-        <div id="seccion-pdf" class="collapsible-card premium-locked">
+          <div id="card-calendario" class="collapsible-card">
             <div class="card-header" onclick="toggleCard(this)">
-                <span>
-                    <div class="card-icon-container"><i data-lucide="file-down"></i></div>
-                    Exportación PDF
-                </span>
-                <span class="premium-tag">PREMIUM</span>
-                <i data-lucide="chevron-down" class="toggle-icon"></i>
+              <span>
+                <div class="card-icon-container">
+                  <i data-lucide="calendar"></i>
+                </div>
+                Calendario Laboral
+              </span>
+              <i data-lucide="chevron-down" class="toggle-icon"></i>
             </div>
             <div class="card-body">
-                <button id="btnPDF" class="btn-primary" onclick="generarInformePDF()">
-                    Descargar Informe Mensual
-                </button>
-            </div>
-        </div>
+              <div class="calendar-container">
+                <div class="calendar-header">
+                  <button onclick="cambiarMes(-1)" class="btn-step">
+                    <i data-lucide="chevron-left"></i>
+                  </button>
+                  <h2 id="mesAnio"></h2>
+                  <button onclick="cambiarMes(1)" class="btn-step">
+                    <i data-lucide="chevron-right"></i>
+                  </button>
+                </div>
+                <div class="calendar-grid" id="calendario"></div>
 
-<div id="card-balance" class="collapsible-card">
-    <div class="card-header" onclick="toggleCard(this)">
-        <span><div class="card-icon-container"><i data-lucide="award"></i></div> Balance Final</span>
-        <i data-lucide="chevron-down" class="toggle-icon"></i>
-    </div>
-    <div class="card-body">
-        <div class="balance-grid" id="balanceResult">
-            <div class="stat-card blue">
-                <span class="stat-label">Balance Horas</span>
-                <div class="stat-value" id="balanceHoras">0h</div>
+                <div class="action-buttons">
+                  <button
+                    class="btn-trabajado"
+                    onclick="seleccionarModo('trabajado')"
+                  >
+                    <i data-lucide="check-circle" size="16"></i> Trabajo
+                  </button>
+                  <button
+                    class="btn-festivo"
+                    onclick="seleccionarModo('festivo')"
+                  >
+                    <i data-lucide="coffee" size="16"></i> Fiesta
+                  </button>
+                  <button
+                    class="btn-vacaciones"
+                    onclick="seleccionarModo('vacaciones')"
+                  >
+                    <i data-lucide="palmtree" size="16"></i> Vacaciones
+                  </button>
+                  <button
+                    class="btn-abonable"
+                    onclick="seleccionarModo('abonable')"
+                  >
+                    <i data-lucide="home"></i> Abonable
+                  </button>
+                  <button class="btn-baja" onclick="seleccionarModo('baja')">
+                    <i data-lucide="pill" size="16"></i> Baja
+                  </button>
+                  <button
+                    class="btn-horas-extra"
+                    onclick="seleccionarModo('horasExtra')"
+                  >
+                    <i data-lucide="plus-circle" size="16"></i> Horas Extra
+                  </button>
+                  <button
+                    class="btn-limpiar"
+                    onclick="limpiarCalendario()"
+                    style="grid-column: span 2"
+                  >
+                    <i data-lucide="trash-2" size="16"></i> Resetear Mes
+                  </button>
+                </div>
+              </div>
             </div>
-            <div class="stat-card purple">
-                <span class="stat-label">Balance Días</span>
-                <div class="stat-value" id="balanceDias">0d</div>
-            </div>
-            <div class="stat-card">
-                <span class="stat-label">Estado</span>
-                <div class="stat-value" id="balanceMensaje" style="font-size: 0.85rem;">-</div>
-            </div>
-        </div>
-    </div>
-</div>
+          </div>
 
-      <div id="seccion-historial" class="collapsible-card premium-locked">
-    <div class="card-header" onclick="toggleCard(this)">
-        <span>
-            <div class="card-icon-container"><i data-lucide="Hourglass"></i></div>
-            Histórico Anual
-        </span>
-        <span class="premium-tag">PREMIUM</span>
-        <i data-lucide="chevron-down" class="toggle-icon"></i>
-    </div>
-    <div class="card-body">
-        <div class="table-wrapper">
-            <table id="tablaResumen">
-                <thead>
+          <div id="card-resumen" class="collapsible-card">
+            <div class="card-header" onclick="toggleCard(this)">
+              <span>
+                <div class="card-icon-container">
+                  <i data-lucide="List"></i>
+                </div>
+                Resumen
+              </span>
+              <i data-lucide="chevron-down" class="toggle-icon"></i>
+            </div>
+            <div class="card-body">
+              <div class="stats-grid">
+                <div class="stat-card blue">
+                  <span class="stat-label">Días Trabajados</span>
+                  <div class="stat-value" id="diasTrabajados">0</div>
+                </div>
+                <div class="stat-card orange">
+                  <span class="stat-label">Festivos</span>
+                  <div class="stat-value" id="festivosTrabajados">0</div>
+                </div>
+                <div class="stat-card green">
+                  <span class="stat-label">Horas Trabajadas</span>
+                  <div class="stat-value" id="horasTrabajadas">0h</div>
+                </div>
+                <div class="stat-card purple">
+                  <span class="stat-label">Objetivo</span>
+                  <div class="stat-value" id="horasRequeridas">0h</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="seccion-horas-extra" class="collapsible-card premium-locked">
+            <div class="card-header" onclick="toggleCard(this)">
+              <span>
+                <div class="card-icon-container">
+                  <i data-lucide="clock-9"></i>
+                </div>
+                Control de Horas Extra
+                <small
+                  id="info-limite-80"
+                  style="margin-left: 8px; opacity: 0.7"
+                  >(Máximo legal: 80h/año)</small
+                >
+              </span>
+              <span class="premium-tag">PREMIUM</span>
+              <i data-lucide="chevron-down" class="toggle-icon"></i>
+            </div>
+            <div class="card-body">
+              <div class="table-wrapper">
+                <table id="tablaHorasExtra">
+                  <thead>
                     <tr>
-                        <th>Año</th>
-                        <th>H. Teóricas</th>
-                        <th>Fest. Trab.</th>
-                        <th>H. Requeridas</th>
-                        <th>H. Trabajadas</th>
-                        <th>Balance</th>
+                      <th>Mes</th>
+                      <th>Total</th>
+                      <th>Compensado</th>
                     </tr>
-                </thead>
-                <tbody id="cuerpoTablaResumen"></tbody>
-            </table>
-        </div>
-    </div>
-</div>
-<div id="card-ayuda" class="collapsible-card">
-    <div class="card-header" onclick="toggleCard(this)">
-        <span>
-            <div class="card-icon-container"><i data-lucide="help-circle"></i></div>
-            Ayuda y Soporte
-        </span>
-        <i data-lucide="chevron-down" class="toggle-icon"></i>
-    </div>
-    <div class="card-body">
-        <div class="ayuda-container">
-            <details class="faq-item">
-                <summary>¿Cómo se calcula mi balance de horas?</summary>
-                <p>El sistema resta las horas que deberías trabajar (según tus horas anuales y tipo de jornada) de las horas que realmente has registrado como trabajadas.</p>
-            </details>
-            
-            <details class="faq-item">
-                <summary>¿Qué incluye la suscripción Premium?</summary>
-                <p>Desbloquea el registro de horas extra, el histórico de años anteriores y la generación de informes oficiales en PDF para inspecciones.</p>
-            </details>
+                  </thead>
+                  <tbody id="cuerpoTablaHorasExtra"></tbody>
+                  <tfoot
+                    id="pieTablaHorasExtra"
+                    style="background: rgba(0, 0, 0, 0.05); font-weight: bold"
+                  >
+                    <tr>
+                      <td>TOTAL ANUAL</td>
+                      <td id="valor-total-anual">0h</td>
+                      <td>-</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
 
-            <details class="faq-item">
-                <summary>¿Cómo descargo mi informe PDF?</summary>
-                <p>Una vez seas Premium, ve a la sección "Exportación PDF", elige el mes y pulsa descargar. El informe incluirá tu logo y sello de validación.</p>
-            </details>
-            <details class="faq-item">
-                 <summary>¿Cómo influye mi Sector en el calendario?</summary>
-                 <p>El sistema detecta tu sector para añadir festivos gremiales automáticos: San Cristóbal (10 de julio) en Transporte y Santa Marta (29 de julio) en Alojamientos, Hostelería y Restauración o Limpieza de Edificios y Locales.</p>
-            </details>
+              <div
+                id="alerta-80h"
+                class="alerta-negativo"
+                style="
+                  display: none;
+                  margin-top: 15px;
+                  padding: 12px;
+                  border-radius: 8px;
+                  background: #fee2e2;
+                  color: #991b1b;
+                  border: 1px solid #f87171;
+                  font-size: 0.85rem;
+                "
+              >
+                <i
+                  data-lucide="alert-triangle"
+                  style="width: 14px; height: 14px; vertical-align: middle"
+                ></i>
+                <strong>¡Límite superado!</strong> Has excedido las 80h extras
+                anuales permitidas por ley.
+              </div>
+            </div>
+          </div>
 
-            <details class="faq-item">
-                 <summary>¿Qué ocurre si cambio de Localidad?</summary>
-                 <p>Al seleccionar la localidad, la aplicación consulta nuestra base de datos y carga los festivos oficiales específicos de esa ciudad para el año en curso.</p>
-            </details>
+          <div id="seccion-pdf" class="collapsible-card premium-locked">
+            <div class="card-header" onclick="toggleCard(this)">
+              <span>
+                <div class="card-icon-container">
+                  <i data-lucide="file-down"></i>
+                </div>
+                Exportación PDF
+              </span>
+              <span class="premium-tag">PREMIUM</span>
+              <i data-lucide="chevron-down" class="toggle-icon"></i>
+            </div>
+            <div class="card-body">
+              <button
+                id="btnPDF"
+                class="btn-primary"
+                onclick="generarInformePDF()"
+              >
+                Descargar Informe Mensual
+              </button>
+            </div>
+          </div>
 
-            <details class="faq-item">
-                 <summary>¿Cómo funciona la Jornada Personalizada?</summary>
-                 <p>Si tu contrato no es estándar, selecciona "Otro" e indica tu coeficiente (ej: 0.66). Todos los cálculos de horas diarias y balance se ajustarán a ese porcentaje exacto.</p>
-            </details>
+          <div id="card-balance" class="collapsible-card">
+            <div class="card-header" onclick="toggleCard(this)">
+              <span
+                ><div class="card-icon-container">
+                  <i data-lucide="award"></i>
+                </div>
+                Balance Final</span
+              >
+              <i data-lucide="chevron-down" class="toggle-icon"></i>
+            </div>
+            <div class="card-body">
+              <div class="balance-grid" id="balanceResult">
+                <div class="stat-card blue">
+                  <span class="stat-label">Balance Horas</span>
+                  <div class="stat-value" id="balanceHoras">0h</div>
+                </div>
+                <div class="stat-card purple">
+                  <span class="stat-label">Balance Días</span>
+                  <div class="stat-value" id="balanceDias">0d</div>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">Estado</span>
+                  <div
+                    class="stat-value"
+                    id="balanceMensaje"
+                    style="font-size: 0.85rem"
+                  >
+                    -
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-            <div class="contacto-directo">
-                <p>¿Tienes alguna incidencia técnica o duda con un pago?</p>
-                <a href="mailto:soporte@balancelaboral.es" class="btn-soporte">
+          <div id="seccion-historial" class="collapsible-card premium-locked">
+            <div class="card-header" onclick="toggleCard(this)">
+              <span>
+                <div class="card-icon-container">
+                  <i data-lucide="Hourglass"></i>
+                </div>
+                Histórico Anual
+              </span>
+              <span class="premium-tag">PREMIUM</span>
+              <i data-lucide="chevron-down" class="toggle-icon"></i>
+            </div>
+            <div class="card-body">
+              <div class="table-wrapper">
+                <table id="tablaResumen">
+                  <thead>
+                    <tr>
+                      <th>Año</th>
+                      <th>H. Teóricas</th>
+                      <th>Fest. Trab.</th>
+                      <th>H. Requeridas</th>
+                      <th>H. Trabajadas</th>
+                      <th>Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cuerpoTablaResumen"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div id="card-ayuda" class="collapsible-card">
+            <div class="card-header" onclick="toggleCard(this)">
+              <span>
+                <div class="card-icon-container">
+                  <i data-lucide="help-circle"></i>
+                </div>
+                Ayuda y Soporte
+              </span>
+              <i data-lucide="chevron-down" class="toggle-icon"></i>
+            </div>
+            <div class="card-body">
+              <div class="ayuda-container">
+                <details class="faq-item">
+                  <summary>¿Cómo se calcula mi balance de horas?</summary>
+                  <p>
+                    El sistema resta las horas que deberías trabajar (según tus
+                    horas anuales y tipo de jornada) de las horas que realmente
+                    has registrado como trabajadas.
+                  </p>
+                </details>
+
+                <details class="faq-item">
+                  <summary>¿Qué incluye la suscripción Premium?</summary>
+                  <p>
+                    Desbloquea el registro de horas extra, el histórico de años
+                    anteriores y la generación de informes oficiales en PDF para
+                    inspecciones.
+                  </p>
+                </details>
+
+                <details class="faq-item">
+                  <summary>¿Cómo descargo mi informe PDF?</summary>
+                  <p>
+                    Una vez seas Premium, ve a la sección "Exportación PDF",
+                    elige el mes y pulsa descargar. El informe incluirá tu logo
+                    y sello de validación.
+                  </p>
+                </details>
+                <details class="faq-item">
+                  <summary>¿Cómo influye mi Sector en el calendario?</summary>
+                  <p>
+                    El sistema detecta tu sector para añadir festivos gremiales
+                    automáticos: San Cristóbal (10 de julio) en Transporte y
+                    Santa Marta (29 de julio) en Alojamientos, Hostelería y
+                    Restauración o Limpieza de Edificios y Locales.
+                  </p>
+                </details>
+
+                <details class="faq-item">
+                  <summary>¿Qué ocurre si cambio de Localidad?</summary>
+                  <p>
+                    Al seleccionar la localidad, la aplicación consulta nuestra
+                    base de datos y carga los festivos oficiales específicos de
+                    esa ciudad para el año en curso.
+                  </p>
+                </details>
+
+                <details class="faq-item">
+                  <summary>¿Cómo funciona la Jornada Personalizada?</summary>
+                  <p>
+                    Si tu contrato no es estándar, selecciona "Otro" e indica tu
+                    coeficiente (ej: 0.66). Todos los cálculos de horas diarias
+                    y balance se ajustarán a ese porcentaje exacto.
+                  </p>
+                </details>
+
+                <div class="contacto-directo">
+                  <p>¿Tienes alguna incidencia técnica o duda con un pago?</p>
+                  <a
+                    href="mailto:soporte@balancelaboral.es"
+                    class="btn-soporte"
+                  >
                     <i data-lucide="mail" size="16"></i> Contactar con Soporte
-                </a>
+                  </a>
+                </div>
+              </div>
             </div>
+          </div>
         </div>
+        <div class="dashboard-credit">
+          <span>© 2026 Balance Laboral</span>
+          <span>Developed by Mikel Urtxegi</span>
+        </div>
+      </main>
     </div>
-</div>
-    </div>
-    <div class="dashboard-credit">
-        <span>© 2026 Balance Laboral</span>
-        <span>Desarrollado por Mikel Urtxegi</span>
-    </div>
-</main>
-</div>
 
-<div id="auth-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
-        <img src="assets/images/logo.png" alt="Logo" class="auth-logo" style="margin-bottom: 15px;">
-        
+    <div id="auth-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content">
+        <img
+          src="assets/images/logo.png"
+          alt="Logo"
+          class="auth-logo"
+          style="margin-bottom: 15px"
+        />
+
         <h2 id="modal-title">Iniciar Sesión</h2>
         <p class="modal-subtitle">Sincroniza tus datos en la nube</p>
-        
-        <input type="email" id="email" placeholder="Email" class="input-standard">
-        <input type="password" id="password" placeholder="Contraseña" class="input-standard">
-        
-        <div id="error-message" style="display: none; color: red; margin-bottom: 10px;"></div>
-        
-        <button onclick="autenticar()" class="btn-primary" id="btn-auth">Continuar</button>
-        
-        <div class="separator" style="margin: 20px 0; color: #cbd5e1;"><span>o</span></div>
-        
-        <button onclick="autenticarConGoogle()" class="btn-google">
-            <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-            Continuar con Google
+
+        <input
+          type="email"
+          id="email"
+          placeholder="Email"
+          class="input-standard"
+        />
+        <input
+          type="password"
+          id="password"
+          placeholder="Contraseña"
+          class="input-standard"
+        />
+
+        <div
+          id="error-message"
+          style="display: none; color: red; margin-bottom: 10px"
+        ></div>
+
+        <button onclick="autenticar()" class="btn-primary" id="btn-auth">
+          Continuar
         </button>
-        
-        <p class="toggle-auth" style="margin-top: 20px;">
-            <span id="toggle-text">¿No tienes cuenta?</span>
-            <a href="#" onclick="toggleAuthMode(); return false;" id="toggle-link" style="color: var(--primary-color); font-weight: bold;">Regístrate aquí</a>
-        </p>
-        
-        <button onclick="cerrarModal()" class="btn-cancel" style="margin-top: 15px; border: none; background: none; color: #94a3b8; cursor: pointer;">Cancelar</button>
-    </div>
-</div>
-    <div id="modal-horas-extra" style="display: none;">
-        <div class="modal-content">
-            <h2>Añadir Horas</h2>
-            <p id="fecha-extra-display"></p>
-            <input type="number" id="input-horas-extra" step="0.5">
-            <div class="button-group">
-                <button onclick="guardarHorasExtra()" class="btn-primary">Guardar</button>
-                <button onclick="cerrarModalHorasExtra()" class="btn-cancel">Cancelar</button>
-            </div>
+
+        <div class="separator" style="margin: 20px 0; color: #cbd5e1">
+          <span>o</span>
         </div>
+
+        <button onclick="autenticarConGoogle()" class="btn-google">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              fill="#4285F4"
+            />
+            <path
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              fill="#34A853"
+            />
+            <path
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+              fill="#FBBC05"
+            />
+            <path
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              fill="#EA4335"
+            />
+          </svg>
+          Continuar con Google
+        </button>
+
+        <p class="toggle-auth" style="margin-top: 20px">
+          <span id="toggle-text">¿No tienes cuenta?</span>
+          <a
+            href="#"
+            onclick="
+              toggleAuthMode();
+              return false;
+            "
+            id="toggle-link"
+            style="color: var(--primary-color); font-weight: bold"
+            >Regístrate aquí</a
+          >
+        </p>
+
+        <button
+          onclick="cerrarModal()"
+          class="btn-cancel"
+          style="
+            margin-top: 15px;
+            border: none;
+            background: none;
+            color: #94a3b8;
+            cursor: pointer;
+          "
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+    <div id="modal-horas-extra" style="display: none">
+      <div class="modal-content">
+        <h2>Añadir Horas</h2>
+        <p id="fecha-extra-display"></p>
+        <input type="number" id="input-horas-extra" step="0.5" />
+        <div class="button-group">
+          <button onclick="guardarHorasExtra()" class="btn-primary">
+            Guardar
+          </button>
+          <button onclick="cerrarModalHorasExtra()" class="btn-cancel">
+            Cancelar
+          </button>
+        </div>
+      </div>
     </div>
 
-
- <div id="modal-pricing" class="modal-overlay" style="display: none;">
-    <div class="modal-content pricing-content">
+    <div id="modal-pricing" class="modal-overlay" style="display: none">
+      <div class="modal-content pricing-content">
         <h2>Eleva tu Control Laboral</h2>
-        <p class="modal-subtitle">Desbloquea todas las funciones y cumple con la normativa legal.</p>
-        
+        <p class="modal-subtitle">
+          Desbloquea todas las funciones y cumple con la normativa legal.
+        </p>
+
         <div class="perks-list">
-            <div class="perk-item">
-                <i data-lucide="zap" class="perk-icon"></i>
-                <p><b>Horas Extra:</b> Registro detallado y control de compensaciones.</p>
-            </div>
-            <div class="perk-item">
-                <i data-lucide="file-check" class="perk-icon"></i>
-                <p><b>Informes PDF:</b> Exporta registros oficiales válidos para inspecciones.</p>
-            </div>
-            <div class="perk-item">
-                <i data-lucide="layers" class="perk-icon"></i>
-                <p><b>Histórico Anual:</b> Acceso ilimitado a todos tus años anteriores.</p>
-            </div>
-            <div class="perk-item">
-                <i data-lucide="refresh-cw" class="perk-icon"></i>
-                <p><b>Sincronización Total:</b> Tus datos siempre seguros en la nube.</p>
-            </div>
+          <div class="perk-item">
+            <i data-lucide="zap" class="perk-icon"></i>
+            <p>
+              <b>Horas Extra:</b> Registro detallado y control de
+              compensaciones.
+            </p>
+          </div>
+          <div class="perk-item">
+            <i data-lucide="file-check" class="perk-icon"></i>
+            <p>
+              <b>Informes PDF:</b> Exporta registros oficiales válidos para
+              inspecciones.
+            </p>
+          </div>
+          <div class="perk-item">
+            <i data-lucide="layers" class="perk-icon"></i>
+            <p>
+              <b>Histórico Anual:</b> Acceso ilimitado a todos tus años
+              anteriores.
+            </p>
+          </div>
+          <div class="perk-item">
+            <i data-lucide="refresh-cw" class="perk-icon"></i>
+            <p>
+              <b>Sincronización Total:</b> Tus datos siempre seguros en la nube.
+            </p>
+          </div>
         </div>
 
         <div class="plans-container">
-            <div class="plan-card" onclick="seleccionarPlan('mensual')">
-                <span class="plan-name">Mensual</span>
-                <div class="plan-price">0,99€<span>/mes</span></div>
-                <button class="btn-plan-yellow">Elegir</button>
-            </div>
+          <div class="plan-card" onclick="seleccionarPlan('mensual')">
+            <span class="plan-name">Mensual</span>
+            <div class="plan-price">0,99€<span>/mes</span></div>
+            <button class="btn-plan-yellow">Elegir</button>
+          </div>
 
-            <div class="plan-card popular" onclick="seleccionarPlan('anual')">
-                <div class="badge-discount">AHORRA 2 MESES</div>
-                <span class="plan-name">Anual</span>
-                <div class="plan-price">9,99€<span>/año</span></div>
-                <button class="btn-plan-yellow">Elegir</button>
-            </div>
+          <div class="plan-card popular" onclick="seleccionarPlan('anual')">
+            <div class="badge-discount">AHORRA 2 MESES</div>
+            <span class="plan-name">Anual</span>
+            <div class="plan-price">9,99€<span>/año</span></div>
+            <button class="btn-plan-yellow">Elegir</button>
+          </div>
         </div>
 
-        <button onclick="cerrarModalPricing()" class="btn-link-cancel">Continuar con la versión gratuita</button>
+        <button onclick="cerrarModalPricing()" class="btn-link-cancel">
+          Continuar con la versión gratuita
+        </button>
+      </div>
     </div>
-    
-</div>
-<div id="modal-legal" class="modal-overlay" style="display: none;">
-    <div class="modal-content legal-content">
+    <div id="modal-legal" class="modal-overlay" style="display: none">
+      <div class="modal-content legal-content">
         <h2 id="legal-title"></h2>
         <div id="legal-body" class="legal-scroll"></div>
         <button onclick="cerrarLegal()" class="btn-primary">Cerrar</button>
+      </div>
     </div>
-</div>
-<div id="logo-overlay" class="logo-viewer-overlay" onclick="cerrarLogoGrande()">
-    <img src="assets/images/logo.png" alt="Logo ampliado" class="logo-ampliado">
-    <span class="close-viewer">&times;</span>
-</div>
+    <div
+      id="logo-overlay"
+      class="logo-viewer-overlay"
+      onclick="cerrarLogoGrande()"
+    >
+      <img
+        src="assets/images/logo.png"
+        alt="Logo ampliado"
+        class="logo-ampliado"
+      />
+      <span class="close-viewer">&times;</span>
+    </div>
 
     <script>
-        window.APP_CONFIG = window.APP_CONFIG || {};
-        window.APP_CONFIG.legalAiEnabled = window.APP_CONFIG.legalAiEnabled ?? true;
-        window.APP_CONFIG.consultarConvenioUrl = window.APP_CONFIG.consultarConvenioUrl || (
-            (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname === '::1')
-                ? 'https://us-central1-calendario-laboral-252b1.cloudfunctions.net/consultarConvenio'
-                : '/consultarConvenio'
-        );
+      window.APP_CONFIG = window.APP_CONFIG || {};
+      window.APP_CONFIG.legalAiEnabled =
+        window.APP_CONFIG.legalAiEnabled ?? true;
+      window.APP_CONFIG.consultarConvenioUrl =
+        window.APP_CONFIG.consultarConvenioUrl ||
+        (location.hostname === "localhost" ||
+        location.hostname === "127.0.0.1" ||
+        location.hostname === "::1"
+          ? "https://us-central1-calendario-laboral-252b1.cloudfunctions.net/consultarConvenio"
+          : "/consultarConvenio");
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -553,7 +903,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
-    
+
     <script src="src/js/firebase-config.js"></script>
     <script src="src/js/app/state.js"></script>
     <script src="src/js/app/calendar.js"></script>
@@ -562,45 +912,97 @@
     <script src="src/js/app/pdf.js"></script>
     <script src="src/js/analytics.js"></script>
 
-    <script> lucide.createIcons(); </script>
+    <script>
+      lucide.createIcons();
+    </script>
 
     <footer class="app-footer">
-    <p>© 2026 Balance Laboral</p>
-    <div class="footer-links">
+      <p>© 2026 Balance Laboral</p>
+      <div class="footer-links">
         <a href="/privacy">Privacidad</a>
-        <a href="#" onclick="mostrarLegal('terminos'); return false;">Términos</a>
-        <a href="#" onclick="mostrarLegal('cookies'); return false;">Cookies</a>
-        
-        <a href="#" id="link-cancelar-sub" class="link-cancelar-sub" onclick="redirigirPortalStripe(); return false;" style="display: none;">
-            Darse de baja
+        <a
+          href="#"
+          onclick="
+            mostrarLegal('terminos');
+            return false;
+          "
+          >Términos</a
+        >
+        <a
+          href="#"
+          onclick="
+            mostrarLegal('cookies');
+            return false;
+          "
+          >Cookies</a
+        >
+
+        <a
+          href="#"
+          id="link-cancelar-sub"
+          class="link-cancelar-sub"
+          onclick="
+            redirigirPortalStripe();
+            return false;
+          "
+          style="display: none"
+        >
+          Darse de baja
         </a>
 
-        <a href="#" onclick="exportarMisDatos(); return false;">Exportar mis datos (JSON)</a>
-        <span class="separator">|</span> 
+        <a
+          href="#"
+          onclick="
+            exportarMisDatos();
+            return false;
+          "
+          >Exportar mis datos (JSON)</a
+        >
+        <span class="separator">|</span>
 
-        <a href="#" id="btn-eliminar-link" onclick="eliminarCuentaTotalmente(); return false;">
-            Eliminar mi cuenta
+        <a
+          href="#"
+          id="btn-eliminar-link"
+          onclick="
+            eliminarCuentaTotalmente();
+            return false;
+          "
+        >
+          Eliminar mi cuenta
         </a>
+      </div>
+    </footer>
+
+    <div class="floating-buttons-container">
+      <button
+        onclick="toggleDarkMode()"
+        class="btn-flotante btn-dark-mode-toggle"
+        title="Modo Oscuro"
+      >
+        <i
+          data-lucide="moon"
+          id="dark-mode-icon"
+          style="width: 22px; height: 22px; vertical-align: middle"
+        ></i>
+      </button>
+      <a
+        href="mensajeUsuarios.html"
+        target="_blank"
+        class="btn-flotante btn-ayuda"
+        title="Guía de uso"
+        >?</a
+      >
     </div>
-</footer>
 
-<div class="floating-buttons-container">
-    <button onclick="toggleDarkMode()" class="btn-flotante btn-dark-mode-toggle" title="Modo Oscuro">
-        <i data-lucide="moon" id="dark-mode-icon" style="width:22px; height:22px; vertical-align: middle;"></i>
-    </button>
-    <a href="mensajeUsuarios.html" target="_blank" class="btn-flotante btn-ayuda" title="Guía de uso">?</a>
-</div>
-
-
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(reg => console.log('✅ Service Worker registrado', reg))
-        .catch(err => console.error('❌ Error al registrar SW', err));
-    });
-  }
-</script>
-
-</body>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("service-worker.js")
+            .then((reg) => console.log("✅ Service Worker registrado", reg))
+            .catch((err) => console.error("❌ Error al registrar SW", err));
+        });
+      }
+    </script>
+  </body>
 </html>

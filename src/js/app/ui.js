@@ -27,6 +27,69 @@ function puedeAutoenfocarCampo() {
   return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 }
 
+function inicializarNavegacionDashboard() {
+  const navItems = Array.from(document.querySelectorAll(".sidebar-nav-item"));
+  const sections = Array.from(document.querySelectorAll("#app-container > .collapsible-card"));
+  const desktopQuery = window.matchMedia("(min-width: 1024px)");
+
+  if (!navItems.length || !sections.length) return;
+
+  const activarSeccion = (targetId, options = {}) => {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    if (
+      desktopQuery.matches &&
+      target.classList.contains("premium-locked") &&
+      typeof usuarioPuedeUsarPremium === "function" &&
+      !usuarioPuedeUsarPremium()
+    ) {
+      if (typeof abrirModalPremium === "function") abrirModalPremium();
+      return;
+    }
+
+    sections.forEach((section) => {
+      section.classList.toggle("dashboard-section-active", section.id === targetId);
+    });
+
+    navItems.forEach((item) => {
+      item.classList.toggle("active", item.dataset.dashboardTarget === targetId);
+    });
+
+    if (desktopQuery.matches) {
+      target.classList.add("active");
+      if (!options.skipScroll) {
+        document.querySelector(".app-main")?.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      if (typeof renderTodo === "function") renderTodo();
+    }
+  };
+
+  navItems.forEach((item) => {
+    item.addEventListener("click", function () {
+      activarSeccion(this.dataset.dashboardTarget);
+    });
+  });
+
+  const sincronizarModo = () => {
+    if (desktopQuery.matches) {
+      const activeItem = document.querySelector(".sidebar-nav-item.active");
+      activarSeccion(activeItem?.dataset.dashboardTarget || "cargar-datos", { skipScroll: true });
+    } else {
+      sections.forEach((section) => section.classList.remove("dashboard-section-active"));
+    }
+  };
+
+  if (desktopQuery.addEventListener) {
+    desktopQuery.addEventListener("change", sincronizarModo);
+  } else {
+    desktopQuery.addListener(sincronizarModo);
+  }
+
+  sincronizarModo();
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   inicializarViewportIOS();
 
@@ -81,6 +144,7 @@ document.addEventListener("DOMContentLoaded", function () {
   cargarFestivosOficiales(ciudadActual, anioActual);
   gestionarJornadaPersonalizada();
   renderTodo();
+  inicializarNavegacionDashboard();
   if (typeof lucide !== "undefined") lucide.createIcons();
   montarAsesorLegal();
   actualizarTextoEstadoLegal();

@@ -149,3 +149,75 @@ body.dark-mode .texto-limite-excedido {
 
 .balance-grid .stat-card.positive { border-bottom-color: #22c55e; }
 .balance-grid .stat-card.negative { border-bottom-color: #ef4444; }
+
+@media (min-width: 1024px) {
+    .calendar-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+        width: min(100%, 1060px);
+        max-width: none;
+        margin: 0 auto;
+    }
+
+    #calendario {
+        flex: 1 1 auto;
+        min-height: 0;
+        grid-auto-rows: minmax(34px, 1fr);
+        gap: clamp(6px, 1.1vh, 10px);
+        padding: clamp(4px, 0.9vh, 10px);
+        border-radius: 16px;
+        align-content: stretch;
+    }
+
+    .day-cell {
+        aspect-ratio: auto;
+        border-radius: 10px;
+        min-height: 0;
+    }
+
+    .calendar-header {
+        flex: 0 0 auto;
+        margin-bottom: clamp(8px, 1.6vh, 18px);
+        gap: clamp(14px, 3vw, 56px);
+    }
+
+    .calendar-header h2 {
+        min-width: clamp(150px, 14vw, 220px);
+        font-size: clamp(1.1rem, 2.2vw, 1.35rem);
+    }
+
+    .btn-step {
+        width: clamp(38px, 5.8vh, 48px);
+        height: clamp(38px, 5.8vh, 48px);
+    }
+
+    .day-number {
+        font-size: clamp(0.88rem, 1.3vw, 1rem);
+    }
+
+    .action-buttons {
+        flex: 0 0 auto;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: clamp(6px, 1vh, 10px);
+        margin-top: clamp(8px, 1.5vh, 15px);
+    }
+
+    .action-buttons button {
+        min-height: clamp(38px, 5.8vh, 58px);
+        padding: clamp(7px, 1vh, 10px);
+        font-size: clamp(0.72rem, 0.88vw, 0.85rem);
+        line-height: 1.1;
+        white-space: normal;
+    }
+
+    .btn-limpiar {
+        grid-column: auto !important;
+    }
+
+    .balance-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+    }
+}

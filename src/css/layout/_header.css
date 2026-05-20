@@ -10,6 +10,10 @@
     width: 100%;
 }
 
+.dashboard-sidebar-nav {
+    display: none;
+}
+
 /* Tarjetas base */
 .header-card {
     border-radius: 16px;
@@ -391,5 +395,176 @@ body.is-premium #btn-upgrade {
     .btn-ai-legal {
         width: 100%;
         justify-content: center;
+    }
+}
+
+@media (min-width: 1024px) {
+    #app-header-container {
+        position: sticky;
+        top: 0;
+        height: var(--app-visible-height);
+        padding: calc(18px + var(--safe-area-top)) clamp(10px, 1.1vw, 18px) calc(18px + var(--safe-area-bottom)) clamp(10px, 1.1vw, 18px) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 18px 0 45px rgba(15, 23, 42, 0.14);
+        overflow-x: hidden;
+        overflow-y: auto;
+        gap: clamp(8px, 1.2vh, 12px);
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.36) transparent;
+    }
+
+    #app-header-container::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #app-header-container::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.30);
+        border-radius: 999px;
+    }
+
+    .main-title-card {
+        padding: clamp(8px, 1.2vh, 12px) !important;
+        background-color: rgba(255, 255, 255, 0.10) !important;
+        border-radius: 14px;
+    }
+
+    .header-info {
+        gap: 12px;
+    }
+
+    .header-icon-main {
+        width: clamp(38px, 5.2vh, 48px) !important;
+        height: clamp(38px, 5.2vh, 48px) !important;
+    }
+
+    .app-logo-header {
+        width: clamp(46px, 6vh, 54px);
+        height: clamp(46px, 6vh, 54px);
+    }
+
+    .header-text-group h2 {
+        font-size: clamp(0.9rem, 1.05vw, 1.05rem) !important;
+        line-height: 1.1;
+    }
+
+    .header-text-group p {
+        font-size: 0.74rem;
+    }
+
+    .ai-legal-card {
+        flex-direction: column;
+        align-items: stretch;
+        padding: clamp(10px, 1.5vh, 14px);
+        border-radius: 14px;
+        box-shadow: none;
+        flex-shrink: 0;
+    }
+
+    .ai-legal-copy h3 {
+        font-size: clamp(0.78rem, 0.95vw, 0.94rem);
+    }
+
+    .ai-legal-copy p {
+        font-size: clamp(0.68rem, 0.76vw, 0.76rem);
+    }
+
+    .ai-legal-actions {
+        align-items: stretch;
+    }
+
+    .btn-ai-legal {
+        width: 100%;
+        min-height: clamp(34px, 4.8vh, 38px);
+        border-radius: 10px;
+    }
+
+    .user-card,
+    .auth-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: clamp(6px, 0.9vh, 10px);
+        padding: clamp(9px, 1.25vh, 12px) !important;
+        border-radius: 14px;
+        min-height: 0;
+        flex-shrink: 0;
+    }
+
+    .user-details-group,
+    .auth-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .user-details-group {
+        gap: 8px;
+    }
+
+    .text-white-figma,
+    .auth-message {
+        overflow-wrap: anywhere;
+        line-height: 1.25;
+    }
+
+    .btn-upgrade-minimal {
+        white-space: nowrap;
+    }
+
+    .btn-login-figma,
+    .btn-register-figma,
+    .btn-logout-figma {
+        flex: 1 1 auto;
+        min-height: clamp(30px, 4vh, 34px);
+        padding: 5px 10px !important;
+    }
+
+    .dashboard-sidebar-nav {
+        display: flex;
+        flex-direction: column;
+        gap: clamp(3px, 0.65vh, 6px);
+        margin-top: 2px;
+        padding-top: clamp(8px, 1.2vh, 12px);
+        border-top: 1px solid rgba(255, 255, 255, 0.10);
+        min-height: 0;
+    }
+
+    .sidebar-nav-item {
+        width: 100%;
+        justify-content: flex-start;
+        min-height: clamp(34px, 4.6vh, 44px);
+        padding: 0 12px;
+        gap: 10px;
+        border-radius: 12px;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: clamp(0.76rem, 0.9vw, 0.86rem);
+        font-weight: 700;
+        text-align: left;
+    }
+
+    .sidebar-nav-item svg {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+    }
+
+    .sidebar-nav-item span:not(.premium-tag) {
+        flex: 1 1 auto;
+    }
+
+    .sidebar-nav-item:hover,
+    .sidebar-nav-item.active {
+        background: rgba(255, 255, 255, 0.14);
+        color: #ffffff;
+    }
+
+    .sidebar-nav-item.active {
+        box-shadow: inset 3px 0 0 #60a5fa;
+    }
+
+    .sidebar-nav-item .premium-tag {
+        margin-left: auto;
+        padding: 3px 6px;
+        font-size: 0.5rem;
+        border-radius: 5px;
     }
 }

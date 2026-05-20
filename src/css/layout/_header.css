@@ -529,6 +529,7 @@ body.is-premium #btn-upgrade {
         padding-top: clamp(8px, 1.2vh, 12px);
         border-top: 1px solid rgba(255, 255, 255, 0.10);
         min-height: 0;
+        flex: 0 0 auto;
     }
 
     .sidebar-nav-item {
@@ -576,7 +577,9 @@ body.is-premium #btn-upgrade {
         display: flex;
         flex-wrap: wrap;
         gap: 8px 12px;
-        margin-top: auto;
+        flex: 0 0 auto;
+        margin-top: clamp(14px, 2vh, 22px);
+        margin-bottom: 4px;
         padding-top: clamp(10px, 1.4vh, 16px);
         border-top: 1px solid rgba(255, 255, 255, 0.10);
     }

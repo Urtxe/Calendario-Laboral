@@ -75,3 +75,31 @@ Marketing/
 # Local convenio PDFs
 functions/convenios/**/*.pdf
 functions/convenios/**/*.PDF
+
+# Android / TWA local signing material
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+*.cer
+*.crt
+keystore.properties
+key.properties
+local.properties
+play-service-account*.json
+google-play-service-account*.json
+
+# Android / Bubblewrap build outputs
+**/.gradle/
+**/build/
+**/app/build/
+**/app-release-signed.apk
+**/app-release-bundle.aab
+**/*-release.apk
+**/*-release.aab
+**/.idea/
+**/*.iml
+**/.kotlin/
+**/.cxx/
+**/captures/

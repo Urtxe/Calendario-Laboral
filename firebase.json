@@ -34,6 +34,14 @@
         "function": "consultarConvenio"
       },
       {
+        "source": "/privacy",
+        "destination": "/privacy.html"
+      },
+      {
+        "source": "/mensajeUsuarios",
+        "destination": "/mensajeUsuarios.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

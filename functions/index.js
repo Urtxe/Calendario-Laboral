@@ -9,6 +9,11 @@ const {
     normalizeText,
     resolveCatalogEntry,
 } = require("./convenio-metadata");
+const {
+    buildWorkersStatuteFallbackResponse,
+    buildWorkersStatuteSource,
+    findWorkersStatuteFallback,
+} = require("./workers-statute-fallback");
 require("dotenv").config({ path: __dirname + "/.env" });
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
@@ -143,6 +148,22 @@ async function buscarTopConvenioEspecifico(vectorPregunta) {
         id: doc.id,
         ...doc.data(),
     };
+}
+
+function respuestaIndicaDatoNoEncontrado(respuesta) {
+    return normalizeText(respuesta).includes("no he encontrado el dato exacto");
+}
+
+function preguntaPideDiasLibres(pregunta) {
+    const normalized = normalizeText(pregunta);
+    return [
+        "dias libres",
+        "dia libre",
+        "permiso",
+        "permisos",
+        "licencia",
+        "licencias",
+    ].some((term) => normalized.includes(normalizeText(term)));
 }
 
 const PERMISOS_QUERY_TERMS = [
@@ -394,6 +415,7 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
             return res.status(400).json({ error: "La pregunta es obligatoria" });
         }
 
+        const estatutoFallback = findWorkersStatuteFallback(pregunta);
         const vectorPregunta = await generarEmbeddingPregunta(pregunta);
         const idiomaRespuesta = detectarIdiomaPregunta(pregunta);
         const convenioReferencia = obtenerReferenciaConvenio(req.body);
@@ -411,6 +433,26 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                 conveniosFileName = Array.isArray(resolucionCatalogo.entry.fileNames) ? resolucionCatalogo.entry.fileNames : [];
                 convenioFileName = conveniosFileName[0] || "";
             } else if (resolucionCatalogo.status && resolucionCatalogo.status !== "catalog_empty") {
+                if (estatutoFallback) {
+                    return res.json({
+                        respuesta: buildWorkersStatuteFallbackResponse(estatutoFallback),
+                        convenioUsado: null,
+                        conveniosUsados: [],
+                        convenioDetectado: null,
+                        fuentes: [buildWorkersStatuteSource(estatutoFallback)],
+                    });
+                }
+
+                if (resolucionCatalogo.status === "missing_all" && preguntaPideDiasLibres(pregunta)) {
+                    return res.json({
+                        respuesta: "No tengo información suficiente en las fuentes disponibles para confirmar un permiso retribuido por ese motivo.",
+                        convenioUsado: null,
+                        conveniosUsados: [],
+                        convenioDetectado: null,
+                        fuentes: [],
+                    });
+                }
+
                 return res.json({
                     respuesta: resolucionCatalogo.message,
                     requiereAclaracion: true,
@@ -437,6 +479,21 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
         );
 
         if (!chunksBase.length && !chunksEspecificos.length) {
+            if (estatutoFallback) {
+                return res.json({
+                    respuesta: buildWorkersStatuteFallbackResponse(estatutoFallback, { convenioFileName }),
+                    convenioUsado: convenioFileName || null,
+                    conveniosUsados: conveniosFileName,
+                    convenioDetectado: convenioResuelto ? {
+                        province: convenioResuelto.province || null,
+                        autonomousCommunity: convenioResuelto.autonomousCommunity || null,
+                        sectorKeys: convenioResuelto.sectorKeys || [],
+                        title: convenioResuelto.title || null,
+                    } : null,
+                    fuentes: [buildWorkersStatuteSource(estatutoFallback)],
+                });
+            }
+
             return res.status(404).json({
                 error: "No se encontraron fragmentos relevantes del convenio para responder.",
             });
@@ -490,9 +547,12 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
         });
 
         const respuesta = extraerTextoRespuesta(result).trim();
+        const respuestaFinal = estatutoFallback && respuestaIndicaDatoNoEncontrado(respuesta)
+            ? buildWorkersStatuteFallbackResponse(estatutoFallback, { convenioFileName })
+            : respuesta;
 
         return res.json({
-            respuesta: respuesta || "No he podido generar una respuesta basada en el convenio.",
+            respuesta: respuestaFinal || "No he podido generar una respuesta basada en el convenio.",
             convenioUsado: convenioFileName || null,
             conveniosUsados: conveniosFileName,
             convenioDetectado: convenioResuelto ? {
@@ -522,6 +582,9 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                     fuente: "especifica",
                     distancia: chunk.distancia ?? null,
                 })),
+                ...(estatutoFallback && respuestaIndicaDatoNoEncontrado(respuesta)
+                    ? [buildWorkersStatuteSource(estatutoFallback)]
+                    : []),
             ],
         });
     } catch (error) {

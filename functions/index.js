@@ -50,6 +50,12 @@ function extraerTextoRespuesta(result) {
     return "";
 }
 
+function extraerFinishReason(result) {
+    return result && result.response && Array.isArray(result.response.candidates)
+        ? result.response.candidates[0] && result.response.candidates[0].finishReason
+        : null;
+}
+
 function detectarIdiomaPregunta(pregunta) {
     const texto = String(pregunta || "").toLowerCase();
     const pistasEuskera = [
@@ -188,6 +194,39 @@ const PERMISOS_HEADER_TERMS = [
     "remunerados",
 ];
 
+const DISCIPLINARIO_QUERY_TERMS = [
+    "falta grave",
+    "faltas graves",
+    "falta muy grave",
+    "faltas muy graves",
+    "despido",
+    "despedir",
+    "despedirme",
+    "echar",
+    "echarme",
+    "sancion",
+    "sanciones",
+    "regimen disciplinario",
+];
+
+const DISCIPLINARIO_EXACT_TERMS = [
+    "faltas graves",
+    "faltas muy graves",
+    "falta grave",
+    "falta muy grave",
+    "clases de sanciones",
+    "seccion tercera sanciones",
+    "despido con perdida",
+];
+
+const DISCIPLINARIO_HEADER_TERMS = [
+    "capitulo xii premios faltas sanciones",
+    "premios faltas sanciones",
+    "seccion segunda faltas",
+    "seccion tercera sanciones",
+    "articulo 53",
+];
+
 function crearReferenciasConvenio(convenioReferencia) {
     const referencias = [];
     const referenciasEntrada = Array.isArray(convenioReferencia) ? convenioReferencia : [convenioReferencia];
@@ -205,6 +244,11 @@ function crearReferenciasConvenio(convenioReferencia) {
 function esPreguntaDePermisos(pregunta) {
     const normalized = normalizeText(pregunta);
     return PERMISOS_QUERY_TERMS.some((term) => normalized.includes(normalizeText(term)));
+}
+
+function esPreguntaDisciplinaria(pregunta) {
+    const normalized = normalizeText(pregunta);
+    return DISCIPLINARIO_QUERY_TERMS.some((term) => normalized.includes(normalizeText(term)));
 }
 
 function contieneAlguno(texto, terminos) {
@@ -227,6 +271,36 @@ function combinarChunksEspecificos(chunksKeyword, chunksVectoriales, maxChunks =
     });
 
     return combinados;
+}
+
+function ordenarPorIndice(a, b) {
+    const indexA = typeof a.chunkIndex === "number" ? a.chunkIndex : Number.MAX_SAFE_INTEGER;
+    const indexB = typeof b.chunkIndex === "number" ? b.chunkIndex : Number.MAX_SAFE_INTEGER;
+    return indexA - indexB;
+}
+
+function puntuarChunkDisciplinario(chunk) {
+    const texto = normalizeText(chunk.texto || "");
+    let score = 0;
+
+    if (texto.includes("despido con perdida")) score += 10;
+    if (texto.includes("clases de sanciones")) score += 9;
+    if (texto.includes("seccion tercera sanciones")) score += 8;
+    if (texto.includes("faltas muy graves")) score += 7;
+    if (texto.includes("faltas graves")) score += 6;
+    if (texto.includes("seccion segunda faltas")) score += 5;
+    if (texto.includes("articulo 53")) score += 4;
+    if (texto.includes("despido disciplinario")) score += 3;
+    if (texto.includes("sanciones")) score += 2;
+    if (texto.includes("representantes de las personas trabajadoras")) score -= 4;
+    if (texto.includes("delegados as sindicales")) score -= 4;
+
+    return score;
+}
+
+function ordenarPorRelevanciaDisciplinaria(a, b) {
+    const scoreDiff = puntuarChunkDisciplinario(b) - puntuarChunkDisciplinario(a);
+    return scoreDiff || ordenarPorIndice(a, b);
 }
 
 async function buscarChunksKeywordPermisos(pregunta, convenioReferencia) {
@@ -262,17 +336,53 @@ async function buscarChunksKeywordPermisos(pregunta, convenioReferencia) {
         });
     }
 
-    const ordenarPorIndice = (a, b) => {
-        const indexA = typeof a.chunkIndex === "number" ? a.chunkIndex : Number.MAX_SAFE_INTEGER;
-        const indexB = typeof b.chunkIndex === "number" ? b.chunkIndex : Number.MAX_SAFE_INTEGER;
-        return indexA - indexB;
-    };
-
     return combinarChunksEspecificos(
         exactos.sort(ordenarPorIndice),
         encabezados.sort(ordenarPorIndice),
         5,
     );
+}
+
+async function buscarChunksKeywordDisciplinario(pregunta, convenioReferencia) {
+    if (!esPreguntaDisciplinaria(pregunta)) {
+        return [];
+    }
+
+    const referencias = crearReferenciasConvenio(convenioReferencia);
+    const exactos = [];
+    const encabezados = [];
+
+    for (const referencia of referencias) {
+        const snapshot = await db.collection(COLLECTION_VECTORES)
+            .where("doc_type", "==", "especifico")
+            .where("file_name", "==", referencia)
+            .get();
+
+        snapshot.docs.forEach((doc) => {
+            const chunk = {
+                id: doc.id,
+                ...doc.data(),
+            };
+            const texto = normalizeText(chunk.texto || "");
+
+            if (contieneAlguno(texto, DISCIPLINARIO_EXACT_TERMS)) {
+                exactos.push(chunk);
+                return;
+            }
+
+            if (contieneAlguno(texto, DISCIPLINARIO_HEADER_TERMS)) {
+                encabezados.push(chunk);
+            }
+        });
+    }
+
+    const seleccionados = combinarChunksEspecificos(
+        exactos.sort(ordenarPorRelevanciaDisciplinaria),
+        encabezados.sort(ordenarPorRelevanciaDisciplinaria),
+        8,
+    );
+
+    return seleccionados.sort(ordenarPorIndice);
 }
 
 async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
@@ -313,6 +423,70 @@ async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
     }
 
     return [];
+}
+
+async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregunta, contexto }) {
+    const buildRequest = (systemInstruction, maxOutputTokens) => ({
+        systemInstruction,
+        contents: [
+            {
+                role: "user",
+                parts: [
+                    {
+                        text: `Idioma de respuesta: ${idiomaRespuesta}\nPregunta: ${pregunta}\n\nContexto para comparar:\n${contexto}`,
+                    },
+                ],
+            },
+        ],
+        generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens,
+        },
+    });
+
+    const firstResult = await chatModel.generateContent(buildRequest(promptSistema, 1200));
+    const firstFinishReason = extraerFinishReason(firstResult);
+    const firstText = extraerTextoRespuesta(firstResult).trim();
+
+    if (firstFinishReason !== "MAX_TOKENS") {
+        return {
+            respuesta: firstText,
+            finishReason: firstFinishReason,
+            reintentado: false,
+            respuestaCompleta: true,
+        };
+    }
+
+    console.warn("Gemini devolvió MAX_TOKENS. Reintentando con respuesta breve.");
+
+    const promptBreve = [
+        promptSistema,
+        "La respuesta anterior se cortó. Reintenta una sola vez con una respuesta completa pero breve.",
+        "Máximo 8 líneas. Usa frases cortas. Si hay varias preguntas, responde cada una sin enumeraciones largas.",
+        "No copies listados completos: resume categorías y cita la fuente.",
+    ].join(" ");
+
+    const retryResult = await chatModel.generateContent(buildRequest(promptBreve, 1600));
+    const retryFinishReason = extraerFinishReason(retryResult);
+    const retryText = extraerTextoRespuesta(retryResult).trim();
+
+    if (retryFinishReason !== "MAX_TOKENS") {
+        return {
+            respuesta: retryText,
+            finishReason: retryFinishReason,
+            reintentado: true,
+            respuestaCompleta: true,
+        };
+    }
+
+    console.warn("Gemini volvió a devolver MAX_TOKENS. Respondiendo con mensaje controlado.");
+
+    return {
+        respuesta: "No he podido generar una respuesta completa sin que se corte. Reformula la pregunta en una parte más concreta o pregunta primero por faltas y después por sanciones.",
+        finishReason: retryFinishReason,
+        reintentado: true,
+        respuestaCompleta: false,
+    };
 }
 
 let catalogoCache = null;
@@ -453,6 +627,17 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                     });
                 }
 
+                if (resolucionCatalogo.status === "missing_all" && esPreguntaDisciplinaria(pregunta)) {
+                    return res.json({
+                        respuesta: "No necesariamente: una falta grave no implica automáticamente despido. Para confirmarte la sanción concreta necesito saber tu sector y provincia, porque cada convenio puede distinguir entre faltas graves, faltas muy graves y sus sanciones.",
+                        requiereAclaracion: true,
+                        opcionesConvenio: [],
+                        convenioUsado: null,
+                        conveniosUsados: [],
+                        fuentes: [],
+                    });
+                }
+
                 return res.json({
                     respuesta: resolucionCatalogo.message,
                     requiereAclaracion: true,
@@ -471,11 +656,15 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
         }
 
         const chunksKeywordPermisos = await buscarChunksKeywordPermisos(pregunta, conveniosFileName);
+        const chunksKeywordDisciplinarios = await buscarChunksKeywordDisciplinario(pregunta, conveniosFileName);
         const chunksVectorialesEspecificos = await buscarChunksEspecificos(vectorPregunta, conveniosFileName);
         const chunksEspecificos = combinarChunksEspecificos(
-            chunksKeywordPermisos,
+            [
+                ...chunksKeywordPermisos,
+                ...chunksKeywordDisciplinarios,
+            ],
             chunksVectorialesEspecificos,
-            8,
+            10,
         );
 
         if (!chunksBase.length && !chunksEspecificos.length) {
@@ -515,10 +704,13 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
             "Si el convenio mejora al Estatuto, prevalece el convenio en ese punto.",
             "Si el convenio no regula ese punto o lo regula peor, prevalece el Estatuto.",
             "Responde primero con el dato concreto en una frase breve.",
+            "Si la pregunta tiene varias partes, responde todas las partes de forma ordenada.",
             "No empieces con fórmulas como 'Como abogado laboralista', 'Como asistente' ni con explicaciones generales.",
             "Usa lenguaje claro y directo para una persona trabajadora.",
             "No expliques el razonamiento salvo que sea imprescindible para evitar una duda.",
             "Si la consulta trata de permisos o licencias, indica si el permiso es retribuido y si consume vacaciones cuando el contexto permita confirmarlo.",
+            "Si la consulta trata de faltas, sanciones o despido, diferencia falta grave y falta muy grave, no digas que una falta grave implica despido automático, y explica cuándo puede aparecer el despido según las sanciones del convenio.",
+            "Si el convenio no especifica el despido para esa conducta, dilo claramente.",
             "Cita al final la fuente con convenio, artículo y apartado cuando aparezcan en el contexto.",
             "Formato preferente: respuesta directa, una línea en blanco y una línea que empiece por 'Fuente:'.",
             idiomaRespuesta === "euskera"
@@ -528,25 +720,14 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
             "Si el contexto no contiene el dato exacto, di claramente: 'No he encontrado el dato exacto en los fragmentos disponibles.'",
         ].join(" ");
 
-        const result = await chatModel.generateContent({
-            systemInstruction: promptSistema,
-            contents: [
-                {
-                    role: "user",
-                    parts: [
-                        {
-                            text: `Idioma de respuesta: ${idiomaRespuesta}\nPregunta: ${pregunta}\n\nContexto para comparar:\n${contexto}`,
-                        },
-                    ],
-                },
-            ],
-            generationConfig: {
-                temperature: 0.2,
-                maxOutputTokens: 800,
-            },
+        const generacion = await generarRespuestaConvenio({
+            promptSistema,
+            idiomaRespuesta,
+            pregunta,
+            contexto,
         });
 
-        const respuesta = extraerTextoRespuesta(result).trim();
+        const respuesta = generacion.respuesta;
         const respuestaFinal = estatutoFallback && respuestaIndicaDatoNoEncontrado(respuesta)
             ? buildWorkersStatuteFallbackResponse(estatutoFallback, { convenioFileName })
             : respuesta;

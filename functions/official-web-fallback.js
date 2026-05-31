@@ -170,20 +170,47 @@ function buildUnavailableResponse(reason) {
     };
 }
 
+function escribirLogWebFallback(event, data = {}) {
+    console.log(JSON.stringify({
+        event,
+        ...data,
+    }));
+}
+
 async function consultarFallbackWebOficial({ question, apiKey, env = process.env }) {
     if (!isEnabled(env)) {
+        escribirLogWebFallback("search_grounding_response", {
+            used: false,
+            reason: "web_fallback_disabled",
+            questionLength: String(question || "").length,
+        });
         return buildUnavailableResponse("web_fallback_disabled");
     }
 
     if (maxCallsPerRequest(env) < 1) {
+        escribirLogWebFallback("search_grounding_response", {
+            used: false,
+            reason: "web_fallback_call_limit_zero",
+            questionLength: String(question || "").length,
+        });
         return buildUnavailableResponse("web_fallback_call_limit_zero");
     }
 
     if (!isLaborQuestion(question)) {
+        escribirLogWebFallback("search_grounding_response", {
+            used: false,
+            reason: "not_labor_question",
+            questionLength: String(question || "").length,
+        });
         return buildUnavailableResponse("not_labor_question");
     }
 
     if (!apiKey) {
+        escribirLogWebFallback("search_grounding_response", {
+            used: false,
+            reason: "missing_api_key",
+            questionLength: String(question || "").length,
+        });
         return buildUnavailableResponse("missing_api_key");
     }
 
@@ -245,6 +272,12 @@ async function consultarFallbackWebOficial({ question, apiKey, env = process.env
     const responseJson = await response.json().catch(() => ({}));
 
     if (!response.ok) {
+        escribirLogWebFallback("search_grounding_response", {
+            used: false,
+            reason: `gemini_search_http_${response.status}`,
+            status: response.status,
+            questionLength: String(question || "").length,
+        });
         return {
             ...buildUnavailableResponse(`gemini_search_http_${response.status}`),
             status: response.status,
@@ -259,10 +292,26 @@ async function consultarFallbackWebOficial({ question, apiKey, env = process.env
     const text = extractText(responseJson);
 
     if (finishReason === "MAX_TOKENS") {
+        escribirLogWebFallback("search_grounding_response", {
+            used: false,
+            reason: "gemini_search_max_tokens",
+            finishReason,
+            sourcesCount: fuentes.length,
+            hasSearchSuggestions: Boolean(searchSuggestions),
+            questionLength: String(question || "").length,
+        });
         return buildUnavailableResponse("gemini_search_max_tokens");
     }
 
     if (officialOnly(env) && !fuentes.length) {
+        escribirLogWebFallback("search_grounding_response", {
+            used: false,
+            reason: "no_allowed_official_sources",
+            finishReason,
+            sourcesCount: 0,
+            hasSearchSuggestions: Boolean(searchSuggestions),
+            questionLength: String(question || "").length,
+        });
         return {
             ...buildUnavailableResponse("no_allowed_official_sources"),
             searchSuggestions,
@@ -270,11 +319,28 @@ async function consultarFallbackWebOficial({ question, apiKey, env = process.env
     }
 
     if (!text) {
+        escribirLogWebFallback("search_grounding_response", {
+            used: false,
+            reason: "empty_response",
+            finishReason,
+            sourcesCount: fuentes.length,
+            hasSearchSuggestions: Boolean(searchSuggestions),
+            questionLength: String(question || "").length,
+        });
         return {
             ...buildUnavailableResponse("empty_response"),
             searchSuggestions,
         };
     }
+
+    escribirLogWebFallback("search_grounding_response", {
+        used: true,
+        reason: "web_grounded",
+        finishReason,
+        sourcesCount: fuentes.length,
+        hasSearchSuggestions: Boolean(searchSuggestions),
+        questionLength: String(question || "").length,
+    });
 
     return {
         used: true,

@@ -163,6 +163,50 @@ function respuestaIndicaDatoNoEncontrado(respuesta) {
     return normalizeText(respuesta).includes("no he encontrado el dato exacto");
 }
 
+function escribirLogConsulta(event, data = {}) {
+    console.log(JSON.stringify({
+        event,
+        ...data,
+    }));
+}
+
+function nombreEventoRespuesta(responseSource) {
+    return {
+        convenio: "convenio_response",
+        estatuto: "statute_response",
+        web_official: "web_official_response",
+        unconfirmed: "unconfirmed_response",
+        error: "consultarConvenio_error",
+    }[responseSource] || "consultarConvenio_response";
+}
+
+function logResultadoConsulta({
+    responseSource,
+    status = 200,
+    pregunta = "",
+    convenioUsado = null,
+    requiresClarification = false,
+    webFallbackUsed = false,
+    webFallbackReason = null,
+    finishReason = null,
+    chunksUsed = 0,
+}) {
+    const payload = {
+        response_source: responseSource,
+        status,
+        convenioUsado: convenioUsado || null,
+        requiresClarification: Boolean(requiresClarification),
+        webFallbackUsed: Boolean(webFallbackUsed),
+        webFallbackReason: webFallbackReason || null,
+        finishReason: finishReason || null,
+        chunksUsed,
+        questionLength: String(pregunta || "").length,
+    };
+
+    escribirLogConsulta(nombreEventoRespuesta(responseSource), payload);
+    escribirLogConsulta("consultarConvenio_result", payload);
+}
+
 function construirConvenioDetectado(convenioResuelto) {
     return convenioResuelto ? {
         province: convenioResuelto.province || null,
@@ -469,7 +513,10 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
         };
     }
 
-    console.warn("Gemini devolvió MAX_TOKENS. Reintentando con respuesta breve.");
+    escribirLogConsulta("max_tokens_retry", {
+        stage: "convenio_generation",
+        finishReason: firstFinishReason,
+    });
 
     const promptBreve = [
         promptSistema,
@@ -491,7 +538,11 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
         };
     }
 
-    console.warn("Gemini volvió a devolver MAX_TOKENS. Respondiendo con mensaje controlado.");
+    escribirLogConsulta("max_tokens_retry", {
+        stage: "convenio_generation_retry",
+        finishReason: retryFinishReason,
+        finalAttempt: true,
+    });
 
     return {
         respuesta: "No he podido generar una respuesta completa sin que se corte. Reformula la pregunta en una parte más concreta o pregunta primero por faltas y después por sanciones.",
@@ -502,7 +553,10 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
 }
 
 async function intentarFallbackWebOficial({ pregunta, convenioFileName, conveniosFileName, convenioResuelto }) {
-    console.log("Intentando web fallback oficial como último recurso.");
+    escribirLogConsulta("web_fallback_attempt", {
+        convenioUsado: convenioFileName || null,
+        questionLength: String(pregunta || "").length,
+    });
 
     const webFallback = await consultarFallbackWebOficial({
         question: pregunta,
@@ -510,7 +564,16 @@ async function intentarFallbackWebOficial({ pregunta, convenioFileName, convenio
     });
 
     if (!webFallback.used) {
-        console.warn(`Web fallback oficial no confirmó respuesta: ${webFallback.reason || "unknown"}`);
+        escribirLogConsulta(
+            webFallback.reason === "no_allowed_official_sources"
+                ? "web_fallback_no_official_source"
+                : "web_fallback_skipped",
+            {
+                webFallbackReason: webFallback.reason || "unknown",
+                convenioUsado: convenioFileName || null,
+                questionLength: String(pregunta || "").length,
+            },
+        );
     }
 
     return {
@@ -615,13 +678,24 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
     }
 
     if (req.method !== "POST") {
+        logResultadoConsulta({
+            responseSource: "error",
+            status: 405,
+        });
         return res.status(405).json({ error: "Método no permitido" });
     }
 
+    let pregunta = "";
+
     try {
-        const pregunta = String(req.body && req.body.pregunta ? req.body.pregunta : "").trim();
+        pregunta = String(req.body && req.body.pregunta ? req.body.pregunta : "").trim();
 
         if (!pregunta) {
+            logResultadoConsulta({
+                responseSource: "error",
+                status: 400,
+                pregunta,
+            });
             return res.status(400).json({ error: "La pregunta es obligatoria" });
         }
 
@@ -644,6 +718,12 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                 convenioFileName = conveniosFileName[0] || "";
             } else if (resolucionCatalogo.status && resolucionCatalogo.status !== "catalog_empty") {
                 if (estatutoFallback) {
+                    logResultadoConsulta({
+                        responseSource: "estatuto",
+                        status: 200,
+                        pregunta,
+                        chunksUsed: 1,
+                    });
                     return res.json({
                         respuesta: buildWorkersStatuteFallbackResponse(estatutoFallback),
                         convenioUsado: null,
@@ -661,10 +741,23 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                 });
 
                 if (webFallbackResponse.webFallbackUsed) {
+                    logResultadoConsulta({
+                        responseSource: "web_official",
+                        status: 200,
+                        pregunta,
+                        webFallbackUsed: true,
+                        webFallbackReason: webFallbackResponse.webFallbackReason,
+                    });
                     return res.json(webFallbackResponse);
                 }
 
                 if (resolucionCatalogo.status === "missing_all" && preguntaPideDiasLibres(pregunta)) {
+                    logResultadoConsulta({
+                        responseSource: "unconfirmed",
+                        status: 200,
+                        pregunta,
+                        webFallbackReason: webFallbackResponse.webFallbackReason,
+                    });
                     return res.json({
                         respuesta: "No tengo información suficiente en las fuentes disponibles para confirmar un permiso retribuido por ese motivo.",
                         convenioUsado: null,
@@ -675,6 +768,13 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                 }
 
                 if (resolucionCatalogo.status === "missing_all" && esPreguntaDisciplinaria(pregunta)) {
+                    logResultadoConsulta({
+                        responseSource: "unconfirmed",
+                        status: 200,
+                        pregunta,
+                        requiresClarification: true,
+                        webFallbackReason: webFallbackResponse.webFallbackReason,
+                    });
                     return res.json({
                         respuesta: "No necesariamente: una falta grave no implica automáticamente despido. Para confirmarte la sanción concreta necesito saber tu sector y provincia, porque cada convenio puede distinguir entre faltas graves, faltas muy graves y sus sanciones.",
                         requiereAclaracion: true,
@@ -686,9 +786,23 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                 }
 
                 if (webFallbackResponse.webFallbackReason && webFallbackResponse.webFallbackReason !== "web_fallback_disabled") {
+                    logResultadoConsulta({
+                        responseSource: "unconfirmed",
+                        status: 200,
+                        pregunta,
+                        webFallbackUsed: webFallbackResponse.webFallbackUsed,
+                        webFallbackReason: webFallbackResponse.webFallbackReason,
+                    });
                     return res.json(webFallbackResponse);
                 }
 
+                logResultadoConsulta({
+                    responseSource: "unconfirmed",
+                    status: 200,
+                    pregunta,
+                    requiresClarification: true,
+                    webFallbackReason: webFallbackResponse.webFallbackReason,
+                });
                 return res.json({
                     respuesta: resolucionCatalogo.message,
                     requiereAclaracion: true,
@@ -720,6 +834,13 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
 
         if (!chunksBase.length && !chunksEspecificos.length) {
             if (estatutoFallback) {
+                logResultadoConsulta({
+                    responseSource: "estatuto",
+                    status: 200,
+                    pregunta,
+                    convenioUsado: convenioFileName,
+                    chunksUsed: 1,
+                });
                 return res.json({
                     respuesta: buildWorkersStatuteFallbackResponse(estatutoFallback, { convenioFileName }),
                     convenioUsado: convenioFileName || null,
@@ -737,9 +858,23 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
             });
 
             if (webFallbackResponse.webFallbackReason && webFallbackResponse.webFallbackReason !== "web_fallback_disabled") {
+                logResultadoConsulta({
+                    responseSource: webFallbackResponse.webFallbackUsed ? "web_official" : "unconfirmed",
+                    status: 200,
+                    pregunta,
+                    convenioUsado: convenioFileName,
+                    webFallbackUsed: webFallbackResponse.webFallbackUsed,
+                    webFallbackReason: webFallbackResponse.webFallbackReason,
+                });
                 return res.json(webFallbackResponse);
             }
 
+            logResultadoConsulta({
+                responseSource: "unconfirmed",
+                status: 404,
+                pregunta,
+                convenioUsado: convenioFileName,
+            });
             return res.status(404).json({
                 error: "No se encontraron fragmentos relevantes del convenio para responder.",
             });
@@ -799,9 +934,32 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
             });
 
             if (webFallbackResponse.webFallbackReason && webFallbackResponse.webFallbackReason !== "web_fallback_disabled") {
+                logResultadoConsulta({
+                    responseSource: webFallbackResponse.webFallbackUsed ? "web_official" : "unconfirmed",
+                    status: 200,
+                    pregunta,
+                    convenioUsado: convenioFileName,
+                    webFallbackUsed: webFallbackResponse.webFallbackUsed,
+                    webFallbackReason: webFallbackResponse.webFallbackReason,
+                    finishReason: generacion.finishReason,
+                    chunksUsed: chunksBase.length + chunksEspecificos.length,
+                });
                 return res.json(webFallbackResponse);
             }
         }
+
+        logResultadoConsulta({
+            responseSource: !generacion.respuestaCompleta
+                ? "unconfirmed"
+                : usaEstatutoFallback
+                    ? "estatuto"
+                    : "convenio",
+            status: 200,
+            pregunta,
+            convenioUsado: convenioFileName,
+            finishReason: generacion.finishReason,
+            chunksUsed: chunksBase.length + chunksEspecificos.length + (usaEstatutoFallback ? 1 : 0),
+        });
 
         return res.json({
             respuesta: respuestaFinal || "No he podido generar una respuesta basada en el convenio.",
@@ -835,6 +993,17 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
             ],
         });
     } catch (error) {
+        escribirLogConsulta("consultarConvenio_error", {
+            response_source: "error",
+            status: 500,
+            errorName: error && error.name ? error.name : "Error",
+            errorMessage: error && error.message ? String(error.message).slice(0, 240) : "",
+        });
+        logResultadoConsulta({
+            responseSource: "error",
+            status: 500,
+            pregunta,
+        });
         console.error("❌ Error en consultarConvenio:", error);
         return res.status(500).json({
             error: "No se pudo consultar el convenio.",

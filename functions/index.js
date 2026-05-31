@@ -27,7 +27,7 @@ if (admin.apps.length === 0) {
 const db = admin.firestore();
 const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 const embeddingModel = genAI ? genAI.getGenerativeModel({ model: "gemini-embedding-001" }) : null;
-const chatModel = genAI ? genAI.getGenerativeModel({ model: "gemini-2.5-pro" }) : null;
+const chatModel = genAI ? genAI.getGenerativeModel({ model: "gemini-2.5-flash" }) : null;
 const COLLECTION_VECTORES = "vectores_convenios";
 const EMBEDDING_DIMENSIONS = 768;
 

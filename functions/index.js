@@ -14,6 +14,9 @@ const {
     buildWorkersStatuteSource,
     findWorkersStatuteFallback,
 } = require("./workers-statute-fallback");
+const {
+    consultarFallbackWebOficial,
+} = require("./official-web-fallback");
 require("dotenv").config({ path: __dirname + "/.env" });
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
@@ -158,6 +161,15 @@ async function buscarTopConvenioEspecifico(vectorPregunta) {
 
 function respuestaIndicaDatoNoEncontrado(respuesta) {
     return normalizeText(respuesta).includes("no he encontrado el dato exacto");
+}
+
+function construirConvenioDetectado(convenioResuelto) {
+    return convenioResuelto ? {
+        province: convenioResuelto.province || null,
+        autonomousCommunity: convenioResuelto.autonomousCommunity || null,
+        sectorKeys: convenioResuelto.sectorKeys || [],
+        title: convenioResuelto.title || null,
+    } : null;
 }
 
 function preguntaPideDiasLibres(pregunta) {
@@ -489,6 +501,30 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
     };
 }
 
+async function intentarFallbackWebOficial({ pregunta, convenioFileName, conveniosFileName, convenioResuelto }) {
+    console.log("Intentando web fallback oficial como último recurso.");
+
+    const webFallback = await consultarFallbackWebOficial({
+        question: pregunta,
+        apiKey: geminiApiKey,
+    });
+
+    if (!webFallback.used) {
+        console.warn(`Web fallback oficial no confirmó respuesta: ${webFallback.reason || "unknown"}`);
+    }
+
+    return {
+        respuesta: webFallback.respuesta,
+        convenioUsado: convenioFileName || null,
+        conveniosUsados: conveniosFileName || [],
+        convenioDetectado: construirConvenioDetectado(convenioResuelto),
+        fuentes: webFallback.fuentes || [],
+        webFallbackUsed: Boolean(webFallback.used),
+        webFallbackReason: webFallback.reason || null,
+        searchSuggestions: webFallback.searchSuggestions || null,
+    };
+}
+
 let catalogoCache = null;
 let catalogoCacheTs = 0;
 const CATALOGO_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -617,6 +653,17 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                     });
                 }
 
+                const webFallbackResponse = await intentarFallbackWebOficial({
+                    pregunta,
+                    convenioFileName: null,
+                    conveniosFileName: [],
+                    convenioResuelto: null,
+                });
+
+                if (webFallbackResponse.webFallbackUsed) {
+                    return res.json(webFallbackResponse);
+                }
+
                 if (resolucionCatalogo.status === "missing_all" && preguntaPideDiasLibres(pregunta)) {
                     return res.json({
                         respuesta: "No tengo información suficiente en las fuentes disponibles para confirmar un permiso retribuido por ese motivo.",
@@ -636,6 +683,10 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                         conveniosUsados: [],
                         fuentes: [],
                     });
+                }
+
+                if (webFallbackResponse.webFallbackReason && webFallbackResponse.webFallbackReason !== "web_fallback_disabled") {
+                    return res.json(webFallbackResponse);
                 }
 
                 return res.json({
@@ -673,14 +724,20 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                     respuesta: buildWorkersStatuteFallbackResponse(estatutoFallback, { convenioFileName }),
                     convenioUsado: convenioFileName || null,
                     conveniosUsados: conveniosFileName,
-                    convenioDetectado: convenioResuelto ? {
-                        province: convenioResuelto.province || null,
-                        autonomousCommunity: convenioResuelto.autonomousCommunity || null,
-                        sectorKeys: convenioResuelto.sectorKeys || [],
-                        title: convenioResuelto.title || null,
-                    } : null,
+                    convenioDetectado: construirConvenioDetectado(convenioResuelto),
                     fuentes: [buildWorkersStatuteSource(estatutoFallback)],
                 });
+            }
+
+            const webFallbackResponse = await intentarFallbackWebOficial({
+                pregunta,
+                convenioFileName,
+                conveniosFileName,
+                convenioResuelto,
+            });
+
+            if (webFallbackResponse.webFallbackReason && webFallbackResponse.webFallbackReason !== "web_fallback_disabled") {
+                return res.json(webFallbackResponse);
             }
 
             return res.status(404).json({
@@ -731,17 +788,26 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
         const respuestaFinal = estatutoFallback && respuestaIndicaDatoNoEncontrado(respuesta)
             ? buildWorkersStatuteFallbackResponse(estatutoFallback, { convenioFileName })
             : respuesta;
+        const usaEstatutoFallback = estatutoFallback && respuestaIndicaDatoNoEncontrado(respuesta);
+
+        if (respuestaIndicaDatoNoEncontrado(respuesta) && !usaEstatutoFallback) {
+            const webFallbackResponse = await intentarFallbackWebOficial({
+                pregunta,
+                convenioFileName,
+                conveniosFileName,
+                convenioResuelto,
+            });
+
+            if (webFallbackResponse.webFallbackReason && webFallbackResponse.webFallbackReason !== "web_fallback_disabled") {
+                return res.json(webFallbackResponse);
+            }
+        }
 
         return res.json({
             respuesta: respuestaFinal || "No he podido generar una respuesta basada en el convenio.",
             convenioUsado: convenioFileName || null,
             conveniosUsados: conveniosFileName,
-            convenioDetectado: convenioResuelto ? {
-                province: convenioResuelto.province || null,
-                autonomousCommunity: convenioResuelto.autonomousCommunity || null,
-                sectorKeys: convenioResuelto.sectorKeys || [],
-                title: convenioResuelto.title || null,
-            } : null,
+            convenioDetectado: construirConvenioDetectado(convenioResuelto),
             fuentes: [
                 ...chunksBase.map((chunk) => ({
                     id: chunk.id,

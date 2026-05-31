@@ -599,6 +599,18 @@ function crearMensajeLegal(texto, tipo) {
   return el;
 }
 
+function crearHtmlLegal(html, tipo) {
+  const messages = document.getElementById("legal-ai-messages");
+  if (!messages || !html) return null;
+
+  const el = document.createElement("div");
+  el.className = `legal-ai-message ${tipo}`;
+  el.innerHTML = html;
+  messages.appendChild(el);
+  messages.scrollTop = messages.scrollHeight;
+  return el;
+}
+
 function actualizarTextoEstadoLegal() {
   const status = document.getElementById("legal-ai-status");
   const note = document.getElementById("legal-ai-note");
@@ -736,6 +748,15 @@ async function enviarConsultaLegal() {
     }
 
     crearMensajeLegal(respuesta, "assistant");
+
+    const searchEntryPoint =
+      data.searchSuggestions &&
+      data.searchSuggestions.searchEntryPoint &&
+      data.searchSuggestions.searchEntryPoint.renderedContent;
+
+    if (searchEntryPoint) {
+      crearHtmlLegal(searchEntryPoint, "assistant");
+    }
 
     if (!window.esPremium && !data.requiereAclaracion) {
       setConsultasUsadas(getConsultasUsadas() + 1);

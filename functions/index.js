@@ -6,6 +6,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const {
     CATALOGO_CONVENIOS,
     detectConvenioCriteria,
+    normalizeText,
     resolveCatalogEntry,
 } = require("./convenio-metadata");
 require("dotenv").config({ path: __dirname + "/.env" });
@@ -144,10 +145,30 @@ async function buscarTopConvenioEspecifico(vectorPregunta) {
     };
 }
 
-async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
-    const baseQuery = db.collection(COLLECTION_VECTORES).where("doc_type", "==", "especifico");
-    const referencias = [];
+const PERMISOS_QUERY_TERMS = [
+    "mudanza",
+    "traslado",
+    "domicilio",
+    "permiso",
+    "permisos",
+    "licencia",
+    "licencias",
+];
 
+const PERMISOS_EXACT_TERMS = [
+    "traslado de domicilio",
+    "domicilio habitual",
+    "mudanza",
+];
+
+const PERMISOS_HEADER_TERMS = [
+    "permisos y licencias",
+    "articulo 16",
+    "remunerados",
+];
+
+function crearReferenciasConvenio(convenioReferencia) {
+    const referencias = [];
     const referenciasEntrada = Array.isArray(convenioReferencia) ? convenioReferencia : [convenioReferencia];
 
     referenciasEntrada.filter(Boolean).forEach((referencia) => {
@@ -157,6 +178,85 @@ async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
         }
     });
 
+    return [...new Set(referencias)];
+}
+
+function esPreguntaDePermisos(pregunta) {
+    const normalized = normalizeText(pregunta);
+    return PERMISOS_QUERY_TERMS.some((term) => normalized.includes(normalizeText(term)));
+}
+
+function contieneAlguno(texto, terminos) {
+    return terminos.some((termino) => texto.includes(normalizeText(termino)));
+}
+
+function claveChunk(chunk) {
+    return chunk.id || `${chunk.convenioId || chunk.file_name || chunk.fileName || "chunk"}:${chunk.chunkIndex ?? ""}`;
+}
+
+function combinarChunksEspecificos(chunksKeyword, chunksVectoriales, maxChunks = 8) {
+    const combinados = [];
+    const vistos = new Set();
+
+    [...chunksKeyword, ...chunksVectoriales].forEach((chunk) => {
+        const clave = claveChunk(chunk);
+        if (vistos.has(clave) || combinados.length >= maxChunks) return;
+        vistos.add(clave);
+        combinados.push(chunk);
+    });
+
+    return combinados;
+}
+
+async function buscarChunksKeywordPermisos(pregunta, convenioReferencia) {
+    if (!esPreguntaDePermisos(pregunta)) {
+        return [];
+    }
+
+    const referencias = crearReferenciasConvenio(convenioReferencia);
+    const exactos = [];
+    const encabezados = [];
+
+    for (const referencia of referencias) {
+        const snapshot = await db.collection(COLLECTION_VECTORES)
+            .where("doc_type", "==", "especifico")
+            .where("file_name", "==", referencia)
+            .get();
+
+        snapshot.docs.forEach((doc) => {
+            const chunk = {
+                id: doc.id,
+                ...doc.data(),
+            };
+            const texto = normalizeText(chunk.texto || "");
+
+            if (contieneAlguno(texto, PERMISOS_EXACT_TERMS)) {
+                exactos.push(chunk);
+                return;
+            }
+
+            if (contieneAlguno(texto, PERMISOS_HEADER_TERMS)) {
+                encabezados.push(chunk);
+            }
+        });
+    }
+
+    const ordenarPorIndice = (a, b) => {
+        const indexA = typeof a.chunkIndex === "number" ? a.chunkIndex : Number.MAX_SAFE_INTEGER;
+        const indexB = typeof b.chunkIndex === "number" ? b.chunkIndex : Number.MAX_SAFE_INTEGER;
+        return indexA - indexB;
+    };
+
+    return combinarChunksEspecificos(
+        exactos.sort(ordenarPorIndice),
+        encabezados.sort(ordenarPorIndice),
+        5,
+    );
+}
+
+async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
+    const baseQuery = db.collection(COLLECTION_VECTORES).where("doc_type", "==", "especifico");
+    const referencias = crearReferenciasConvenio(convenioReferencia);
     const resultados = [];
 
     for (const referencia of referencias) {
@@ -328,7 +428,13 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
             conveniosFileName = convenioFileName ? [convenioFileName] : [];
         }
 
-        const chunksEspecificos = await buscarChunksEspecificos(vectorPregunta, conveniosFileName);
+        const chunksKeywordPermisos = await buscarChunksKeywordPermisos(pregunta, conveniosFileName);
+        const chunksVectorialesEspecificos = await buscarChunksEspecificos(vectorPregunta, conveniosFileName);
+        const chunksEspecificos = combinarChunksEspecificos(
+            chunksKeywordPermisos,
+            chunksVectorialesEspecificos,
+            8,
+        );
 
         if (!chunksBase.length && !chunksEspecificos.length) {
             return res.status(404).json({
@@ -347,16 +453,22 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
         const contexto = bloquesContexto.join("\n\n===\n\n");
 
         const promptSistema = [
-            "Eres un abogado laboralista experto en España.",
+            "Eres un asistente laboral para trabajadores en España.",
             "Aplica siempre esta regla jurídica: el Estatuto de los Trabajadores es el mínimo legal.",
             "Si el convenio mejora al Estatuto, prevalece el convenio en ese punto.",
             "Si el convenio no regula ese punto o lo regula peor, prevalece el Estatuto.",
-            "Responde de forma práctica y profesional, indicando qué norma aplica y por qué.",
+            "Responde primero con el dato concreto en una frase breve.",
+            "No empieces con fórmulas como 'Como abogado laboralista', 'Como asistente' ni con explicaciones generales.",
+            "Usa lenguaje claro y directo para una persona trabajadora.",
+            "No expliques el razonamiento salvo que sea imprescindible para evitar una duda.",
+            "Si la consulta trata de permisos o licencias, indica si el permiso es retribuido y si consume vacaciones cuando el contexto permita confirmarlo.",
+            "Cita al final la fuente con convenio, artículo y apartado cuando aparezcan en el contexto.",
+            "Formato preferente: respuesta directa, una línea en blanco y una línea que empiece por 'Fuente:'.",
             idiomaRespuesta === "euskera"
                 ? "Responde siempre en euskera."
                 : "Responde siempre en castellano.",
             "No inventes artículos, no completes con conocimiento externo y no des consejos jurídicos genéricos fuera del contexto facilitado.",
-            "Si el contexto no contiene la respuesta, indica claramente que no puedes confirmarlo con la norma aportada.",
+            "Si el contexto no contiene el dato exacto, di claramente: 'No he encontrado el dato exacto en los fragmentos disponibles.'",
         ].join(" ");
 
         const result = await chatModel.generateContent({

@@ -19,8 +19,31 @@ const {
 } = require("./official-web-fallback");
 require("dotenv").config({ path: __dirname + "/.env" });
 
+function obtenerProjectIdDesdeFirebaseConfig() {
+    try {
+        const firebaseConfig = process.env.FIREBASE_CONFIG
+            ? JSON.parse(process.env.FIREBASE_CONFIG)
+            : null;
+        return firebaseConfig && firebaseConfig.projectId ? firebaseConfig.projectId : "";
+    } catch {
+        return "";
+    }
+}
+
+const projectId =
+    process.env.GCLOUD_PROJECT ||
+    process.env.GCP_PROJECT ||
+    process.env.FIREBASE_PROJECT_ID ||
+    obtenerProjectIdDesdeFirebaseConfig() ||
+    "calendario-laboral-252b1";
+
+process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || projectId;
+process.env.GCP_PROJECT = process.env.GCP_PROJECT || projectId;
+
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
+const premiumStripePriceIds = parseEnvList(process.env.STRIPE_PREMIUM_PRICE_IDS || process.env.STRIPE_PREMIUM_PRICE_ID || "");
+const premiumStripeProductIds = parseEnvList(process.env.STRIPE_PREMIUM_PRODUCT_IDS || process.env.STRIPE_PREMIUM_PRODUCT_ID || "");
 const geminiApiKey =
     process.env.GEMINI_API_KEY ||
     process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
@@ -37,13 +60,86 @@ const db = admin.firestore();
 const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 const embeddingModel = genAI ? genAI.getGenerativeModel({ model: "gemini-embedding-001" }) : null;
 const chatModel = genAI ? genAI.getGenerativeModel({ model: "gemini-2.5-flash" }) : null;
+
+if (stripeSecretKey && webhookSecret && !hasPremiumStripeConfig()) {
+    console.warn(JSON.stringify({
+        event: "stripe_premium_config_missing_at_startup",
+        message: "Define STRIPE_PREMIUM_PRICE_IDS or STRIPE_PREMIUM_PRODUCT_IDS before deploying the hardened Stripe webhook.",
+    }));
+}
+
 const COLLECTION_VECTORES = "vectores_convenios";
 const EMBEDDING_DIMENSIONS = 768;
+const FREE_AI_TOTAL_LIMIT = 3;
+const PREMIUM_AI_DAILY_LIMIT = 100;
+const AI_USAGE_COLLECTION = "usage";
+const AI_USAGE_DOC = "ai";
+const AI_QUESTION_MAX_LENGTH = 1200;
+const CONSULTAR_CONVENIO_FUNCTION_OPTIONS = {
+    timeoutSeconds: 90,
+    memory: "512MiB",
+    maxInstances: 10,
+    concurrency: 20,
+};
+const CONSULTAR_CONVENIO_ALLOWED_ORIGINS = new Set([
+    "https://balancelaboral.es",
+    "https://www.balancelaboral.es",
+    "https://calendario-laboral-252b1.web.app",
+    "https://calendario-laboral-252b1.firebaseapp.com",
+]);
+const CONSULTAR_CONVENIO_DEV_ORIGIN_PATTERN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const CONSULTAR_CONVENIO_ALLOWED_FIELDS = [
+    "pregunta",
+    "ciudad",
+    "ciudadActual",
+    "location",
+    "sector",
+    "sectorUsuario",
+    "profesion",
+    "convenioFileName",
+    "file_name",
+    "fileName",
+    "convenioNombre",
+    "convenioId",
+];
+const CONSULTAR_CONVENIO_OPTIONAL_STRING_FIELDS = CONSULTAR_CONVENIO_ALLOWED_FIELDS
+    .filter((field) => field !== "pregunta");
 
-function setCorsHeaders(res) {
-    res.set("Access-Control-Allow-Origin", "*");
+function esOrigenPermitidoConsulta(origin) {
+    return CONSULTAR_CONVENIO_ALLOWED_ORIGINS.has(origin) ||
+        CONSULTAR_CONVENIO_DEV_ORIGIN_PATTERN.test(origin);
+}
+
+function setCorsHeaders(req, res) {
+    const origin = req.get("origin") || "";
+
     res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Firebase-AppCheck");
+    res.set("Vary", "Origin");
+
+    if (!origin) {
+        return {
+            ok: true,
+            origin: "",
+            reason: "missing_origin",
+        };
+    }
+
+    if (!esOrigenPermitidoConsulta(origin)) {
+        return {
+            ok: false,
+            origin,
+            reason: "origin_not_allowed",
+        };
+    }
+
+    res.set("Access-Control-Allow-Origin", origin);
+
+    return {
+        ok: true,
+        origin,
+        reason: "origin_allowed",
+    };
 }
 
 function extraerTextoRespuesta(result) {
@@ -51,6 +147,91 @@ function extraerTextoRespuesta(result) {
     if (typeof result.text === "function") return result.text();
     if (result.response && typeof result.response.text === "function") return result.response.text();
     return "";
+}
+
+function tieneContentTypeJson(req) {
+    const contentType = req.get("content-type") || "";
+    return contentType.toLowerCase().includes("application/json");
+}
+
+function validarPayloadBasicoConsulta(req) {
+    if (!tieneContentTypeJson(req)) {
+        return {
+            ok: false,
+            status: 400,
+            error: "La solicitud debe enviarse como application/json.",
+        };
+    }
+
+    const body = req.body;
+
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+        return {
+            ok: false,
+            status: 400,
+            error: "El cuerpo de la solicitud debe ser un objeto JSON.",
+        };
+    }
+
+    const keys = Object.keys(body);
+    const unexpectedFields = keys.filter((key) => !CONSULTAR_CONVENIO_ALLOWED_FIELDS.includes(key));
+
+    if (unexpectedFields.length) {
+        return {
+            ok: false,
+            status: 400,
+            error: "La solicitud contiene campos no permitidos.",
+        };
+    }
+
+    const invalidOptionalField = CONSULTAR_CONVENIO_OPTIONAL_STRING_FIELDS
+        .find((field) => body[field] !== undefined && typeof body[field] !== "string");
+
+    if (invalidOptionalField) {
+        return {
+            ok: false,
+            status: 400,
+            error: "Los datos de contexto deben ser texto.",
+        };
+    }
+
+    return {
+        ok: true,
+        body,
+    };
+}
+
+function validarPreguntaConsulta(body) {
+    if (typeof body.pregunta !== "string") {
+        return {
+            ok: false,
+            status: 400,
+            error: "La pregunta debe ser texto.",
+        };
+    }
+
+    const pregunta = body.pregunta.trim();
+
+    if (!pregunta) {
+        return {
+            ok: false,
+            status: 400,
+            error: "La pregunta es obligatoria.",
+        };
+    }
+
+    if (pregunta.length > AI_QUESTION_MAX_LENGTH) {
+        return {
+            ok: false,
+            status: 400,
+            error: `La pregunta no puede superar ${AI_QUESTION_MAX_LENGTH} caracteres.`,
+        };
+    }
+
+    return {
+        ok: true,
+        pregunta,
+    };
 }
 
 function extraerFinishReason(result) {
@@ -170,6 +351,166 @@ function escribirLogConsulta(event, data = {}) {
     }));
 }
 
+function extraerBearerToken(req) {
+    const authHeader = req.get("authorization") || "";
+    const match = authHeader.match(/^Bearer\s+(.+)$/i);
+    return match ? match[1].trim() : "";
+}
+
+async function verificarUsuarioConsulta(req) {
+    const idToken = extraerBearerToken(req);
+
+    if (!idToken) {
+        return {
+            ok: false,
+            reason: "missing_or_malformed_authorization",
+        };
+    }
+
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        return {
+            ok: true,
+            uid: decodedToken.uid,
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            reason: "invalid_id_token",
+            errorName: error && error.code ? error.code : (error && error.name ? error.name : "Error"),
+        };
+    }
+}
+
+class QuotaError extends Error {
+    constructor({ status, code, message, quota = null }) {
+        super(message);
+        this.name = "QuotaError";
+        this.status = status;
+        this.code = code;
+        this.quota = quota;
+    }
+}
+
+function obtenerDiaCuota(date = new Date()) {
+    return date.toISOString().slice(0, 10);
+}
+
+function normalizarContador(value) {
+    const numberValue = Number(value || 0);
+    return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : 0;
+}
+
+function construirQuotaPublica(quotaInfo) {
+    if (!quotaInfo) return null;
+
+    return {
+        plan: quotaInfo.plan,
+        limit: quotaInfo.limit,
+        used: quotaInfo.used,
+        remaining: Math.max(0, quotaInfo.limit - quotaInfo.used),
+        period: quotaInfo.period,
+    };
+}
+
+function responderConCuota(payload, quotaInfo) {
+    const quota = construirQuotaPublica(quotaInfo);
+    return quota ? { ...payload, quota } : payload;
+}
+
+async function consumirCuotaConsultaIA(uid) {
+    const userRef = db.collection("usuarios").doc(uid);
+    const usageRef = userRef.collection(AI_USAGE_COLLECTION).doc(AI_USAGE_DOC);
+    const today = obtenerDiaCuota();
+
+    return db.runTransaction(async (transaction) => {
+        const userSnap = await transaction.get(userRef);
+
+        if (!userSnap.exists) {
+            throw new QuotaError({
+                status: 403,
+                code: "user_profile_not_found",
+                message: "No se ha encontrado tu perfil de usuario.",
+            });
+        }
+
+        const userData = userSnap.data() || {};
+        const isPremium = userData.tipoCuenta === "premium";
+        const usageSnap = await transaction.get(usageRef);
+        const usageData = usageSnap.exists ? usageSnap.data() || {} : {};
+        const now = admin.firestore.FieldValue.serverTimestamp();
+
+        if (isPremium) {
+            const currentDailyCount = usageData.premiumDailyKey === today
+                ? normalizarContador(usageData.premiumDailyCount)
+                : 0;
+
+            if (currentDailyCount >= PREMIUM_AI_DAILY_LIMIT) {
+                throw new QuotaError({
+                    status: 429,
+                    code: "premium_daily_quota_exceeded",
+                    message: "Has alcanzado temporalmente el límite de uso razonable. Inténtalo más tarde.",
+                    quota: {
+                        plan: "premium",
+                        limit: PREMIUM_AI_DAILY_LIMIT,
+                        used: currentDailyCount,
+                        period: "day",
+                    },
+                });
+            }
+
+            const nextDailyCount = currentDailyCount + 1;
+            transaction.set(usageRef, {
+                plan: "premium",
+                premiumDailyKey: today,
+                premiumDailyCount: nextDailyCount,
+                premiumDailyLimit: PREMIUM_AI_DAILY_LIMIT,
+                totalAccepted: admin.firestore.FieldValue.increment(1),
+                updatedAt: now,
+            }, { merge: true });
+
+            return {
+                plan: "premium",
+                limit: PREMIUM_AI_DAILY_LIMIT,
+                used: nextDailyCount,
+                period: "day",
+            };
+        }
+
+        const currentFreeTotal = normalizarContador(usageData.freeTotalCount);
+
+        if (currentFreeTotal >= FREE_AI_TOTAL_LIMIT) {
+            throw new QuotaError({
+                status: 429,
+                code: "free_total_quota_exceeded",
+                message: "Has alcanzado el límite gratuito de consultas IA.",
+                quota: {
+                    plan: "free",
+                    limit: FREE_AI_TOTAL_LIMIT,
+                    used: currentFreeTotal,
+                    period: "total",
+                },
+            });
+        }
+
+        const nextFreeTotal = currentFreeTotal + 1;
+        transaction.set(usageRef, {
+            plan: "free",
+            freeTotalCount: nextFreeTotal,
+            freeTotalLimit: FREE_AI_TOTAL_LIMIT,
+            totalAccepted: admin.firestore.FieldValue.increment(1),
+            updatedAt: now,
+        }, { merge: true });
+
+        return {
+            plan: "free",
+            limit: FREE_AI_TOTAL_LIMIT,
+            used: nextFreeTotal,
+            period: "total",
+        };
+    });
+}
+
 function nombreEventoRespuesta(responseSource) {
     return {
         convenio: "convenio_response",
@@ -183,6 +524,9 @@ function nombreEventoRespuesta(responseSource) {
 function logResultadoConsulta({
     responseSource,
     status = 200,
+    uid = null,
+    quotaPlan = null,
+    quotaRemaining = null,
     pregunta = "",
     convenioUsado = null,
     requiresClarification = false,
@@ -194,6 +538,9 @@ function logResultadoConsulta({
     const payload = {
         response_source: responseSource,
         status,
+        uid: uid || null,
+        quotaPlan: quotaPlan || null,
+        quotaRemaining: typeof quotaRemaining === "number" ? quotaRemaining : null,
         convenioUsado: convenioUsado || null,
         requiresClarification: Boolean(requiresClarification),
         webFallbackUsed: Boolean(webFallbackUsed),
@@ -622,6 +969,396 @@ async function resolverConvenioDesdeEntrada(reqBody, pregunta) {
     return resolveCatalogEntry(catalogo, criteria);
 }
 
+function parseEnvList(value) {
+    return String(value || "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+}
+
+function stripeLog(eventName, payload = {}) {
+    console.log(JSON.stringify({
+        event: eventName,
+        ...payload,
+    }));
+}
+
+function stripeWarn(eventName, payload = {}) {
+    console.warn(JSON.stringify({
+        event: eventName,
+        ...payload,
+    }));
+}
+
+function getStripeId(value) {
+    if (!value) return "";
+    if (typeof value === "string") return value;
+    return value.id || "";
+}
+
+function getStripeProductId(price) {
+    if (!price) return "";
+    return getStripeId(price.product);
+}
+
+function getUidFromCheckoutSession(session) {
+    return session && (
+        session.client_reference_id ||
+        (session.metadata && (session.metadata.uid || session.metadata.userId)) ||
+        ""
+    );
+}
+
+function getUidFromSubscription(subscription) {
+    return subscription && subscription.metadata && (
+        subscription.metadata.uid ||
+        subscription.metadata.userId ||
+        ""
+    );
+}
+
+function hasPremiumStripeConfig() {
+    return premiumStripePriceIds.length > 0 || premiumStripeProductIds.length > 0;
+}
+
+function isAllowedPremiumPrice(priceId, productId) {
+    if (!hasPremiumStripeConfig()) return false;
+
+    const priceMatches = priceId && premiumStripePriceIds.includes(priceId);
+    const productMatches = productId && premiumStripeProductIds.includes(productId);
+
+    return Boolean(priceMatches || productMatches);
+}
+
+function getSubscriptionItems(subscription) {
+    return subscription &&
+        subscription.items &&
+        Array.isArray(subscription.items.data)
+        ? subscription.items.data
+        : [];
+}
+
+function getSubscriptionPremiumMatch(subscription) {
+    const items = getSubscriptionItems(subscription);
+
+    for (const item of items) {
+        const price = item.price || {};
+        const priceId = getStripeId(price);
+        const productId = getStripeProductId(price);
+
+        if (isAllowedPremiumPrice(priceId, productId)) {
+            return { priceId, productId };
+        }
+    }
+
+    return null;
+}
+
+function getLineItemPremiumMatch(lineItems) {
+    const items = lineItems && Array.isArray(lineItems.data) ? lineItems.data : [];
+
+    for (const item of items) {
+        const price = item.price || {};
+        const priceId = getStripeId(price);
+        const productId = getStripeProductId(price);
+
+        if (isAllowedPremiumPrice(priceId, productId)) {
+            return { priceId, productId };
+        }
+    }
+
+    return null;
+}
+
+async function findUserRefForStripe({ uid, customerId, subscriptionId }) {
+    if (uid) {
+        const userRef = db.collection("usuarios").doc(uid);
+        const userSnap = await userRef.get();
+
+        if (userSnap.exists) {
+            return {
+                userRef,
+                uid,
+            };
+        }
+
+        stripeWarn("stripe_user_not_found_by_uid", {
+            uid,
+        });
+    }
+
+    if (subscriptionId) {
+        const subscriptionQuery = await db.collection("usuarios")
+            .where("stripeSubscriptionId", "==", subscriptionId)
+            .limit(1)
+            .get();
+
+        if (!subscriptionQuery.empty) {
+            return {
+                userRef: subscriptionQuery.docs[0].ref,
+                uid: subscriptionQuery.docs[0].id,
+            };
+        }
+    }
+
+    if (customerId) {
+        const customerQuery = await db.collection("usuarios")
+            .where("stripeCustomerId", "==", customerId)
+            .limit(1)
+            .get();
+
+        if (!customerQuery.empty) {
+            return {
+                userRef: customerQuery.docs[0].ref,
+                uid: customerQuery.docs[0].id,
+            };
+        }
+    }
+
+    return null;
+}
+
+async function activatePremiumFromStripe({ uid, customerId, subscriptionId, priceId, productId, subscriptionStatus, currentPeriodEnd, cancelAtPeriodEnd }) {
+    const userMatch = await findUserRefForStripe({ uid, customerId, subscriptionId });
+
+    if (!userMatch) {
+        stripeWarn("stripe_activation_user_not_found", {
+            hasUid: Boolean(uid),
+            hasCustomerId: Boolean(customerId),
+            hasSubscriptionId: Boolean(subscriptionId),
+        });
+        return false;
+    }
+
+    await userMatch.userRef.set({
+        tipoCuenta: "premium",
+        stripeCustomerId: customerId || null,
+        stripeSubscriptionId: subscriptionId || null,
+        stripePriceId: priceId || null,
+        stripeProductId: productId || null,
+        subscriptionStatus: subscriptionStatus || "active",
+        updatedBillingAt: admin.firestore.FieldValue.serverTimestamp(),
+        stripeCurrentPeriodEnd: currentPeriodEnd || null,
+        stripeCancelAtPeriodEnd: Boolean(cancelAtPeriodEnd),
+    }, { merge: true });
+
+    stripeLog("stripe_premium_activated", {
+        uid: userMatch.uid,
+        subscriptionStatus: subscriptionStatus || "active",
+        hasCustomerId: Boolean(customerId),
+        hasSubscriptionId: Boolean(subscriptionId),
+        priceId: priceId || null,
+        productId: productId || null,
+    });
+
+    return true;
+}
+
+async function deactivatePremiumFromStripe({ uid, customerId, subscriptionId, subscriptionStatus, reason }) {
+    const userMatch = await findUserRefForStripe({ uid, customerId, subscriptionId });
+
+    if (!userMatch) {
+        stripeWarn("stripe_deactivation_user_not_found", {
+            reason,
+            hasUid: Boolean(uid),
+            hasCustomerId: Boolean(customerId),
+            hasSubscriptionId: Boolean(subscriptionId),
+        });
+        return false;
+    }
+
+    await userMatch.userRef.set({
+        tipoCuenta: "free",
+        subscriptionStatus: subscriptionStatus || reason || "inactive",
+        updatedBillingAt: admin.firestore.FieldValue.serverTimestamp(),
+        stripeCancelAtPeriodEnd: null,
+    }, { merge: true });
+
+    stripeLog("stripe_premium_deactivated", {
+        uid: userMatch.uid,
+        subscriptionStatus: subscriptionStatus || null,
+        reason,
+        hasCustomerId: Boolean(customerId),
+        hasSubscriptionId: Boolean(subscriptionId),
+    });
+
+    return true;
+}
+
+async function getExpandedSubscription(subscriptionId) {
+    if (!subscriptionId) return null;
+
+    return stripe.subscriptions.retrieve(subscriptionId, {
+        expand: ["items.data.price.product"],
+    });
+}
+
+async function handleCheckoutSessionCompleted(session) {
+    if (!hasPremiumStripeConfig()) {
+        stripeWarn("stripe_premium_config_missing", {
+            eventType: "checkout.session.completed",
+        });
+        return;
+    }
+
+    if (session.status !== "complete") {
+        stripeWarn("stripe_checkout_ignored_incomplete_status", {
+            status: session.status || null,
+        });
+        return;
+    }
+
+    const uid = getUidFromCheckoutSession(session);
+    const customerId = getStripeId(session.customer);
+    const subscriptionId = getStripeId(session.subscription);
+    const mode = session.mode || "";
+
+    if (!uid) {
+        stripeWarn("stripe_checkout_missing_uid", {
+            mode,
+            hasCustomerId: Boolean(customerId),
+            hasSubscriptionId: Boolean(subscriptionId),
+        });
+        return;
+    }
+
+    if (mode === "subscription") {
+        const subscription = await getExpandedSubscription(subscriptionId);
+
+        if (!subscription || subscription.status !== "active") {
+            stripeWarn("stripe_checkout_subscription_not_active", {
+                uid,
+                status: subscription ? subscription.status : null,
+                hasSubscriptionId: Boolean(subscriptionId),
+            });
+            return;
+        }
+
+        const premiumMatch = getSubscriptionPremiumMatch(subscription);
+
+        if (!premiumMatch) {
+            stripeWarn("stripe_checkout_price_not_allowed", {
+                uid,
+                mode,
+                hasSubscriptionId: Boolean(subscriptionId),
+            });
+            return;
+        }
+
+        await activatePremiumFromStripe({
+            uid,
+            customerId,
+            subscriptionId,
+            priceId: premiumMatch.priceId,
+            productId: premiumMatch.productId,
+            subscriptionStatus: subscription.status,
+            currentPeriodEnd: subscription.current_period_end || null,
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        });
+        return;
+    }
+
+    if (mode === "payment") {
+        if (session.payment_status !== "paid") {
+            stripeWarn("stripe_checkout_payment_not_paid", {
+                uid,
+                paymentStatus: session.payment_status || null,
+            });
+            return;
+        }
+
+        const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+            limit: 100,
+            expand: ["data.price.product"],
+        });
+        const premiumMatch = getLineItemPremiumMatch(lineItems);
+
+        if (!premiumMatch) {
+            stripeWarn("stripe_checkout_price_not_allowed", {
+                uid,
+                mode,
+            });
+            return;
+        }
+
+        await activatePremiumFromStripe({
+            uid,
+            customerId,
+            subscriptionId: "",
+            priceId: premiumMatch.priceId,
+            productId: premiumMatch.productId,
+            subscriptionStatus: "paid",
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: false,
+        });
+        return;
+    }
+
+    stripeWarn("stripe_checkout_mode_not_supported", {
+        uid,
+        mode,
+    });
+}
+
+async function handleSubscriptionUpdated(subscription) {
+    const uid = getUidFromSubscription(subscription);
+    const customerId = getStripeId(subscription.customer);
+    const subscriptionId = getStripeId(subscription);
+    const premiumMatch = getSubscriptionPremiumMatch(subscription);
+
+    if (!premiumMatch) {
+        await deactivatePremiumFromStripe({
+            uid,
+            customerId,
+            subscriptionId,
+            subscriptionStatus: subscription.status,
+            reason: "subscription_price_not_allowed",
+        });
+        return;
+    }
+
+    if (subscription.status === "active") {
+        await activatePremiumFromStripe({
+            uid,
+            customerId,
+            subscriptionId,
+            priceId: premiumMatch.priceId,
+            productId: premiumMatch.productId,
+            subscriptionStatus: subscription.status,
+            currentPeriodEnd: subscription.current_period_end || null,
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        });
+        return;
+    }
+
+    await deactivatePremiumFromStripe({
+        uid,
+        customerId,
+        subscriptionId,
+        subscriptionStatus: subscription.status,
+        reason: "subscription_not_active",
+    });
+}
+
+async function handleSubscriptionDeleted(subscription) {
+    await deactivatePremiumFromStripe({
+        uid: getUidFromSubscription(subscription),
+        customerId: getStripeId(subscription.customer),
+        subscriptionId: getStripeId(subscription),
+        subscriptionStatus: subscription.status || "canceled",
+        reason: "subscription_deleted",
+    });
+}
+
+async function handleInvoicePaymentFailed(invoice) {
+    await deactivatePremiumFromStripe({
+        customerId: getStripeId(invoice.customer),
+        subscriptionId: getStripeId(invoice.subscription),
+        subscriptionStatus: "past_due",
+        reason: "invoice_payment_failed",
+    });
+}
+
 // 1. WEBHOOK DE STRIPE (V2)
 exports.stripeWebhook = onRequest({ cors: true }, async (req, res) => {
     const sig = req.headers["stripe-signature"];
@@ -638,40 +1375,53 @@ exports.stripeWebhook = onRequest({ cors: true }, async (req, res) => {
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    if (event.type === "checkout.session.completed") {
-        const session = event.data.object;
-        const userId = session.client_reference_id; 
-        const customerId = session.customer;
-
-        if (userId) {
-            await db.collection("usuarios").doc(userId).set({
-                tipoCuenta: "premium",
-                stripeCustomerId: customerId
-            }, { merge: true });
-            console.log(`✅ Usuario ${userId} activado como PREMIUM`);
+    try {
+        switch (event.type) {
+            case "checkout.session.completed":
+                await handleCheckoutSessionCompleted(event.data.object);
+                break;
+            case "customer.subscription.updated":
+                await handleSubscriptionUpdated(event.data.object);
+                break;
+            case "customer.subscription.deleted":
+                await handleSubscriptionDeleted(event.data.object);
+                break;
+            case "invoice.payment_failed":
+                await handleInvoicePaymentFailed(event.data.object);
+                break;
+            default:
+                stripeLog("stripe_webhook_ignored_event", {
+                    eventType: event.type,
+                });
         }
-    }
-
-    if (event.type === "customer.subscription.deleted") {
-        const subscription = event.data.object;
-        const customerId = subscription.customer;
-
-        const userQuery = await db.collection("usuarios")
-            .where("stripeCustomerId", "==", customerId)
-            .limit(1).get();
-
-        if (!userQuery.empty) {
-            await userQuery.docs[0].ref.set({ tipoCuenta: "free" }, { merge: true });
-            console.log(`ℹ️ Suscripción cancelada para el cliente ${customerId}`);
-        }
+    } catch (error) {
+        console.error("Error procesando webhook de Stripe:", {
+            eventType: event.type,
+            errorName: error.name,
+            errorMessage: error.message,
+        });
+        return res.status(500).json({ error: "Stripe webhook processing failed" });
     }
 
     res.json({ received: true });
 });
 
 // 1.1 CONSULTA LEGAL SOBRE CONVENIOS (V2)
-exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
-    setCorsHeaders(res);
+exports.consultarConvenio = onRequest(CONSULTAR_CONVENIO_FUNCTION_OPTIONS, async (req, res) => {
+    const corsResult = setCorsHeaders(req, res);
+
+    if (!corsResult.ok) {
+        escribirLogConsulta("consultarConvenio_cors_rejected", {
+            status: 403,
+            origin: corsResult.origin,
+            reason: corsResult.reason,
+        });
+        logResultadoConsulta({
+            responseSource: "error",
+            status: 403,
+        });
+        return res.status(403).json({ error: "Origen no permitido" });
+    }
 
     if (req.method === "OPTIONS") {
         return res.status(204).send("");
@@ -686,18 +1436,89 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
     }
 
     let pregunta = "";
+    const payloadValidation = validarPayloadBasicoConsulta(req);
+
+    if (!payloadValidation.ok) {
+        escribirLogConsulta("consultarConvenio_bad_request", {
+            status: payloadValidation.status,
+            reason: payloadValidation.error,
+        });
+        logResultadoConsulta({
+            responseSource: "error",
+            status: payloadValidation.status,
+        });
+        return res.status(payloadValidation.status).json({ error: payloadValidation.error });
+    }
+
+    const authResult = await verificarUsuarioConsulta(req);
+
+    if (!authResult.ok) {
+        escribirLogConsulta("consultarConvenio_auth_failed", {
+            status: 401,
+            reason: authResult.reason,
+            errorName: authResult.errorName || null,
+        });
+        logResultadoConsulta({
+            responseSource: "error",
+            status: 401,
+        });
+        return res.status(401).json({ error: "Debes iniciar sesión para usar la consulta IA" });
+    }
+
+    const preguntaValidation = validarPreguntaConsulta(payloadValidation.body);
+
+    if (!preguntaValidation.ok) {
+        escribirLogConsulta("consultarConvenio_bad_request", {
+            status: preguntaValidation.status,
+            reason: preguntaValidation.error,
+            uid: authResult.uid,
+        });
+        logResultadoConsulta({
+            responseSource: "error",
+            status: preguntaValidation.status,
+        });
+        return res.status(preguntaValidation.status).json({ error: preguntaValidation.error });
+    }
+
+    pregunta = preguntaValidation.pregunta;
+    const uid = authResult.uid;
+    let quotaInfo = null;
 
     try {
-        pregunta = String(req.body && req.body.pregunta ? req.body.pregunta : "").trim();
+        try {
+            quotaInfo = await consumirCuotaConsultaIA(uid);
+        } catch (error) {
+            if (error instanceof QuotaError) {
+                const quota = construirQuotaPublica(error.quota);
 
-        if (!pregunta) {
-            logResultadoConsulta({
-                responseSource: "error",
-                status: 400,
-                pregunta,
-            });
-            return res.status(400).json({ error: "La pregunta es obligatoria" });
+                escribirLogConsulta("consultarConvenio_quota_rejected", {
+                    status: error.status,
+                    uid,
+                    code: error.code,
+                    quotaPlan: quota ? quota.plan : null,
+                    quotaRemaining: quota ? quota.remaining : null,
+                    questionLength: String(pregunta || "").length,
+                });
+                logResultadoConsulta({
+                    responseSource: "error",
+                    status: error.status,
+                    uid,
+                    quotaPlan: quota ? quota.plan : null,
+                    quotaRemaining: quota ? quota.remaining : null,
+                    pregunta,
+                });
+
+                return res.status(error.status).json({
+                    error: error.message,
+                    code: error.code,
+                    quota,
+                });
+            }
+
+            throw error;
         }
+
+        const quotaPublica = construirQuotaPublica(quotaInfo);
 
         const estatutoFallback = findWorkersStatuteFallback(pregunta);
         const vectorPregunta = await generarEmbeddingPregunta(pregunta);
@@ -721,16 +1542,19 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                     logResultadoConsulta({
                         responseSource: "estatuto",
                         status: 200,
+                        uid,
+                        quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                        quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
                         pregunta,
                         chunksUsed: 1,
                     });
-                    return res.json({
+                    return res.json(responderConCuota({
                         respuesta: buildWorkersStatuteFallbackResponse(estatutoFallback),
                         convenioUsado: null,
                         conveniosUsados: [],
                         convenioDetectado: null,
                         fuentes: [buildWorkersStatuteSource(estatutoFallback)],
-                    });
+                    }, quotaInfo));
                 }
 
                 const webFallbackResponse = await intentarFallbackWebOficial({
@@ -744,73 +1568,88 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                     logResultadoConsulta({
                         responseSource: "web_official",
                         status: 200,
+                        uid,
+                        quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                        quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
                         pregunta,
                         webFallbackUsed: true,
                         webFallbackReason: webFallbackResponse.webFallbackReason,
                     });
-                    return res.json(webFallbackResponse);
+                    return res.json(responderConCuota(webFallbackResponse, quotaInfo));
                 }
 
                 if (resolucionCatalogo.status === "missing_all" && preguntaPideDiasLibres(pregunta)) {
                     logResultadoConsulta({
                         responseSource: "unconfirmed",
                         status: 200,
+                        uid,
+                        quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                        quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
                         pregunta,
                         webFallbackReason: webFallbackResponse.webFallbackReason,
                     });
-                    return res.json({
+                    return res.json(responderConCuota({
                         respuesta: "No tengo información suficiente en las fuentes disponibles para confirmar un permiso retribuido por ese motivo.",
                         convenioUsado: null,
                         conveniosUsados: [],
                         convenioDetectado: null,
                         fuentes: [],
-                    });
+                    }, quotaInfo));
                 }
 
                 if (resolucionCatalogo.status === "missing_all" && esPreguntaDisciplinaria(pregunta)) {
                     logResultadoConsulta({
                         responseSource: "unconfirmed",
                         status: 200,
+                        uid,
+                        quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                        quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
                         pregunta,
                         requiresClarification: true,
                         webFallbackReason: webFallbackResponse.webFallbackReason,
                     });
-                    return res.json({
+                    return res.json(responderConCuota({
                         respuesta: "No necesariamente: una falta grave no implica automáticamente despido. Para confirmarte la sanción concreta necesito saber tu sector y provincia, porque cada convenio puede distinguir entre faltas graves, faltas muy graves y sus sanciones.",
                         requiereAclaracion: true,
                         opcionesConvenio: [],
                         convenioUsado: null,
                         conveniosUsados: [],
                         fuentes: [],
-                    });
+                    }, quotaInfo));
                 }
 
                 if (webFallbackResponse.webFallbackReason && webFallbackResponse.webFallbackReason !== "web_fallback_disabled") {
                     logResultadoConsulta({
                         responseSource: "unconfirmed",
                         status: 200,
+                        uid,
+                        quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                        quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
                         pregunta,
                         webFallbackUsed: webFallbackResponse.webFallbackUsed,
                         webFallbackReason: webFallbackResponse.webFallbackReason,
                     });
-                    return res.json(webFallbackResponse);
+                    return res.json(responderConCuota(webFallbackResponse, quotaInfo));
                 }
 
                 logResultadoConsulta({
                     responseSource: "unconfirmed",
                     status: 200,
+                    uid,
+                    quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                    quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
                     pregunta,
                     requiresClarification: true,
                     webFallbackReason: webFallbackResponse.webFallbackReason,
                 });
-                return res.json({
+                return res.json(responderConCuota({
                     respuesta: resolucionCatalogo.message,
                     requiereAclaracion: true,
                     opcionesConvenio: resolucionCatalogo.options || [],
                     convenioUsado: null,
                     conveniosUsados: [],
                     fuentes: [],
-                });
+                }, quotaInfo));
             }
         }
 
@@ -837,17 +1676,20 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                 logResultadoConsulta({
                     responseSource: "estatuto",
                     status: 200,
+                    uid,
+                    quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                    quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
                     pregunta,
                     convenioUsado: convenioFileName,
                     chunksUsed: 1,
                 });
-                return res.json({
+                return res.json(responderConCuota({
                     respuesta: buildWorkersStatuteFallbackResponse(estatutoFallback, { convenioFileName }),
                     convenioUsado: convenioFileName || null,
                     conveniosUsados: conveniosFileName,
                     convenioDetectado: construirConvenioDetectado(convenioResuelto),
                     fuentes: [buildWorkersStatuteSource(estatutoFallback)],
-                });
+                }, quotaInfo));
             }
 
             const webFallbackResponse = await intentarFallbackWebOficial({
@@ -861,23 +1703,29 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                 logResultadoConsulta({
                     responseSource: webFallbackResponse.webFallbackUsed ? "web_official" : "unconfirmed",
                     status: 200,
+                    uid,
+                    quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                    quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
                     pregunta,
                     convenioUsado: convenioFileName,
                     webFallbackUsed: webFallbackResponse.webFallbackUsed,
                     webFallbackReason: webFallbackResponse.webFallbackReason,
                 });
-                return res.json(webFallbackResponse);
+                return res.json(responderConCuota(webFallbackResponse, quotaInfo));
             }
 
             logResultadoConsulta({
                 responseSource: "unconfirmed",
                 status: 404,
+                uid,
+                quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
                 pregunta,
                 convenioUsado: convenioFileName,
             });
-            return res.status(404).json({
+            return res.status(404).json(responderConCuota({
                 error: "No se encontraron fragmentos relevantes del convenio para responder.",
-            });
+            }, quotaInfo));
         }
 
         const bloquesContexto = [];
@@ -937,6 +1785,9 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                 logResultadoConsulta({
                     responseSource: webFallbackResponse.webFallbackUsed ? "web_official" : "unconfirmed",
                     status: 200,
+                    uid,
+                    quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                    quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
                     pregunta,
                     convenioUsado: convenioFileName,
                     webFallbackUsed: webFallbackResponse.webFallbackUsed,
@@ -944,7 +1795,7 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                     finishReason: generacion.finishReason,
                     chunksUsed: chunksBase.length + chunksEspecificos.length,
                 });
-                return res.json(webFallbackResponse);
+                return res.json(responderConCuota(webFallbackResponse, quotaInfo));
             }
         }
 
@@ -955,13 +1806,16 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                     ? "estatuto"
                     : "convenio",
             status: 200,
+            uid,
+            quotaPlan: quotaPublica ? quotaPublica.plan : null,
+            quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
             pregunta,
             convenioUsado: convenioFileName,
             finishReason: generacion.finishReason,
             chunksUsed: chunksBase.length + chunksEspecificos.length + (usaEstatutoFallback ? 1 : 0),
         });
 
-        return res.json({
+        return res.json(responderConCuota({
             respuesta: respuestaFinal || "No he podido generar una respuesta basada en el convenio.",
             convenioUsado: convenioFileName || null,
             conveniosUsados: conveniosFileName,
@@ -991,7 +1845,7 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
                     ? [buildWorkersStatuteSource(estatutoFallback)]
                     : []),
             ],
-        });
+        }, quotaInfo));
     } catch (error) {
         escribirLogConsulta("consultarConvenio_error", {
             response_source: "error",
@@ -1002,6 +1856,7 @@ exports.consultarConvenio = onRequest({ cors: true }, async (req, res) => {
         logResultadoConsulta({
             responseSource: "error",
             status: 500,
+            uid,
             pregunta,
         });
         console.error("❌ Error en consultarConvenio:", error);

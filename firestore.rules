@@ -23,6 +23,83 @@ service cloud.firestore {
         && acciones.intentos_pdf is number
         && acciones.errores is number;
     }
+
+    function esUsuario(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function camposEditablesUsuario() {
+      return [
+        "email",
+        "fechaRegistro",
+        "ciudadActual",
+        "sectorUsuario",
+        "esHosteleria"
+      ];
+    }
+
+    function camposReservadosUsuario() {
+      return [
+        "tipoCuenta",
+        "stripeCustomerId",
+        "subscriptionId",
+        "subscriptionStatus",
+        "billing",
+        "billingStatus",
+        "role",
+        "admin",
+        "isPremium",
+        "premium",
+        "createdAt",
+        "updatedBillingAt",
+        "stripeSubscriptionId",
+        "stripePriceId",
+        "stripeProductId",
+        "stripeCurrentPeriodEnd",
+        "stripeCancelAtPeriodEnd"
+      ];
+    }
+
+    function camposPermitidosDocumentoUsuario() {
+      return [
+        "email",
+        "fechaRegistro",
+        "ciudadActual",
+        "sectorUsuario",
+        "esHosteleria",
+        "tipoCuenta",
+        "stripeCustomerId",
+        "subscriptionId",
+        "subscriptionStatus",
+        "billing",
+        "billingStatus",
+        "role",
+        "admin",
+        "isPremium",
+        "premium",
+        "createdAt",
+        "updatedBillingAt",
+        "stripeSubscriptionId",
+        "stripePriceId",
+        "stripeProductId",
+        "stripeCurrentPeriodEnd",
+        "stripeCancelAtPeriodEnd"
+      ];
+    }
+
+    function camposReservadosSinCambios() {
+      return !request.resource.data.diff(resource.data)
+        .affectedKeys()
+        .hasAny(camposReservadosUsuario());
+    }
+
+    function camposEditablesValidos(data) {
+      return (!data.keys().hasAny(["email"]) || data.email is string)
+        && (!data.keys().hasAny(["fechaRegistro"]) || data.fechaRegistro is string)
+        && (!data.keys().hasAny(["ciudadActual"]) || data.ciudadActual is string)
+        && (!data.keys().hasAny(["sectorUsuario"]) || data.sectorUsuario is string)
+        && (!data.keys().hasAny(["esHosteleria"]) || data.esHosteleria is bool);
+    }
     
     // 1. REGLA PARA FESTIVOS (PÚBLICA)
     match /festivos_oficiales/{document=**} {
@@ -31,10 +108,34 @@ service cloud.firestore {
 
     // 2. REGLA PARA USUARIOS (PRIVADA)
     match /usuarios/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
+      allow read: if esUsuario(userId);
+
+      allow create: if esUsuario(userId)
+        && request.resource.data.keys().hasOnly(camposEditablesUsuario())
+        && camposEditablesValidos(request.resource.data);
+
+      allow update: if esUsuario(userId)
+        && request.resource.data.keys().hasOnly(camposPermitidosDocumentoUsuario())
+        && camposReservadosSinCambios()
+        && camposEditablesValidos(request.resource.data);
+
+      allow delete: if false;
+
+      match /years/{yearId} {
+        allow read, write: if esUsuario(userId);
+      }
+
+      match /visitas/{visitId} {
+        allow read, write: if esUsuario(userId);
+      }
+
+      match /usage/{usageDoc} {
+        allow read: if esUsuario(userId);
+        allow write: if false;
+      }
+
       match /{allSubcollections=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if false;
       }
     }
 

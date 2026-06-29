@@ -90,7 +90,6 @@ function guardarTodoEnFirebase() {
             ciudadActual: ciudadActual,
             sectorUsuario: sectorUsuario,
             esHosteleria: (sectorUsuario === 'hosteleria' || sectorUsuario === 'alojamientos'),
-            tipoCuenta: esPremium ? 'premium' : 'free',
             diasMarcados: firebase.firestore.FieldValue.delete(),
             objetivosAnuales: firebase.firestore.FieldValue.delete(),
             tipoJornadaPorAnio: firebase.firestore.FieldValue.delete(),

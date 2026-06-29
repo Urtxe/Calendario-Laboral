@@ -92,7 +92,6 @@ window.autenticar = () => {
         ? auth.createUserWithEmailAndPassword(email, password).then(u => {
             return db.collection('usuarios').doc(u.user.uid).set({ 
                 email, 
-                tipoCuenta: 'free', 
                 fechaRegistro: new Date().toISOString(),
                 ciudadActual: 'Donostia',
                 sectorUsuario: 'general',
@@ -133,7 +132,6 @@ window.autenticarConGoogle = () => {
                 esNuevoUsuario = true; // Marcamos si es nuevo para ofrecerle el Premium luego
                 return userRef.set({
                     email: user.email,
-                    tipoCuenta: 'free',
                     fechaRegistro: new Date().toISOString(),
                     ciudadActual: 'Donostia',
                     sectorUsuario: 'general',

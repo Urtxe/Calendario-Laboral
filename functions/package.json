@@ -7,6 +7,7 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
+    "test:security": "node ../scripts/security-checks.js",
     "ingest:convenios": "node ingest-conventios.js",
     "migrate:doc-type": "node migrate-doc-type.js",
     "build:catalogo-convenios": "node build-convenio-catalog.js"

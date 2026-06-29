@@ -1,0 +1,8 @@
+{
+  "name": "balance-laboral",
+  "private": true,
+  "scripts": {
+    "test": "npm run test:security",
+    "test:security": "node scripts/security-checks.js"
+  }
+}

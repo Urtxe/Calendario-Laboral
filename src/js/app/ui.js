@@ -318,6 +318,7 @@ function actualizarTarjetaAsesorLegal(activar) {
 // ============================================
 
 const LIMITE_CONSULTAS_GRATIS = 3;
+const LIMITE_CARACTERES_PREGUNTA_IA = 1200;
 const ASESOR_LEGAL_STORAGE_PREFIX = "balance_laboral_asesor_legal_";
 
 function getModoAsesorLegal() {
@@ -668,6 +669,14 @@ async function enviarConsultaLegal() {
     return;
   }
 
+  if (pregunta.length > LIMITE_CARACTERES_PREGUNTA_IA) {
+    crearMensajeLegal(
+      `La pregunta no puede superar ${LIMITE_CARACTERES_PREGUNTA_IA} caracteres.`,
+      "error",
+    );
+    return;
+  }
+
   if (!usuarioTieneSesion()) {
     actualizarTextoEstadoLegal();
     crearMensajeLegal(
@@ -693,6 +702,13 @@ async function enviarConsultaLegal() {
   const typing = crearMensajeLegal("Consultando el convenio...", "assistant");
 
   try {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      throw new Error("Debes iniciar sesión para usar la consulta IA");
+    }
+
+    const idToken = await currentUser.getIdToken();
     const consultarConvenioUrl =
       (window.APP_CONFIG && window.APP_CONFIG.consultarConvenioUrl) ||
       localStorage.getItem("consultarConvenioUrl") ||
@@ -702,14 +718,15 @@ async function enviarConsultaLegal() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${idToken}`,
       },
-            body: JSON.stringify({
-                pregunta,
-                ciudad: ciudadActual || "",
-                sector: sectorUsuario || "",
-                convenioFileName:
-                  window.convenioFileName ||
-                  localStorage.getItem("convenioFileName") ||
+      body: JSON.stringify({
+        pregunta,
+        ciudad: ciudadActual || "",
+        sector: sectorUsuario || "",
+        convenioFileName:
+          window.convenioFileName ||
+          localStorage.getItem("convenioFileName") ||
           localStorage.getItem("file_name") ||
           "",
       }),
@@ -728,6 +745,25 @@ async function enviarConsultaLegal() {
     }
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Debes iniciar sesión para usar la consulta IA");
+      }
+
+      if (response.status === 429) {
+        const quotaPlan = data && data.quota ? data.quota.plan : "";
+        throw new Error(
+          quotaPlan === "premium"
+            ? "Has alcanzado temporalmente el límite de uso razonable. Inténtalo más tarde."
+            : "Has alcanzado el límite gratuito de consultas IA.",
+        );
+      }
+
+      if (response.status === 400) {
+        throw new Error(
+          data && data.error ? data.error : "Revisa la pregunta antes de enviarla.",
+        );
+      }
+
       throw new Error(
         data && data.error ? data.error : "No se pudo consultar el convenio.",
       );
@@ -758,8 +794,17 @@ async function enviarConsultaLegal() {
       crearHtmlLegal(searchEntryPoint, "assistant");
     }
 
-    if (!window.esPremium && !data.requiereAclaracion) {
-      setConsultasUsadas(getConsultasUsadas() + 1);
+    if (!window.esPremium) {
+      if (
+        data.quota &&
+        data.quota.plan === "free" &&
+        typeof data.quota.limit === "number" &&
+        typeof data.quota.remaining === "number"
+      ) {
+        setConsultasUsadas(data.quota.limit - data.quota.remaining);
+      } else if (!data.requiereAclaracion) {
+        setConsultasUsadas(getConsultasUsadas() + 1);
+      }
       actualizarTarjetaAsesorLegal(false);
     }
   } catch (error) {

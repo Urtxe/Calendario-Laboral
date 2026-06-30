@@ -41,6 +41,54 @@ function puedeAutoenfocarCampo() {
   return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 }
 
+function legalAiDebugEnabled() {
+  return Boolean(
+    window.APP_CONFIG &&
+      (window.APP_CONFIG.legalAiDebug === true ||
+        window.APP_CONFIG.debugLegalAiAuth === true),
+  );
+}
+
+function logLegalAiAuthDebug(data) {
+  if (!legalAiDebugEnabled()) return;
+  console.log("[LegalAI auth]", {
+    hasUser: Boolean(data && data.hasUser),
+    uid: data && data.uid ? data.uid : null,
+    tokenLength:
+      data && typeof data.tokenLength === "number" ? data.tokenLength : 0,
+    hasAuthorizationHeader: Boolean(data && data.hasAuthorizationHeader),
+  });
+}
+
+function esperarUsuarioAuth(timeoutMs = 3000) {
+  if (typeof auth === "undefined" || !auth) {
+    return Promise.resolve(null);
+  }
+
+  if (auth.currentUser) {
+    return Promise.resolve(auth.currentUser);
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    let unsubscribe = function () {};
+    const timeoutId = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      unsubscribe();
+      resolve(auth.currentUser || null);
+    }, timeoutMs);
+
+    unsubscribe = auth.onAuthStateChanged((user) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      unsubscribe();
+      resolve(user || null);
+    });
+  });
+}
+
 function inicializarNavegacionDashboard() {
   const navItems = Array.from(document.querySelectorAll(".sidebar-nav-item"));
   const sections = Array.from(
@@ -730,13 +778,27 @@ async function enviarConsultaLegal() {
   const typing = crearMensajeLegal("Consultando el convenio...", "assistant");
 
   try {
-    const currentUser = auth.currentUser;
+    const currentUser = await esperarUsuarioAuth();
 
     if (!currentUser) {
+      logLegalAiAuthDebug({
+        hasUser: false,
+        uid: null,
+        tokenLength: 0,
+        hasAuthorizationHeader: false,
+      });
       throw new Error("Debes iniciar sesión para usar la consulta IA");
     }
 
     const idToken = await currentUser.getIdToken();
+    const authorizationHeader = `Bearer ${idToken}`;
+    logLegalAiAuthDebug({
+      hasUser: true,
+      uid: currentUser.uid,
+      tokenLength: idToken ? idToken.length : 0,
+      hasAuthorizationHeader: Boolean(authorizationHeader),
+    });
+
     const consultarConvenioUrl =
       (window.APP_CONFIG && window.APP_CONFIG.consultarConvenioUrl) ||
       localStorage.getItem("consultarConvenioUrl") ||
@@ -746,7 +808,7 @@ async function enviarConsultaLegal() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
+        Authorization: authorizationHeader,
       },
       body: JSON.stringify({
         pregunta,

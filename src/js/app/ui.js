@@ -1,11 +1,15 @@
 function actualizarViewportVisible() {
   const viewport = window.visualViewport;
   const root = document.documentElement;
-  const height = viewport && viewport.height ? viewport.height : window.innerHeight;
+  const height =
+    viewport && viewport.height ? viewport.height : window.innerHeight;
   const top = viewport && viewport.offsetTop ? viewport.offsetTop : 0;
 
   if (height) root.style.setProperty("--app-visible-height", `${height}px`);
-  root.style.setProperty("--app-modal-height", height ? `${height}px` : "100dvh");
+  root.style.setProperty(
+    "--app-modal-height",
+    height ? `${height}px` : "100dvh",
+  );
   root.style.setProperty("--app-modal-top", `${top}px`);
 }
 
@@ -13,14 +17,24 @@ function inicializarViewportIOS() {
   actualizarViewportVisible();
 
   if (!window.visualViewport) {
-    window.addEventListener("resize", actualizarViewportVisible, { passive: true });
-    window.addEventListener("orientationchange", actualizarViewportVisible, { passive: true });
+    window.addEventListener("resize", actualizarViewportVisible, {
+      passive: true,
+    });
+    window.addEventListener("orientationchange", actualizarViewportVisible, {
+      passive: true,
+    });
     return;
   }
 
-  window.visualViewport.addEventListener("resize", actualizarViewportVisible, { passive: true });
-  window.visualViewport.addEventListener("scroll", actualizarViewportVisible, { passive: true });
-  window.addEventListener("orientationchange", actualizarViewportVisible, { passive: true });
+  window.visualViewport.addEventListener("resize", actualizarViewportVisible, {
+    passive: true,
+  });
+  window.visualViewport.addEventListener("scroll", actualizarViewportVisible, {
+    passive: true,
+  });
+  window.addEventListener("orientationchange", actualizarViewportVisible, {
+    passive: true,
+  });
 }
 
 function puedeAutoenfocarCampo() {
@@ -29,7 +43,9 @@ function puedeAutoenfocarCampo() {
 
 function inicializarNavegacionDashboard() {
   const navItems = Array.from(document.querySelectorAll(".sidebar-nav-item"));
-  const sections = Array.from(document.querySelectorAll("#app-container > .collapsible-card"));
+  const sections = Array.from(
+    document.querySelectorAll("#app-container > .collapsible-card"),
+  );
   const desktopQuery = window.matchMedia("(min-width: 1024px)");
 
   if (!navItems.length || !sections.length) return;
@@ -49,17 +65,25 @@ function inicializarNavegacionDashboard() {
     }
 
     sections.forEach((section) => {
-      section.classList.toggle("dashboard-section-active", section.id === targetId);
+      section.classList.toggle(
+        "dashboard-section-active",
+        section.id === targetId,
+      );
     });
 
     navItems.forEach((item) => {
-      item.classList.toggle("active", item.dataset.dashboardTarget === targetId);
+      item.classList.toggle(
+        "active",
+        item.dataset.dashboardTarget === targetId,
+      );
     });
 
     if (desktopQuery.matches) {
       target.classList.add("active");
       if (!options.skipScroll) {
-        document.querySelector(".app-main")?.scrollTo({ top: 0, behavior: "smooth" });
+        document
+          .querySelector(".app-main")
+          ?.scrollTo({ top: 0, behavior: "smooth" });
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
       if (typeof renderTodo === "function") renderTodo();
@@ -75,9 +99,13 @@ function inicializarNavegacionDashboard() {
   const sincronizarModo = () => {
     if (desktopQuery.matches) {
       const activeItem = document.querySelector(".sidebar-nav-item.active");
-      activarSeccion(activeItem?.dataset.dashboardTarget || "cargar-datos", { skipScroll: true });
+      activarSeccion(activeItem?.dataset.dashboardTarget || "cargar-datos", {
+        skipScroll: true,
+      });
     } else {
-      sections.forEach((section) => section.classList.remove("dashboard-section-active"));
+      sections.forEach((section) =>
+        section.classList.remove("dashboard-section-active"),
+      );
     }
   };
 
@@ -386,7 +414,7 @@ function crearMensajeBienvenidaLegal() {
   }
 
   crearMensajeLegal(
-    "Pregúntame sobre tu convenio y te responderé con lo que pueda confirmar en la norma aplicable.",
+    "Dime tu trabajo, tu ciudad y tu duda para revisar el convenio que te corresponde.",
     "assistant",
   );
 }
@@ -718,7 +746,7 @@ async function enviarConsultaLegal() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${idToken}`,
+        Authorization: `Bearer ${idToken}`,
       },
       body: JSON.stringify({
         pregunta,
@@ -760,7 +788,9 @@ async function enviarConsultaLegal() {
 
       if (response.status === 400) {
         throw new Error(
-          data && data.error ? data.error : "Revisa la pregunta antes de enviarla.",
+          data && data.error
+            ? data.error
+            : "Revisa la pregunta antes de enviarla.",
         );
       }
 
@@ -771,10 +801,14 @@ async function enviarConsultaLegal() {
 
     if (typing) typing.remove();
     let respuesta = data.respuesta || "No he podido generar una respuesta.";
-    if (data.requiereAclaracion && Array.isArray(data.opcionesConvenio) && data.opcionesConvenio.length) {
+    if (
+      data.requiereAclaracion &&
+      Array.isArray(data.opcionesConvenio) &&
+      data.opcionesConvenio.length
+    ) {
       const sugerencias = data.opcionesConvenio
         .slice(0, 3)
-        .map((opcion) => opcion && opcion.title ? `- ${opcion.title}` : "")
+        .map((opcion) => (opcion && opcion.title ? `- ${opcion.title}` : ""))
         .filter(Boolean)
         .join("\n");
 

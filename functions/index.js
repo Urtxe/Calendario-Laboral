@@ -2,6 +2,7 @@ const { onRequest } = require("firebase-functions/v2/https");
 // Forzamos la carga de la versión 1 específicamente para el disparador de usuario
 const functionsV1 = require("firebase-functions/v1"); 
 const admin = require("firebase-admin");
+const { FieldValue } = require("firebase-admin/firestore");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const {
     CATALOGO_CONVENIOS,
@@ -81,6 +82,9 @@ const CONSULTAR_CONVENIO_FUNCTION_OPTIONS = {
     maxInstances: 10,
     concurrency: 20,
 };
+const GLOBAL_CONVENIO_TOP_K = 3;
+const SPECIFIC_CHUNKS_TOP_K = 5;
+const CLARIFICATION_STATUSES = new Set(["missing_all", "missing_sector", "missing_location", "ambiguous"]);
 const CONSULTAR_CONVENIO_ALLOWED_ORIGINS = new Set([
     "https://balancelaboral.es",
     "https://www.balancelaboral.es",
@@ -316,28 +320,23 @@ async function buscarChunksBase(vectorPregunta) {
     }));
 }
 
-async function buscarTopConvenioEspecifico(vectorPregunta) {
+async function buscarTopConveniosEspecificos(vectorPregunta) {
     const vectorQuery = db.collection(COLLECTION_VECTORES)
         .where("doc_type", "==", "especifico")
         .findNearest({
             vectorField: "vector",
             queryVector: vectorPregunta,
             distanceMeasure: "COSINE",
-            limit: 1,
+            limit: GLOBAL_CONVENIO_TOP_K,
             distanceResultField: "distancia",
         });
 
     const snapshot = await vectorQuery.get();
-    const doc = snapshot.docs[0];
 
-    if (!doc) {
-        return null;
-    }
-
-    return {
+    return snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-    };
+    }));
 }
 
 function respuestaIndicaDatoNoEncontrado(respuesta) {
@@ -348,6 +347,22 @@ function escribirLogConsulta(event, data = {}) {
     console.log(JSON.stringify({
         event,
         ...data,
+    }));
+}
+
+function diagnosticsEnabled() {
+    return String(process.env.AI_DIAGNOSTICS || "false").toLowerCase() === "true";
+}
+
+function escribirDiagnosticoIA(event, data = {}) {
+    if (!diagnosticsEnabled()) return;
+    escribirLogConsulta(event, data);
+}
+
+function resumirChunksDiagnostico(chunks) {
+    return (chunks || []).map((chunk) => ({
+        fileName: chunk.file_name || chunk.fileName || null,
+        distancia: typeof chunk.distancia === "number" ? chunk.distancia : null,
     }));
 }
 
@@ -438,7 +453,7 @@ async function consumirCuotaConsultaIA(uid) {
         const isPremium = userData.tipoCuenta === "premium";
         const usageSnap = await transaction.get(usageRef);
         const usageData = usageSnap.exists ? usageSnap.data() || {} : {};
-        const now = admin.firestore.FieldValue.serverTimestamp();
+        const now = FieldValue.serverTimestamp();
 
         if (isPremium) {
             const currentDailyCount = usageData.premiumDailyKey === today
@@ -465,7 +480,7 @@ async function consumirCuotaConsultaIA(uid) {
                 premiumDailyKey: today,
                 premiumDailyCount: nextDailyCount,
                 premiumDailyLimit: PREMIUM_AI_DAILY_LIMIT,
-                totalAccepted: admin.firestore.FieldValue.increment(1),
+                totalAccepted: FieldValue.increment(1),
                 updatedAt: now,
             }, { merge: true });
 
@@ -498,7 +513,7 @@ async function consumirCuotaConsultaIA(uid) {
             plan: "free",
             freeTotalCount: nextFreeTotal,
             freeTotalLimit: FREE_AI_TOTAL_LIMIT,
-            totalAccepted: admin.firestore.FieldValue.increment(1),
+            totalAccepted: FieldValue.increment(1),
             updatedAt: now,
         }, { merge: true });
 
@@ -800,7 +815,7 @@ async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
                 vectorField: "vector",
                 queryVector: vectorPregunta,
                 distanceMeasure: "COSINE",
-                limit: 3,
+                limit: SPECIFIC_CHUNKS_TOP_K,
                 distanceResultField: "distancia",
             })
             .get();
@@ -822,7 +837,7 @@ async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
                 const distB = typeof b.distancia === "number" ? b.distancia : Number.MAX_SAFE_INTEGER;
                 return distA - distB;
             })
-            .slice(0, 4);
+            .slice(0, SPECIFIC_CHUNKS_TOP_K);
     }
 
     return [];
@@ -900,6 +915,12 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
 }
 
 async function intentarFallbackWebOficial({ pregunta, convenioFileName, conveniosFileName, convenioResuelto }) {
+    escribirDiagnosticoIA("ai_diagnostics_fallback", {
+        used: false,
+        motivo: "attempt",
+        convenioCandidato: convenioFileName || null,
+        questionLength: String(pregunta || "").length,
+    });
     escribirLogConsulta("web_fallback_attempt", {
         convenioUsado: convenioFileName || null,
         questionLength: String(pregunta || "").length,
@@ -922,6 +943,13 @@ async function intentarFallbackWebOficial({ pregunta, convenioFileName, convenio
             },
         );
     }
+
+    escribirDiagnosticoIA("ai_diagnostics_fallback", {
+        used: Boolean(webFallback.used),
+        motivo: webFallback.reason || null,
+        convenioCandidato: convenioFileName || null,
+        fuentesCount: Array.isArray(webFallback.fuentes) ? webFallback.fuentes.length : 0,
+    });
 
     return {
         respuesta: webFallback.respuesta,
@@ -1137,7 +1165,7 @@ async function activatePremiumFromStripe({ uid, customerId, subscriptionId, pric
         stripePriceId: priceId || null,
         stripeProductId: productId || null,
         subscriptionStatus: subscriptionStatus || "active",
-        updatedBillingAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedBillingAt: FieldValue.serverTimestamp(),
         stripeCurrentPeriodEnd: currentPeriodEnd || null,
         stripeCancelAtPeriodEnd: Boolean(cancelAtPeriodEnd),
     }, { merge: true });
@@ -1170,7 +1198,7 @@ async function deactivatePremiumFromStripe({ uid, customerId, subscriptionId, su
     await userMatch.userRef.set({
         tipoCuenta: "free",
         subscriptionStatus: subscriptionStatus || reason || "inactive",
-        updatedBillingAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedBillingAt: FieldValue.serverTimestamp(),
         stripeCancelAtPeriodEnd: null,
     }, { merge: true });
 
@@ -1532,12 +1560,42 @@ exports.consultarConvenio = onRequest(CONSULTAR_CONVENIO_FUNCTION_OPTIONS, async
 
         if (!convenioFileName) {
             const resolucionCatalogo = await resolverConvenioDesdeEntrada(req.body, pregunta);
+            escribirDiagnosticoIA("ai_diagnostics_convenio_resolution", {
+                status: resolucionCatalogo.status || null,
+                convenioCandidato: resolucionCatalogo.entry ? resolucionCatalogo.entry.title || null : null,
+                opciones: (resolucionCatalogo.options || []).map((option) => ({
+                    title: option.title || null,
+                    province: option.province || null,
+                    sectorKeys: option.sectorKeys || [],
+                })),
+                questionLength: String(pregunta || "").length,
+            });
 
             if (resolucionCatalogo.status === "resolved" && resolucionCatalogo.entry) {
                 convenioResuelto = resolucionCatalogo.entry;
                 conveniosFileName = Array.isArray(resolucionCatalogo.entry.fileNames) ? resolucionCatalogo.entry.fileNames : [];
                 convenioFileName = conveniosFileName[0] || "";
             } else if (resolucionCatalogo.status && resolucionCatalogo.status !== "catalog_empty") {
+                if (CLARIFICATION_STATUSES.has(resolucionCatalogo.status)) {
+                    logResultadoConsulta({
+                        responseSource: "clarification",
+                        status: 200,
+                        uid,
+                        quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                        quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
+                        pregunta,
+                        requiresClarification: true,
+                    });
+                    return res.json(responderConCuota({
+                        respuesta: resolucionCatalogo.message,
+                        requiereAclaracion: true,
+                        opcionesConvenio: resolucionCatalogo.options || [],
+                        convenioUsado: null,
+                        conveniosUsados: [],
+                        fuentes: [],
+                    }, quotaInfo));
+                }
+
                 if (estatutoFallback) {
                     logResultadoConsulta({
                         responseSource: "estatuto",
@@ -1597,27 +1655,6 @@ exports.consultarConvenio = onRequest(CONSULTAR_CONVENIO_FUNCTION_OPTIONS, async
                     }, quotaInfo));
                 }
 
-                if (resolucionCatalogo.status === "missing_all" && esPreguntaDisciplinaria(pregunta)) {
-                    logResultadoConsulta({
-                        responseSource: "unconfirmed",
-                        status: 200,
-                        uid,
-                        quotaPlan: quotaPublica ? quotaPublica.plan : null,
-                        quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
-                        pregunta,
-                        requiresClarification: true,
-                        webFallbackReason: webFallbackResponse.webFallbackReason,
-                    });
-                    return res.json(responderConCuota({
-                        respuesta: "No necesariamente: una falta grave no implica automáticamente despido. Para confirmarte la sanción concreta necesito saber tu sector y provincia, porque cada convenio puede distinguir entre faltas graves, faltas muy graves y sus sanciones.",
-                        requiereAclaracion: true,
-                        opcionesConvenio: [],
-                        convenioUsado: null,
-                        conveniosUsados: [],
-                        fuentes: [],
-                    }, quotaInfo));
-                }
-
                 if (webFallbackResponse.webFallbackReason && webFallbackResponse.webFallbackReason !== "web_fallback_disabled") {
                     logResultadoConsulta({
                         responseSource: "unconfirmed",
@@ -1654,9 +1691,23 @@ exports.consultarConvenio = onRequest(CONSULTAR_CONVENIO_FUNCTION_OPTIONS, async
         }
 
         if (!convenioFileName) {
-            const topConvenio = await buscarTopConvenioEspecifico(vectorPregunta);
-            convenioFileName = topConvenio ? (topConvenio.file_name || topConvenio.fileName || "") : "";
-            conveniosFileName = convenioFileName ? [convenioFileName] : [];
+            const topConvenios = await buscarTopConveniosEspecificos(vectorPregunta);
+            const nombresConvenio = [];
+
+            topConvenios.forEach((chunk) => {
+                const fileName = chunk.file_name || chunk.fileName || "";
+                if (fileName && !nombresConvenio.includes(fileName)) {
+                    nombresConvenio.push(fileName);
+                }
+            });
+
+            convenioFileName = nombresConvenio[0] || "";
+            conveniosFileName = nombresConvenio;
+            escribirDiagnosticoIA("ai_diagnostics_global_convenio_search", {
+                topK: GLOBAL_CONVENIO_TOP_K,
+                convenioCandidato: convenioFileName || null,
+                topChunks: resumirChunksDiagnostico(topConvenios),
+            });
         }
 
         const chunksKeywordPermisos = await buscarChunksKeywordPermisos(pregunta, conveniosFileName);
@@ -1670,6 +1721,12 @@ exports.consultarConvenio = onRequest(CONSULTAR_CONVENIO_FUNCTION_OPTIONS, async
             chunksVectorialesEspecificos,
             10,
         );
+        escribirDiagnosticoIA("ai_diagnostics_chunks", {
+            convenioCandidato: convenioFileName || null,
+            conveniosCandidatos: conveniosFileName || [],
+            specificTopK: SPECIFIC_CHUNKS_TOP_K,
+            topChunks: resumirChunksDiagnostico(chunksEspecificos),
+        });
 
         if (!chunksBase.length && !chunksEspecificos.length) {
             if (estatutoFallback) {

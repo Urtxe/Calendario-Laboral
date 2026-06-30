@@ -5,13 +5,17 @@ const GEMINI_SEARCH_ENDPOINT =
 
 const DEFAULT_ALLOWED_DOMAINS = [
     "boe.es",
+    "bocm.es",
     "mites.gob.es",
     "expinterweb.mites.gob.es",
     "euskadi.eus",
+    "bopv.euskadi.eus",
     "gipuzkoa.eus",
+    "bop.gipuzkoa.eus",
     "bizkaia.eus",
     "araba.eus",
     "navarra.es",
+    "boletin.navarra.es",
 ];
 
 const LABOR_TERMS = [
@@ -26,11 +30,17 @@ const LABOR_TERMS = [
     "descanso",
     "vacaciones",
     "permiso",
+    "asuntos propios",
+    "mudanza",
+    "traslado de domicilio",
     "licencia",
     "despido",
     "sancion",
     "falta",
     "contrato",
+    "camarero",
+    "cocinero",
+    "hotel",
     "hosteleria",
     "alojamientos",
     "limpieza",
@@ -63,7 +73,7 @@ function allowedDomains(env = process.env) {
         .map((domain) => domain.trim().toLowerCase())
         .filter(Boolean);
 
-    return configured.length ? configured : DEFAULT_ALLOWED_DOMAINS;
+    return [...new Set([...DEFAULT_ALLOWED_DOMAINS, ...configured])];
 }
 
 function isLaborQuestion(question) {

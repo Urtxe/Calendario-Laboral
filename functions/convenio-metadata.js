@@ -41,7 +41,7 @@ const COMMUNITY_ALIASES = {
 const SECTOR_DEFINITIONS = [
   {
     key: "alojamientos",
-    labels: ["alojamientos", "hotel", "hoteles", "hostal", "hostales", "recepcionista", "recepción"],
+    labels: ["alojamientos", "alojamiento", "hotel", "hoteles", "hostal", "hostales", "hospedaje", "recepcionista", "recepción"],
     fileKeywords: ["alojamientos"],
   },
   {
@@ -115,11 +115,22 @@ function detectProvinceFromText(value) {
 
 function detectSectorKeysFromText(value) {
   const normalized = normalizeText(value);
-  return SECTOR_DEFINITIONS
+  const detected = SECTOR_DEFINITIONS
     .filter((definition) =>
       definition.labels.some((alias) => includesWholeAlias(normalized, normalizeText(alias)))
     )
     .map((definition) => definition.key);
+
+  const explicitAlojamientos = includesWholeAlias(normalized, "convenio alojamientos");
+  const strongAlojamientos = explicitAlojamientos ||
+    ["hotel", "hoteles", "alojamiento", "alojamientos", "hospedaje"]
+      .some((alias) => includesWholeAlias(normalized, alias));
+
+  if (strongAlojamientos && detected.includes("alojamientos")) {
+    return ["alojamientos", ...detected.filter((sectorKey) => sectorKey !== "alojamientos" && sectorKey !== "hosteleria")];
+  }
+
+  return detected;
 }
 
 function detectSectorKeysFromFileName(fileName) {
@@ -285,7 +296,7 @@ function resolveCatalogEntry(catalogEntries, criteria) {
   if (sectorGroups.size > 1) {
     return {
       status: "ambiguous",
-      message: `He encontrado varios convenios posibles para esos datos: ${sortedCandidates.map((candidate) => candidate.title).join(", ")}. Indícame con más precisión el tipo de empresa o el sector exacto para decirte cuál te corresponde.`,
+      message: "¿Te refieres a hostelería/restauración o a alojamientos/hoteles?",
       options: sortedCandidates.map((candidate) => ({
         title: candidate.title,
         province: candidate.province || null,

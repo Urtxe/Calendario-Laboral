@@ -913,8 +913,8 @@ async function enviarConsultaLegal() {
 
     if (esErrorDeConexion) {
       crearMensajeLegal(
-        "Ahora mismo el panel ya está listo para usar, pero el backend no me ha devuelto resultados aún. En cuanto ingresemos los convenios, responderé con la comparación real entre la norma base y el convenio. Mientras tanto, prueba con preguntas de jornada, vacaciones o pluses.",
-        "assistant",
+        "No he podido obtener una respuesta en este momento. Inténtalo de nuevo.",
+        "error",
       );
     } else {
       crearMensajeLegal(

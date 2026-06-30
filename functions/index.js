@@ -18,6 +18,9 @@ const {
 const {
     consultarFallbackWebOficial,
 } = require("./official-web-fallback");
+const {
+    classifyLaborIntent,
+} = require("./intent-classifier");
 require("dotenv").config({ path: __dirname + "/.env" });
 
 function obtenerProjectIdDesdeFirebaseConfig() {
@@ -264,6 +267,17 @@ function detectarIdiomaPregunta(pregunta) {
 
     return pistasEuskera.some((regex) => regex.test(texto)) ? "euskera" : "castellano";
 }
+
+function obtenerRespuestaLaboralGeneralLocal(pregunta) {
+    const normalized = normalizeText(pregunta);
+
+    if (normalized.includes("despido objetivo")) {
+        return "El despido objetivo es la extinción del contrato por causas no disciplinarias, como motivos económicos, técnicos, organizativos o productivos, ineptitud sobrevenida o falta de adaptación a cambios técnicos. En general exige carta escrita, causa concreta, preaviso de 15 días e indemnización legal. Puede variar según el caso y conviene revisar convenio y documentación.";
+    }
+
+    return "";
+}
+
 
 function obtenerReferenciaConvenio(reqBody) {
     const valor =
@@ -531,6 +545,10 @@ function nombreEventoRespuesta(responseSource) {
         convenio: "convenio_response",
         estatuto: "statute_response",
         web_official: "web_official_response",
+        general_labor: "general_labor_response",
+        out_of_scope: "out_of_scope_response",
+        mixed_labor: "mixed_labor_response",
+        clarification: "consultarConvenio_response",
         unconfirmed: "unconfirmed_response",
         error: "consultarConvenio_error",
     }[responseSource] || "consultarConvenio_response";
@@ -911,6 +929,49 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
         finishReason: retryFinishReason,
         reintentado: true,
         respuestaCompleta: false,
+    };
+}
+
+async function generarRespuestaLaboralGeneral({ pregunta, idiomaRespuesta }) {
+    if (!chatModel) {
+        return {
+            respuesta: "Puedo ayudarte con dudas laborales generales, pero ahora mismo la IA no está configurada.",
+            finishReason: null,
+            respuestaCompleta: false,
+        };
+    }
+
+    const promptSistema = [
+        "Eres un asistente laboral especializado en España.",
+        "Responde sólo sobre legislación laboral, relaciones laborales y conceptos de trabajo.",
+        "No respondas como chatbot generalista.",
+        "Explica el concepto de forma clara y breve para una persona trabajadora.",
+        "Máximo 6 líneas. Evita listas largas.",
+        "No inventes datos vigentes, importes, fechas o porcentajes actualizados.",
+        "Si la respuesta puede variar por convenio colectivo, contrato o caso concreto, indícalo brevemente al final.",
+        idiomaRespuesta === "euskera"
+            ? "Responde siempre en euskera."
+            : "Responde siempre en castellano.",
+    ].join(" ");
+
+    const result = await chatModel.generateContent({
+        systemInstruction: promptSistema,
+        contents: [
+            {
+                role: "user",
+                parts: [{ text: pregunta }],
+            },
+        ],
+        generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 800,
+        },
+    });
+
+    return {
+        respuesta: extraerTextoRespuesta(result).trim(),
+        finishReason: extraerFinishReason(result),
+        respuestaCompleta: extraerFinishReason(result) !== "MAX_TOKENS",
     };
 }
 
@@ -1547,10 +1608,146 @@ exports.consultarConvenio = onRequest(CONSULTAR_CONVENIO_FUNCTION_OPTIONS, async
         }
 
         const quotaPublica = construirQuotaPublica(quotaInfo);
+        const idiomaRespuesta = detectarIdiomaPregunta(pregunta);
+        const intentClassification = classifyLaborIntent({
+            pregunta,
+            ciudad: req.body && (req.body.ciudad || req.body.ciudadActual || req.body.location || ""),
+            sector: req.body && (req.body.sector || req.body.sectorUsuario || req.body.profesion || ""),
+        });
+
+        escribirDiagnosticoIA("ai_diagnostics_intent_classification", {
+            intent: intentClassification.intent,
+            reason: intentClassification.reason || null,
+            route: intentClassification.intent,
+            questionLength: String(pregunta || "").length,
+        });
+
+        if (intentClassification.intent === "out_of_scope") {
+            logResultadoConsulta({
+                responseSource: "out_of_scope",
+                status: 200,
+                uid,
+                quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
+                pregunta,
+            });
+            return res.json(responderConCuota({
+                respuesta: "Soy un asistente especializado en convenios colectivos, jornada laboral, permisos, vacaciones y normativa laboral. No puedo ayudarte con esa consulta, pero puedo resolver dudas relacionadas con tu trabajo o convenio.",
+                convenioUsado: null,
+                conveniosUsados: [],
+                convenioDetectado: null,
+                fuentes: [],
+            }, quotaInfo));
+        }
+
+        if (intentClassification.intent === "mixed_labor") {
+            logResultadoConsulta({
+                responseSource: "mixed_labor",
+                status: 200,
+                uid,
+                quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
+                pregunta,
+                requiresClarification: true,
+            });
+            return res.json(responderConCuota({
+                respuesta: "Puedo ayudarte con la parte laboral: para revisar vacaciones, permisos, jornada o convenio necesito que me indiques tu provincia o ciudad y tu sector o convenio. La parte no laboral de la consulta queda fuera del ámbito de esta app.",
+                requiereAclaracion: true,
+                opcionesConvenio: [],
+                convenioUsado: null,
+                conveniosUsados: [],
+                convenioDetectado: null,
+                fuentes: [],
+            }, quotaInfo));
+        }
+
+        if (intentClassification.intent === "needs_clarification") {
+            logResultadoConsulta({
+                responseSource: "clarification",
+                status: 200,
+                uid,
+                quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
+                pregunta,
+                requiresClarification: true,
+            });
+            return res.json(responderConCuota({
+                respuesta: intentClassification.message || "Indícame tu trabajo o sector y tu provincia o ciudad para poder ayudarte con tu convenio o duda laboral.",
+                requiereAclaracion: true,
+                opcionesConvenio: [],
+                convenioUsado: null,
+                conveniosUsados: [],
+                convenioDetectado: null,
+                fuentes: [],
+            }, quotaInfo));
+        }
+
+        if (intentClassification.intent === "current_labor") {
+            const webFallbackResponse = await intentarFallbackWebOficial({
+                pregunta,
+                convenioFileName: null,
+                conveniosFileName: [],
+                convenioResuelto: null,
+            });
+
+            logResultadoConsulta({
+                responseSource: webFallbackResponse.webFallbackUsed ? "web_official" : "unconfirmed",
+                status: 200,
+                uid,
+                quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
+                pregunta,
+                webFallbackUsed: webFallbackResponse.webFallbackUsed,
+                webFallbackReason: webFallbackResponse.webFallbackReason,
+            });
+            return res.json(responderConCuota(webFallbackResponse, quotaInfo));
+        }
+
+        if (intentClassification.intent === "general_labor") {
+            const respuestaLocal = obtenerRespuestaLaboralGeneralLocal(pregunta);
+            if (respuestaLocal) {
+                logResultadoConsulta({
+                    responseSource: "general_labor",
+                    status: 200,
+                    uid,
+                    quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                    quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
+                    pregunta,
+                });
+                return res.json(responderConCuota({
+                    respuesta: respuestaLocal,
+                    convenioUsado: null,
+                    conveniosUsados: [],
+                    convenioDetectado: null,
+                    fuentes: [],
+                }, quotaInfo));
+            }
+
+            const generalResponse = await generarRespuestaLaboralGeneral({
+                pregunta,
+                idiomaRespuesta,
+            });
+
+            logResultadoConsulta({
+                responseSource: "general_labor",
+                status: 200,
+                uid,
+                quotaPlan: quotaPublica ? quotaPublica.plan : null,
+                quotaRemaining: quotaPublica ? quotaPublica.remaining : null,
+                pregunta,
+                finishReason: generalResponse.finishReason,
+            });
+            return res.json(responderConCuota({
+                respuesta: generalResponse.respuesta || "No he podido generar una respuesta laboral general.",
+                convenioUsado: null,
+                conveniosUsados: [],
+                convenioDetectado: null,
+                fuentes: [],
+            }, quotaInfo));
+        }
 
         const estatutoFallback = findWorkersStatuteFallback(pregunta);
         const vectorPregunta = await generarEmbeddingPregunta(pregunta);
-        const idiomaRespuesta = detectarIdiomaPregunta(pregunta);
         const convenioReferencia = obtenerReferenciaConvenio(req.body);
         const chunksBase = await buscarChunksBase(vectorPregunta);
 

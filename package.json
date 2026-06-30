@@ -2,7 +2,8 @@
   "name": "balance-laboral",
   "private": true,
   "scripts": {
-    "test": "npm run test:security",
-    "test:security": "node scripts/security-checks.js"
+    "test": "npm run test:security && npm run test:intent",
+    "test:security": "node scripts/security-checks.js",
+    "test:intent": "node scripts/intent-classifier-checks.js"
   }
 }

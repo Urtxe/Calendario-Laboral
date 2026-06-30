@@ -42,6 +42,62 @@
         "destination": "/mensajeUsuarios.html"
       },
       {
+        "source": "/convenios",
+        "destination": "/seo/convenios.html"
+      },
+      {
+        "source": "/convenios/hosteleria-gipuzkoa",
+        "destination": "/seo/hosteleria-gipuzkoa.html"
+      },
+      {
+        "source": "/convenios/alojamientos-gipuzkoa",
+        "destination": "/seo/alojamientos-gipuzkoa.html"
+      },
+      {
+        "source": "/convenios/hosteleria-bizkaia",
+        "destination": "/seo/hosteleria-bizkaia.html"
+      },
+      {
+        "source": "/convenios/hosteleria-madrid",
+        "destination": "/seo/hosteleria-madrid.html"
+      },
+      {
+        "source": "/convenios/alojamientos-alava",
+        "destination": "/seo/alojamientos-alava.html"
+      },
+      {
+        "source": "/convenios/alojamientos-sevilla",
+        "destination": "/seo/alojamientos-sevilla.html"
+      },
+      {
+        "source": "/convenios/alojamientos-zaragoza",
+        "destination": "/seo/alojamientos-zaragoza.html"
+      },
+      {
+        "source": "/convenios/limpieza-madrid",
+        "destination": "/seo/limpieza-madrid.html"
+      },
+      {
+        "source": "/convenios/limpieza-gipuzkoa",
+        "destination": "/seo/limpieza-gipuzkoa.html"
+      },
+      {
+        "source": "/convenios/limpieza-bizkaia",
+        "destination": "/seo/limpieza-bizkaia.html"
+      },
+      {
+        "source": "/convenios/transporte-madrid",
+        "destination": "/seo/transporte-madrid.html"
+      },
+      {
+        "source": "/convenios/transporte-valencia",
+        "destination": "/seo/transporte-valencia.html"
+      },
+      {
+        "source": "/convenios/transporte-sevilla",
+        "destination": "/seo/transporte-sevilla.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

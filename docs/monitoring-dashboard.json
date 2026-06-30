@@ -1,0 +1,607 @@
+{
+  "displayName": "Balance Laboral - Firebase Production Observability",
+  "labels": {
+    "app": "balance-laboral",
+    "environment": "production",
+    "project": "calendario-laboral-252b1"
+  },
+  "gridLayout": {
+    "columns": "2",
+    "widgets": [
+      {
+        "title": "Estado General - checklist operativo",
+        "text": {
+          "content": "Panel operativo para Balance Laboral en `calendario-laboral-252b1`.\n\nOrden recomendado de revision:\n1. `consultarConvenio`: llamadas, errores 5xx y p95.\n2. Cloud Functions Gen2: errores por funcion y latencia p95.\n3. Firestore: lecturas, escrituras, eliminaciones y errores API.\n4. Hosting: ancho de banda, storage y logs HTTP si Cloud Logging esta enlazado.\n5. Gemini API: requests/cuota, tokens de salida y errores API.\n6. Stripe: estado del webhook `stripeWebhook`.\n\nCostes: Cloud Monitoring no expone un widget universal de coste por proyecto en este dashboard. Usar Cloud Billing Reports y Budget alerts."
+        }
+      },
+      {
+        "title": "Estado General - riesgos de instrumentacion",
+        "text": {
+          "content": "Las metricas nativas verificadas existen en Cloud Monitoring para este proyecto: Cloud Run/Functions Gen2, Firestore, Firebase Hosting, Identity Toolkit, Generative Language API y Service Runtime.\n\nLimitaciones conocidas:\n- Firebase Hosting requests/4xx/5xx requieren Cloud Logging o metricas basadas en logs.\n- Stripe no tiene metricas nativas en Cloud Monitoring.\n- Metricas de negocio requieren instrumentacion futura como logs estructurados o metricas custom."
+        }
+      },
+      {
+        "title": "Coste y servicios externos",
+        "text": {
+          "content": "Coste GCP: https://console.cloud.google.com/billing/reports?project=calendario-laboral-252b1\n\nBudgets: https://console.cloud.google.com/billing/budgets?project=calendario-laboral-252b1\n\nStripe: no emite metricas nativas a Cloud Monitoring. Para verlo aqui, crear log-based metrics desde logs de `stripeWebhook` o exportar eventos de Stripe a BigQuery/Monitoring."
+        }
+      },
+      {
+        "title": "Cloud Functions Gen2 - invocaciones por funcion",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "resource.label.service_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "requests/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Cloud Functions Gen2 - errores 5xx por funcion",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\" metric.labels.response_code_class=\"5xx\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "resource.label.service_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "STACKED_BAR",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "5xx/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Cloud Functions Gen2 - latencia media por funcion",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_MEAN",
+                    "crossSeriesReducer": "REDUCE_MEAN",
+                    "groupByFields": [
+                      "resource.label.service_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "ms",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Cloud Functions Gen2 - latencia p95 por funcion",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_PERCENTILE_95",
+                    "crossSeriesReducer": "REDUCE_MAX",
+                    "groupByFields": [
+                      "resource.label.service_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "ms",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "consultarConvenio - llamadas",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\" resource.labels.service_name=\"consultarconvenio\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM"
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "requests/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "consultarConvenio - errores 5xx",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\" resource.labels.service_name=\"consultarconvenio\" metric.labels.response_code_class=\"5xx\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM"
+                  }
+                }
+              },
+              "plotType": "STACKED_BAR",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "5xx/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "consultarConvenio - tiempo medio",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.labels.service_name=\"consultarconvenio\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_MEAN",
+                    "crossSeriesReducer": "REDUCE_MEAN"
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "ms",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "consultarConvenio - tiempo p95",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.labels.service_name=\"consultarconvenio\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_PERCENTILE_95",
+                    "crossSeriesReducer": "REDUCE_MAX"
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "ms",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Firestore - lecturas",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"firestore.googleapis.com/document/read_count\" resource.type=\"firestore_instance\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM"
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "reads/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Firestore - escrituras",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"firestore.googleapis.com/document/write_count\" resource.type=\"firestore_instance\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "metric.labels.op"
+                    ]
+                  }
+                }
+              },
+              "plotType": "STACKED_BAR",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "writes/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Firestore - eliminaciones",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"firestore.googleapis.com/document/delete_count\" resource.type=\"firestore_instance\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM"
+                  }
+                }
+              },
+              "plotType": "STACKED_BAR",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "deletes/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Firestore - errores API",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"firestore.googleapis.com/api/request_count\" resource.type=\"firestore.googleapis.com/Database\" metric.labels.response_code!=\"OK\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "metric.labels.response_code"
+                    ]
+                  }
+                }
+              },
+              "plotType": "STACKED_BAR",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "errors/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Hosting - ancho de banda servido",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"firebasehosting.googleapis.com/network/sent_bytes_count\" resource.type=\"firebase_domain\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM"
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "bytes/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Hosting - storage publicado",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"firebasehosting.googleapis.com/storage/total_bytes\" resource.type=\"firebase_domain\"",
+                  "aggregation": {
+                    "alignmentPeriod": "3600s",
+                    "perSeriesAligner": "ALIGN_MEAN",
+                    "crossSeriesReducer": "REDUCE_SUM"
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "bytes",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Hosting - requests y errores 4xx/5xx",
+        "text": {
+          "content": "Firebase Hosting requests, 4xx y 5xx requieren la integracion de Firebase Hosting con Cloud Logging. Despues de enlazarla, crear log-based metrics o usar Log Explorer con filtros por `httpRequest.status`.\n\nFiltros recomendados:\n- Requests: `resource.type=\"firebase_domain\"`\n- 4xx: `resource.type=\"firebase_domain\" AND httpRequest.status>=400 AND httpRequest.status<500`\n- 5xx: `resource.type=\"firebase_domain\" AND httpRequest.status>=500`\n\nFirebase documenta las metricas Hosting `log_bytes` y `response_count` cuando se enlaza Cloud Logging."
+        }
+      },
+      {
+        "title": "Authentication - nuevos inicios de sesion diarios",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"identitytoolkit.googleapis.com/usage/daily_new_signin_count\" resource.type=\"identitytoolkit_project\"",
+                  "aggregation": {
+                    "alignmentPeriod": "86400s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "metric.labels.is_anon"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "new sign-ins/day",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Authentication - llamadas API Identity Toolkit",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"serviceruntime.googleapis.com/api/request_count\" resource.type=\"consumed_api\" resource.labels.service=\"identitytoolkit.googleapis.com\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "metric.labels.response_code_class"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "calls/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Gemini API - generate requests por modelo",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"generativelanguage.googleapis.com/quota/generate_requests_per_model/usage\" resource.type=\"generativelanguage.googleapis.com/Location\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "metric.labels.model"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "calls/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Gemini API - embed requests",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"generativelanguage.googleapis.com/quota/embed_content_free_tier_requests/usage\" resource.type=\"generativelanguage.googleapis.com/Location\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "metric.labels.model"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "requests/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Gemini API - output tokens",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"generativelanguage.googleapis.com/generate_content_usage_output_token_count\" resource.type=\"generativelanguage.googleapis.com/Location\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "metric.labels.model"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "tokens/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Gemini API - errores API",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"serviceruntime.googleapis.com/api/request_count\" resource.type=\"consumed_api\" resource.labels.service=\"generativelanguage.googleapis.com\" metric.labels.response_code_class!=\"2xx\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "metric.labels.response_code_class"
+                    ]
+                  }
+                }
+              },
+              "plotType": "STACKED_BAR",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "errors/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Stripe - webhook Cloud Function",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\" resource.labels.service_name=\"stripewebhook\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "metric.labels.response_code_class"
+                    ]
+                  }
+                }
+              },
+              "plotType": "STACKED_BAR",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "label": "requests/min",
+            "scale": "LINEAR"
+          }
+        }
+      },
+      {
+        "title": "Metricas de negocio - pendiente de instrumentacion",
+        "text": {
+          "content": "Seccion preparada para KPIs de producto cuando exista instrumentacion propia.\n\nKPIs recomendados:\n- consultas IA aceptadas por plan (`free`, `premium`);\n- respuestas por fuente (`convenio`, `estatuto`, `web_official`, `clarification`, `out_of_scope`);\n- conversiones premium iniciadas/completadas;\n- usuarios activos diarios/semanales;\n- agotamiento de cuota gratuita;\n- errores funcionales del RAG.\n\nImplementacion recomendada futura: log-based metrics desde logs estructurados existentes o metricas custom `custom.googleapis.com/balance_laboral/...`."
+        }
+      }
+    ]
+  }
+}

@@ -898,6 +898,11 @@
       window.APP_CONFIG = window.APP_CONFIG || {};
       window.APP_CONFIG.legalAiEnabled =
         window.APP_CONFIG.legalAiEnabled ?? true;
+      window.APP_CONFIG.appCheckSiteKey =
+        window.APP_CONFIG.appCheckSiteKey ||
+        "6LdoDz4tAAAAAP7DQdlbU0TcFDb8h6u5Lp5j_b-R";
+      window.APP_CONFIG.appCheckDebugToken =
+        window.APP_CONFIG.appCheckDebugToken || false;
       window.APP_CONFIG.consultarConvenioUrl =
         window.APP_CONFIG.consultarConvenioUrl ||
         (location.hostname === "localhost" ||
@@ -911,6 +916,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
 
     <script src="src/js/firebase-config.js"></script>

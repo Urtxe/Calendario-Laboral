@@ -792,6 +792,33 @@ async function enviarConsultaLegal() {
 
     const idToken = await currentUser.getIdToken();
     const authorizationHeader = `Bearer ${idToken}`;
+    const appCheckToken =
+      typeof window.obtenerAppCheckToken === "function"
+        ? await window.obtenerAppCheckToken()
+        : null;
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: authorizationHeader,
+    };
+
+    if (appCheckToken) {
+      headers["X-Firebase-AppCheck"] = appCheckToken;
+    }
+
+    if (typeof window.logAppCheckDebug === "function") {
+      window.logAppCheckDebug({
+        siteKeyPresent: Boolean(
+          window.APP_CONFIG && window.APP_CONFIG.appCheckSiteKey,
+        ),
+        initialized: typeof window.obtenerAppCheckToken === "function",
+        getTokenCalled: typeof window.obtenerAppCheckToken === "function",
+        getTokenResolved: true,
+        tokenObtained: Boolean(appCheckToken),
+        tokenLength: appCheckToken ? appCheckToken.length : 0,
+        headerAdded: Boolean(headers["X-Firebase-AppCheck"]),
+      });
+    }
+
     logLegalAiAuthDebug({
       hasUser: true,
       uid: currentUser.uid,
@@ -806,10 +833,7 @@ async function enviarConsultaLegal() {
 
     const response = await fetch(consultarConvenioUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authorizationHeader,
-      },
+      headers,
       body: JSON.stringify({
         pregunta,
         ciudad: ciudadActual || "",

@@ -1,0 +1,39 @@
+{
+  "displayName": "Balance Laboral - stripeWebhook 5xx errors",
+  "documentation": {
+    "content": "Detecta al menos 1 respuesta 5xx en 10 minutos en stripeWebhook, expuesta como servicio Cloud Run stripewebhook. Stripe es critico porque activa y desactiva premium; un solo fallo de servidor merece revision.",
+    "mimeType": "text/markdown"
+  },
+  "userLabels": {
+    "app": "balance-laboral",
+    "service": "stripewebhook",
+    "severity": "critical",
+    "managed_by": "repo"
+  },
+  "conditions": [
+    {
+      "displayName": "stripewebhook: al menos 1 error 5xx en 10 minutos",
+      "conditionThreshold": {
+        "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\" resource.labels.service_name=\"stripewebhook\" metric.labels.response_code_class=\"5xx\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "600s",
+            "perSeriesAligner": "ALIGN_DELTA",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 0,
+        "duration": "0s",
+        "trigger": {
+          "count": 1
+        }
+      }
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "alertStrategy": {
+    "autoClose": "3600s"
+  }
+}

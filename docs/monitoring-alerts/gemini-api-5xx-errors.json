@@ -1,0 +1,39 @@
+{
+  "displayName": "Balance Laboral - Gemini API 5xx errors",
+  "documentation": {
+    "content": "Detecta mas de 3 errores 5xx en 10 minutos al consumir generativelanguage.googleapis.com. Usa Service Runtime porque expone response_code_class para APIs consumidas.",
+    "mimeType": "text/markdown"
+  },
+  "userLabels": {
+    "app": "balance-laboral",
+    "service": "gemini-api",
+    "severity": "warning",
+    "managed_by": "repo"
+  },
+  "conditions": [
+    {
+      "displayName": "Gemini API: mas de 3 errores 5xx en 10 minutos",
+      "conditionThreshold": {
+        "filter": "metric.type=\"serviceruntime.googleapis.com/api/request_count\" resource.type=\"consumed_api\" resource.labels.service=\"generativelanguage.googleapis.com\" metric.labels.response_code_class=\"5xx\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "600s",
+            "perSeriesAligner": "ALIGN_DELTA",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 3,
+        "duration": "0s",
+        "trigger": {
+          "count": 1
+        }
+      }
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "alertStrategy": {
+    "autoClose": "3600s"
+  }
+}

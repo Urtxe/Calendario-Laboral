@@ -9,6 +9,71 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+
+function appCheckDebugEnabled() {
+    let localDebug = false;
+    try {
+        localDebug = localStorage.getItem('appCheckDebug') === 'true';
+    } catch (error) {
+        localDebug = false;
+    }
+
+    return Boolean(
+        localDebug ||
+        window.APP_CONFIG &&
+        (window.APP_CONFIG.appCheckDebug === true ||
+            window.APP_CONFIG.legalAiDebug === true ||
+            window.APP_CONFIG.debugLegalAiAuth === true)
+    );
+}
+
+function logAppCheckDebug(data) {
+    if (!appCheckDebugEnabled()) return;
+    console.log('[AppCheck]', {
+        siteKeyPresent: Boolean(data && data.siteKeyPresent),
+        sdkAvailable: Boolean(data && data.sdkAvailable),
+        initialized: Boolean(data && data.initialized),
+        getTokenCalled: Boolean(data && data.getTokenCalled),
+        getTokenResolved: Boolean(data && data.getTokenResolved),
+        rawTokenType: data && data.rawTokenType ? data.rawTokenType : null,
+        hasTokenProperty: Boolean(data && data.hasTokenProperty),
+        rawKeys: Array.isArray(data && data.rawKeys) ? data.rawKeys : [],
+        tokenObtained: Boolean(data && data.tokenObtained),
+        tokenLength: data && typeof data.tokenLength === 'number' ? data.tokenLength : 0,
+        headerAdded: Boolean(data && data.headerAdded),
+        errorName: data && data.errorName ? data.errorName : null,
+        errorCode: data && data.errorCode ? data.errorCode : null
+    });
+}
+
+window.logAppCheckDebug = logAppCheckDebug;
+
+const appCheckSiteKey =
+    window.APP_CONFIG && typeof window.APP_CONFIG.appCheckSiteKey === 'string'
+        ? window.APP_CONFIG.appCheckSiteKey.trim()
+        : '';
+let appCheck = null;
+
+if (
+    appCheckSiteKey &&
+    firebase.appCheck &&
+    window.APP_CONFIG &&
+    window.APP_CONFIG.appCheckDebugToken
+) {
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = window.APP_CONFIG.appCheckDebugToken;
+}
+
+if (appCheckSiteKey && firebase.appCheck) {
+    appCheck = firebase.appCheck();
+    appCheck.activate(appCheckSiteKey, true);
+}
+
+logAppCheckDebug({
+    siteKeyPresent: Boolean(appCheckSiteKey),
+    sdkAvailable: Boolean(firebase.appCheck),
+    initialized: Boolean(appCheck)
+});
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 
@@ -16,6 +81,71 @@ db.enablePersistence().catch(err => console.log("Persistencia no disponible"));
 
 window.usuarioActual = null;
 window.authMode = 'login'; 
+
+window.obtenerAppCheckToken = async function() {
+    if (!appCheck) {
+        logAppCheckDebug({
+            siteKeyPresent: Boolean(appCheckSiteKey),
+            sdkAvailable: Boolean(firebase.appCheck),
+            initialized: false,
+            getTokenCalled: false,
+            getTokenResolved: false,
+            tokenObtained: false
+        });
+        return null;
+    }
+
+    try {
+        logAppCheckDebug({
+            siteKeyPresent: Boolean(appCheckSiteKey),
+            sdkAvailable: Boolean(firebase.appCheck),
+            initialized: true,
+            getTokenCalled: true,
+            getTokenResolved: false,
+            tokenObtained: false
+        });
+        const result = await appCheck.getToken();
+        const rawTokenType = result === null ? 'null' : typeof result;
+        const rawKeys =
+            result && typeof result === 'object'
+                ? Object.keys(result).slice(0, 8)
+                : [];
+        const hasTokenProperty =
+            result && typeof result === 'object' &&
+            Object.prototype.hasOwnProperty.call(result, 'token');
+        const token =
+            typeof result === 'string'
+                ? result
+                : result && typeof result.token === 'string'
+                    ? result.token
+                    : null;
+        logAppCheckDebug({
+            siteKeyPresent: Boolean(appCheckSiteKey),
+            sdkAvailable: Boolean(firebase.appCheck),
+            initialized: true,
+            getTokenCalled: true,
+            getTokenResolved: true,
+            rawTokenType,
+            hasTokenProperty,
+            rawKeys,
+            tokenObtained: Boolean(token),
+            tokenLength: token ? token.length : 0
+        });
+        return token;
+    } catch (error) {
+        logAppCheckDebug({
+            siteKeyPresent: Boolean(appCheckSiteKey),
+            sdkAvailable: Boolean(firebase.appCheck),
+            initialized: true,
+            getTokenCalled: true,
+            getTokenResolved: false,
+            tokenObtained: false,
+            errorName: error && error.name ? error.name : null,
+            errorCode: error && error.code ? error.code : null
+        });
+        return null;
+    }
+};
 
 // Función para abrir el modal en modo REGISTRO
 window.mostrarRegistro = function() {

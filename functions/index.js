@@ -79,6 +79,8 @@ const PREMIUM_AI_DAILY_LIMIT = 100;
 const AI_USAGE_COLLECTION = "usage";
 const AI_USAGE_DOC = "ai";
 const AI_QUESTION_MAX_LENGTH = 1200;
+const APP_CHECK_ENFORCEMENT =
+    String(process.env.APP_CHECK_ENFORCEMENT || "false").toLowerCase() === "true";
 const CONSULTAR_CONVENIO_FUNCTION_OPTIONS = {
     timeoutSeconds: 90,
     memory: "512MiB",
@@ -384,6 +386,38 @@ function extraerBearerToken(req) {
     const authHeader = req.get("authorization") || "";
     const match = authHeader.match(/^Bearer\s+(.+)$/i);
     return match ? match[1].trim() : "";
+}
+
+function extraerAppCheckToken(req) {
+    return (req.get("x-firebase-appcheck") || "").trim();
+}
+
+async function verificarAppCheckConsulta(req) {
+    const appCheckToken = extraerAppCheckToken(req);
+
+    if (!appCheckToken) {
+        return {
+            ok: false,
+            status: "missing",
+            reason: "missing_app_check_token",
+        };
+    }
+
+    try {
+        await admin.appCheck().verifyToken(appCheckToken);
+        return {
+            ok: true,
+            status: "valid",
+            reason: null,
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            status: "invalid",
+            reason: "invalid_app_check_token",
+            errorName: error && error.code ? error.code : (error && error.name ? error.name : "Error"),
+        };
+    }
 }
 
 async function verificarUsuarioConsulta(req) {
@@ -1537,6 +1571,22 @@ exports.consultarConvenio = onRequest(CONSULTAR_CONVENIO_FUNCTION_OPTIONS, async
             status: payloadValidation.status,
         });
         return res.status(payloadValidation.status).json({ error: payloadValidation.error });
+    }
+
+    const appCheckResult = await verificarAppCheckConsulta(req);
+    escribirLogConsulta("consultarConvenio_app_check", {
+        appCheckStatus: appCheckResult.status,
+        appCheckEnforcement: APP_CHECK_ENFORCEMENT,
+        reason: appCheckResult.reason || null,
+        errorName: appCheckResult.errorName || null,
+    });
+
+    if (APP_CHECK_ENFORCEMENT && !appCheckResult.ok) {
+        logResultadoConsulta({
+            responseSource: "error",
+            status: 403,
+        });
+        return res.status(403).json({ error: "App Check requerido" });
     }
 
     const authResult = await verificarUsuarioConsulta(req);

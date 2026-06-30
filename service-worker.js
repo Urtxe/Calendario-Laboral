@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2.0.3';
+const CACHE_VERSION = 'v2.0.6';
 const SHELL_CACHE = `balance-laboral-shell-${CACHE_VERSION}`;
 const STATIC_CACHE = `balance-laboral-static-${CACHE_VERSION}`;
 const APP_BASE = new URL('./', self.location);
@@ -45,6 +45,7 @@ const DYNAMIC_HOST_PARTS = [
   'identitytoolkit.googleapis.com',
   'securetoken.googleapis.com',
   'firestore.googleapis.com',
+  'firebaseappcheck.googleapis.com',
   'firebaseinstallations.googleapis.com',
   'firebase.googleapis.com',
   'google-analytics.com',

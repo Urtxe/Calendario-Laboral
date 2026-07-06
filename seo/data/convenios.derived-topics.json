@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "status": "draft",
+  "generationEnabled": false,
+  "urlPattern": "/convenios/{convenioSlug}/{topicSlug}",
+  "outputPattern": "seo/derived/{convenioSlug}/{topicSlug}.html",
+  "topics": [
+    {
+      "slug": "jornada-anual",
+      "label": "Jornada anual",
+      "contentField": "jornada_anual",
+      "searchIntent": "Conocer la jornada anual aplicable en un convenio concreto.",
+      "titlePattern": "Jornada anual del {title} | Balance Laboral",
+      "descriptionPattern": "Consulta la jornada anual del {title}, con vigencia, fuente y enlace a la app para calcular horas.",
+      "uniqueAngle": "horas anuales, vigencia y calculo practico de jornada",
+      "minimumData": ["vigencia", "jornada_anual"],
+      "fallbackPolicy": "do_not_generate"
+    },
+    {
+      "slug": "vacaciones",
+      "label": "Vacaciones",
+      "contentField": "vacaciones",
+      "searchIntent": "Resolver cuantos dias de vacaciones reconoce un convenio concreto.",
+      "titlePattern": "Vacaciones del {title} | Balance Laboral",
+      "descriptionPattern": "Consulta las vacaciones del {title}, los dias localizados y la fuente del convenio.",
+      "uniqueAngle": "dias de vacaciones, forma de disfrute y comprobacion en fuente oficial",
+      "minimumData": ["vigencia", "vacaciones"],
+      "fallbackPolicy": "do_not_generate"
+    },
+    {
+      "slug": "permisos",
+      "label": "Permisos",
+      "contentField": "permisos",
+      "searchIntent": "Localizar permisos y licencias dentro de un convenio concreto.",
+      "titlePattern": "Permisos del {title} | Balance Laboral",
+      "descriptionPattern": "Consulta permisos y licencias del {title}, con resumen prudente y fuente del convenio.",
+      "uniqueAngle": "supuestos de permisos, prudencia legal y consulta del convenio completo",
+      "minimumData": ["vigencia", "permisos"],
+      "fallbackPolicy": "generate_prudent"
+    },
+    {
+      "slug": "horas-extra",
+      "label": "Horas extra",
+      "contentField": "horas_extra",
+      "searchIntent": "Entender como trata las horas extra un convenio concreto.",
+      "titlePattern": "Horas extra del {title} | Balance Laboral",
+      "descriptionPattern": "Consulta las horas extra del {title}, reglas localizadas y enlaces para calcular jornada.",
+      "uniqueAngle": "limites, compensacion y relacion con jornada anual",
+      "minimumData": ["vigencia", "horas_extra"],
+      "fallbackPolicy": "generate_prudent"
+    },
+    {
+      "slug": "nocturnidad",
+      "label": "Nocturnidad",
+      "contentField": "nocturnidad",
+      "searchIntent": "Comprobar si el convenio recoge nocturnidad o trabajo nocturno.",
+      "titlePattern": "Nocturnidad del {title} | Balance Laboral",
+      "descriptionPattern": "Consulta la nocturnidad del {title}, compensacion localizada y fuente del convenio.",
+      "uniqueAngle": "trabajo nocturno, porcentaje o regla localizada y cautelas",
+      "minimumData": ["vigencia", "nocturnidad"],
+      "fallbackPolicy": "do_not_generate"
+    },
+    {
+      "slug": "festivos",
+      "label": "Festivos",
+      "contentField": "festivos_descansos",
+      "searchIntent": "Saber como regula festivos y descansos compensatorios un convenio.",
+      "titlePattern": "Festivos del {title} | Balance Laboral",
+      "descriptionPattern": "Consulta festivos y descansos del {title}, reglas localizadas y fuente del convenio.",
+      "uniqueAngle": "festivos trabajados, descansos compensatorios y enlace con calendario laboral",
+      "minimumData": ["vigencia", "festivos_descansos"],
+      "fallbackPolicy": "do_not_generate"
+    }
+  ],
+  "sharedRules": {
+    "canonicalPattern": "https://balancelaboral.es/convenios/{convenioSlug}/{topicSlug}",
+    "sourcePriority": ["pdf_extracted", "manual_verified", "prudent_fallback"],
+    "duplicatePrevention": [
+      "Cada topic usa title, h1, lead, FAQ y JSON-LD especificos.",
+      "No se genera una pagina derivada si el campo principal no existe y fallbackPolicy es do_not_generate.",
+      "Las paginas derivadas enlazan a la pagina madre del convenio y a otros topics del mismo convenio.",
+      "El indice de convenios no enlaza topics hasta que la generacion este activada."
+    ]
+  }
+}

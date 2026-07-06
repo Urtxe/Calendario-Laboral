@@ -98,6 +98,66 @@
         "destination": "/seo/transporte-sevilla.html"
       },
       {
+        "source": "/convenios/alojamientos-barcelona",
+        "destination": "/seo/alojamientos-barcelona.html"
+      },
+      {
+        "source": "/convenios/alojamientos-navarra",
+        "destination": "/seo/alojamientos-navarra.html"
+      },
+      {
+        "source": "/convenios/hosteleria-malaga",
+        "destination": "/seo/hosteleria-malaga.html"
+      },
+      {
+        "source": "/convenios/hosteleria-valencia",
+        "destination": "/seo/hosteleria-valencia.html"
+      },
+      {
+        "source": "/convenios/limpieza-barcelona",
+        "destination": "/seo/limpieza-barcelona.html"
+      },
+      {
+        "source": "/convenios/limpieza-navarra",
+        "destination": "/seo/limpieza-navarra.html"
+      },
+      {
+        "source": "/convenios/limpieza-sevilla",
+        "destination": "/seo/limpieza-sevilla.html"
+      },
+      {
+        "source": "/convenios/limpieza-valencia",
+        "destination": "/seo/limpieza-valencia.html"
+      },
+      {
+        "source": "/convenios/limpieza-zaragoza",
+        "destination": "/seo/limpieza-zaragoza.html"
+      },
+      {
+        "source": "/convenios/transporte-alava",
+        "destination": "/seo/transporte-alava.html"
+      },
+      {
+        "source": "/convenios/transporte-barcelona",
+        "destination": "/seo/transporte-barcelona.html"
+      },
+      {
+        "source": "/convenios/transporte-bizkaia",
+        "destination": "/seo/transporte-bizkaia.html"
+      },
+      {
+        "source": "/convenios/transporte-gipuzkoa",
+        "destination": "/seo/transporte-gipuzkoa.html"
+      },
+      {
+        "source": "/convenios/transporte-navarra",
+        "destination": "/seo/transporte-navarra.html"
+      },
+      {
+        "source": "/convenios/transporte-zaragoza",
+        "destination": "/seo/transporte-zaragoza.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

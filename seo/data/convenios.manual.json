@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-06",
+  "entries": [
+    {
+      "documento": "Convenio Hosteleria Malaga 2018-2027.pdf",
+      "slug": "hosteleria-malaga",
+      "sector": "hosteleria",
+      "provincia": "MALAGA",
+      "vigencia": "Vigencia verificada en el texto: 2018-2027.",
+      "jornada_anual": "Jornada anual verificada en el texto: 1.800 horas.",
+      "vacaciones": "Vacaciones verificadas en el texto: 30 dias naturales.",
+      "fuente_oficial": "Boletin Oficial de la Provincia de Malaga.",
+      "fuente_url": "https://www.bopmalaga.es/cve.php",
+      "verified": true,
+      "notes": "PDF fusionado a partir del convenio base y la revision publicada con el mismo codigo de convenio."
+    },
+    {
+      "documento": "Convenio Alojamientos y Hostelería Valencia2022-2025.pdf",
+      "slug": "hosteleria-valencia",
+      "sector": "hosteleria",
+      "provincia": "VALENCIA",
+      "vigencia": "Vigencia verificada en el texto: 2022-2025.",
+      "jornada_anual": "Jornada anual verificada en el texto: 1.794 horas.",
+      "vacaciones": "Vacaciones verificadas en el texto: 30 dias naturales.",
+      "fuente_oficial": "Boletin Oficial de la Provincia de Valencia.",
+      "fuente_url": "https://bop.dival.es/bop",
+      "verified": true,
+      "notes": "El nombre de archivo contenia alojamientos, pero el PDF identifica el convenio provincial de hostaleria/hosteleria."
+    },
+    {
+      "documento": "Convenio Transporte Alava 201-2026.pdf",
+      "slug": "transporte-alava",
+      "sector": "transporte",
+      "provincia": "ALAVA",
+      "vigencia": "Vigencia verificada en el texto: 2020-2026.",
+      "vacaciones": "Vacaciones verificadas en el texto: 32 dias naturales.",
+      "fuente_oficial": "Boletin Oficial del Territorio Historico de Alava.",
+      "fuente_url": "https://www.araba.eus",
+      "verified": true,
+      "notes": "El nombre de archivo tenia el ano inicial truncado; el texto indica vigencia 2020-2026."
+    },
+    {
+      "documento": "Convenio Alojamientos y Hostelería Malaga parte 1.pdf",
+      "skip": true,
+      "skipStatus": "no_publicar",
+      "reason": "Fusionado en Convenio Hosteleria Malaga 2018-2027.pdf."
+    },
+    {
+      "documento": "Convenio Alojamientos y Hostelería Malaga parte 2 2018-2027.pdf",
+      "skip": true,
+      "skipStatus": "no_publicar",
+      "reason": "Fusionado en Convenio Hosteleria Malaga 2018-2027.pdf."
+    },
+    {
+      "documento": "Convenio Transporte GIPUZKOA 2007-2010parte1.pdf",
+      "skip": true,
+      "skipStatus": "no_publicar",
+      "reason": "No se publica: existe documento posterior para transporte-gipuzkoa y la parte pertenece a boletin amplio."
+    },
+    {
+      "documento": "Convenio Transporte GIPUZKOA 2007-2010parte2.pdf",
+      "skip": true,
+      "skipStatus": "no_publicar",
+      "reason": "No se publica: no contiene texto suficiente del convenio de transporte y pertenece a boletin amplio."
+    }
+  ]
+}

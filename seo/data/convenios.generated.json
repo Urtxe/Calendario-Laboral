@@ -1,12 +1,18 @@
 {
-  "generatedAt": "2026-06-30T21:55:57.055Z",
-  "limits": {
-    "maxNewPages": 10,
-    "pilotSlugs": [
-      "hosteleria-gipuzkoa",
-      "alojamientos-gipuzkoa",
-      "hosteleria-bizkaia"
-    ]
+  "generatedAt": "2026-07-06T21:04:00.024Z",
+  "classificationCriteria": {
+    "publish": "PDF legible, metadata suficiente, convenio provincial, no partido, sin duplicado mas reciente y al menos 4 bloques tematicos localizados.",
+    "needsCorrections": "Documento potencialmente util con incidencias pequenas: PDF partido, metadata ambigua o extraccion tematica mejorable.",
+    "doNotPublish": "No es convenio especifico, PDF ilegible, texto insuficiente o duplicado sustituido por otro documento."
+  },
+  "summary": {
+    "published": 28,
+    "needsCorrections": 0,
+    "doNotPublish": 8,
+    "seoIssues": 0,
+    "dataExtracted": 225,
+    "dataMissing": 55,
+    "internalLinksAdded": 308
   },
   "generated": [
     {
@@ -21,27 +27,39 @@
         "path": "functions/convenios/processed/Convenio Hosteleria y Restauración GIPUZKOA 2023-2026.pdf",
         "years_detected_internal_only": "2023-2026",
         "quality": "alta",
+        "content_score": 10,
+        "manual_fields": [],
+        "manual_verified": false,
         "status": "generar"
       },
       "content": {
-        "resumen": "Resumen orientativo del convenio colectivo de hosteleria de Gipuzkoa, elaborado a partir del texto disponible en Balance Laboral.",
+        "resumen": "Pagina orientativa del convenio colectivo de hosteleria de Gipuzkoa. Vigencia detectada en el documento: 2023-2026. Jornada anual localizada en el texto: 1.708 horas. Vacaciones localizadas en el texto: 30 días naturales.",
+        "vigencia": "Vigencia detectada en el documento: 2023-2026.",
         "ambito": "Ambito del convenio localizado para el sector hosteleria en Gipuzkoa.",
-        "jornada_anual": "No localizado en el texto disponible",
-        "vacaciones": "No localizado en el texto disponible",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.708 horas.",
+        "vacaciones": "Vacaciones localizadas en el texto: 30 días naturales.",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
         "festivos_descansos": "Festivos trabajados localizados: compensacion economica con incremento del 75% o descanso posterior con aumento del 50%.",
-        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento.",
-        "horas_extra": "Reglas sobre horas extra localizadas en el documento.",
         "pluses": "Pluses o complementos localizados en el documento.",
-        "categorias": "Categorias o grupos profesionales localizados en el documento."
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial Del País Vasco De.",
+        "fuente_url": "No localizado en el texto disponible"
       },
       "faq": [
         {
+          "question": "Que vigencia tiene el convenio de hosteleria de Gipuzkoa?",
+          "answer": "Vigencia detectada en el documento: 2023-2026."
+        },
+        {
           "question": "Cuantas horas anuales tiene el convenio de hosteleria de Gipuzkoa?",
-          "answer": "No localizado en el texto disponible"
+          "answer": "Jornada anual localizada en el texto: 1.708 horas."
         },
         {
           "question": "Cuantos dias de vacaciones corresponden?",
-          "answer": "No localizado en el texto disponible"
+          "answer": "Vacaciones localizadas en el texto: 30 días naturales."
         },
         {
           "question": "Como funcionan los festivos?",
@@ -49,15 +67,19 @@
         },
         {
           "question": "Como se pagan las horas extra?",
-          "answer": "Reglas sobre horas extra localizadas en el documento."
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
         },
         {
-          "question": "Existen pluses?",
-          "answer": "Pluses o complementos localizados en el documento."
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
         },
         {
           "question": "Que permisos retribuidos hay?",
-          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento."
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
         },
         {
           "question": "Como consultar mi convenio con IA?",
@@ -77,27 +99,39 @@
         "path": "functions/convenios/processed/Convenio Alojamientos GIPUZKOA 2025-2028.pdf",
         "years_detected_internal_only": "2025-2028",
         "quality": "alta",
+        "content_score": 10,
+        "manual_fields": [],
+        "manual_verified": false,
         "status": "generar"
       },
       "content": {
-        "resumen": "Resumen orientativo del convenio colectivo de alojamientos de Gipuzkoa, elaborado a partir del texto disponible en Balance Laboral.",
+        "resumen": "Pagina orientativa del convenio colectivo de alojamientos de Gipuzkoa. Vigencia detectada en el documento: 2025-2028. Jornada anual localizada en el texto: 1.723 horas. Vacaciones localizadas en el texto: 30 días naturales.",
+        "vigencia": "Vigencia detectada en el documento: 2025-2028.",
         "ambito": "Ambito del convenio localizado para el sector alojamientos en Gipuzkoa.",
-        "jornada_anual": "Jornada anual localizada: 1.723 horas.",
-        "vacaciones": "No localizado en el texto disponible",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.723 horas.",
+        "vacaciones": "Vacaciones localizadas en el texto: 30 días naturales.",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
         "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
-        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento.",
-        "horas_extra": "Reglas sobre horas extra localizadas en el documento.",
         "pluses": "Pluses o complementos localizados en el documento.",
-        "categorias": "Categorias o grupos profesionales localizados en el documento."
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial Del País Vasco De.",
+        "fuente_url": "No localizado en el texto disponible"
       },
       "faq": [
         {
+          "question": "Que vigencia tiene el convenio de alojamientos de Gipuzkoa?",
+          "answer": "Vigencia detectada en el documento: 2025-2028."
+        },
+        {
           "question": "Cuantas horas anuales tiene el convenio de alojamientos de Gipuzkoa?",
-          "answer": "Jornada anual localizada: 1.723 horas."
+          "answer": "Jornada anual localizada en el texto: 1.723 horas."
         },
         {
           "question": "Cuantos dias de vacaciones corresponden?",
-          "answer": "No localizado en el texto disponible"
+          "answer": "Vacaciones localizadas en el texto: 30 días naturales."
         },
         {
           "question": "Como funcionan los festivos?",
@@ -105,15 +139,19 @@
         },
         {
           "question": "Como se pagan las horas extra?",
-          "answer": "Reglas sobre horas extra localizadas en el documento."
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
         },
         {
-          "question": "Existen pluses?",
-          "answer": "Pluses o complementos localizados en el documento."
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
         },
         {
           "question": "Que permisos retribuidos hay?",
-          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento."
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
         },
         {
           "question": "Como consultar mi convenio con IA?",
@@ -133,27 +171,35 @@
         "path": "functions/convenios/processed/Convenio Alojamientos y  Hostelería BIZKAIA 2025-2027.pdf",
         "years_detected_internal_only": "2025-2027",
         "quality": "alta",
+        "content_score": 9,
+        "manual_fields": [],
+        "manual_verified": false,
         "status": "generar"
       },
       "content": {
-        "resumen": "Resumen orientativo del convenio colectivo de hosteleria de Bizkaia, elaborado a partir del texto disponible en Balance Laboral.",
+        "resumen": "Pagina orientativa del convenio colectivo de hosteleria de Bizkaia. Vigencia detectada en el documento: 2025-2027. Jornada anual localizada en el texto: 1.746 horas. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2025-2027.",
         "ambito": "Ambito del convenio localizado para el sector hosteleria en Bizkaia.",
-        "jornada_anual": "Jornada anual localizada: 1.746 horas.",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.746 horas.",
         "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
         "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
-        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento.",
-        "horas_extra": "Reglas sobre horas extra localizadas en el documento.",
         "pluses": "Pluses o complementos localizados en el documento.",
-        "categorias": "Categorias o grupos profesionales localizados en el documento."
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Bizkaia.",
+        "fuente_url": "No localizado en el texto disponible"
       },
       "faq": [
         {
-          "question": "Cuantas horas anuales tiene el convenio de hosteleria de Bizkaia?",
-          "answer": "Jornada anual localizada: 1.746 horas."
+          "question": "Que vigencia tiene el convenio de hosteleria de Bizkaia?",
+          "answer": "Vigencia detectada en el documento: 2025-2027."
         },
         {
-          "question": "Cuantos dias de vacaciones corresponden?",
-          "answer": "No localizado en el texto disponible"
+          "question": "Cuantas horas anuales tiene el convenio de hosteleria de Bizkaia?",
+          "answer": "Jornada anual localizada en el texto: 1.746 horas."
         },
         {
           "question": "Como funcionan los festivos?",
@@ -161,15 +207,19 @@
         },
         {
           "question": "Como se pagan las horas extra?",
-          "answer": "Reglas sobre horas extra localizadas en el documento."
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
         },
         {
-          "question": "Existen pluses?",
-          "answer": "Pluses o complementos localizados en el documento."
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
         },
         {
           "question": "Que permisos retribuidos hay?",
-          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento."
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
         },
         {
           "question": "Como consultar mi convenio con IA?",
@@ -189,27 +239,39 @@
         "path": "functions/convenios/processed/Convenio Hosteleria Madrid 2023-2025.pdf",
         "years_detected_internal_only": "2023-2025",
         "quality": "alta",
+        "content_score": 10,
+        "manual_fields": [],
+        "manual_verified": false,
         "status": "generar"
       },
       "content": {
-        "resumen": "Resumen orientativo del convenio colectivo de hosteleria de Madrid, elaborado a partir del texto disponible en Balance Laboral.",
+        "resumen": "Pagina orientativa del convenio colectivo de hosteleria de Madrid. Vigencia detectada en el documento: 2023-2025. Jornada anual localizada en el texto: 1.800 horas. Vacaciones localizadas en el texto: 30 días naturales.",
+        "vigencia": "Vigencia detectada en el documento: 2023-2025.",
         "ambito": "Ambito del convenio localizado para el sector hosteleria en Madrid.",
-        "jornada_anual": "No localizado en el texto disponible",
-        "vacaciones": "No localizado en el texto disponible",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.800 horas.",
+        "vacaciones": "Vacaciones localizadas en el texto: 30 días naturales.",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
         "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
-        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento.",
-        "horas_extra": "Reglas sobre horas extra localizadas en el documento.",
         "pluses": "Pluses o complementos localizados en el documento.",
-        "categorias": "Categorias o grupos profesionales localizados en el documento."
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Comunidad De Madridbocm I.",
+        "fuente_url": "No localizado en el texto disponible"
       },
       "faq": [
         {
+          "question": "Que vigencia tiene el convenio de hosteleria de Madrid?",
+          "answer": "Vigencia detectada en el documento: 2023-2025."
+        },
+        {
           "question": "Cuantas horas anuales tiene el convenio de hosteleria de Madrid?",
-          "answer": "No localizado en el texto disponible"
+          "answer": "Jornada anual localizada en el texto: 1.800 horas."
         },
         {
           "question": "Cuantos dias de vacaciones corresponden?",
-          "answer": "No localizado en el texto disponible"
+          "answer": "Vacaciones localizadas en el texto: 30 días naturales."
         },
         {
           "question": "Como funcionan los festivos?",
@@ -217,15 +279,19 @@
         },
         {
           "question": "Como se pagan las horas extra?",
-          "answer": "Reglas sobre horas extra localizadas en el documento."
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
         },
         {
-          "question": "Existen pluses?",
-          "answer": "Pluses o complementos localizados en el documento."
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
         },
         {
           "question": "Que permisos retribuidos hay?",
-          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento."
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
         },
         {
           "question": "Como consultar mi convenio con IA?",
@@ -245,27 +311,39 @@
         "path": "functions/convenios/processed/Convenio Alojamientos y Hostelería Alava 2025-2028.pdf",
         "years_detected_internal_only": "2025-2028",
         "quality": "alta",
+        "content_score": 11,
+        "manual_fields": [],
+        "manual_verified": false,
         "status": "generar"
       },
       "content": {
-        "resumen": "Resumen orientativo del convenio colectivo de alojamientos de Alava, elaborado a partir del texto disponible en Balance Laboral.",
+        "resumen": "Pagina orientativa del convenio colectivo de alojamientos de Alava. Vigencia detectada en el documento: 2025-2028. Jornada anual localizada en el texto: 1.746 horas. Vacaciones localizadas en el texto: 30 días naturales.",
+        "vigencia": "Vigencia detectada en el documento: 2025-2028.",
         "ambito": "Ambito del convenio localizado para el sector alojamientos en Alava.",
-        "jornada_anual": "Jornada anual localizada: 1.746 horas.",
-        "vacaciones": "No localizado en el texto disponible",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.746 horas.",
+        "vacaciones": "Vacaciones localizadas en el texto: 30 días naturales.",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
         "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
-        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento.",
-        "horas_extra": "Reglas sobre horas extra localizadas en el documento.",
         "pluses": "Pluses o complementos localizados en el documento.",
-        "categorias": "Categorias o grupos profesionales localizados en el documento."
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial Del Territorio Histórico De Álava C.",
+        "fuente_url": "https://araba.eus"
       },
       "faq": [
         {
+          "question": "Que vigencia tiene el convenio de alojamientos de Alava?",
+          "answer": "Vigencia detectada en el documento: 2025-2028."
+        },
+        {
           "question": "Cuantas horas anuales tiene el convenio de alojamientos de Alava?",
-          "answer": "Jornada anual localizada: 1.746 horas."
+          "answer": "Jornada anual localizada en el texto: 1.746 horas."
         },
         {
           "question": "Cuantos dias de vacaciones corresponden?",
-          "answer": "No localizado en el texto disponible"
+          "answer": "Vacaciones localizadas en el texto: 30 días naturales."
         },
         {
           "question": "Como funcionan los festivos?",
@@ -273,15 +351,19 @@
         },
         {
           "question": "Como se pagan las horas extra?",
-          "answer": "Reglas sobre horas extra localizadas en el documento."
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
         },
         {
-          "question": "Existen pluses?",
-          "answer": "Pluses o complementos localizados en el documento."
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
         },
         {
           "question": "Que permisos retribuidos hay?",
-          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento."
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
         },
         {
           "question": "Como consultar mi convenio con IA?",
@@ -301,27 +383,35 @@
         "path": "functions/convenios/processed/Convenio Alojamientos y Hostelería Sevilla 2025-2028.pdf",
         "years_detected_internal_only": "2025-2028",
         "quality": "alta",
+        "content_score": 9,
+        "manual_fields": [],
+        "manual_verified": false,
         "status": "generar"
       },
       "content": {
-        "resumen": "Resumen orientativo del convenio colectivo de alojamientos de Sevilla, elaborado a partir del texto disponible en Balance Laboral.",
+        "resumen": "Pagina orientativa del convenio colectivo de alojamientos de Sevilla. Vigencia detectada en el documento: 2025-2028. Jornada anual localizada en el texto: 1.800 horas. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2025-2028.",
         "ambito": "Ambito del convenio localizado para el sector alojamientos en Sevilla.",
-        "jornada_anual": "No localizado en el texto disponible",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.800 horas.",
         "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
         "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
-        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento.",
-        "horas_extra": "Reglas sobre horas extra localizadas en el documento.",
         "pluses": "Pluses o complementos localizados en el documento.",
-        "categorias": "Categorias o grupos profesionales localizados en el documento."
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Provincia.",
+        "fuente_url": "No localizado en el texto disponible"
       },
       "faq": [
         {
-          "question": "Cuantas horas anuales tiene el convenio de alojamientos de Sevilla?",
-          "answer": "No localizado en el texto disponible"
+          "question": "Que vigencia tiene el convenio de alojamientos de Sevilla?",
+          "answer": "Vigencia detectada en el documento: 2025-2028."
         },
         {
-          "question": "Cuantos dias de vacaciones corresponden?",
-          "answer": "No localizado en el texto disponible"
+          "question": "Cuantas horas anuales tiene el convenio de alojamientos de Sevilla?",
+          "answer": "Jornada anual localizada en el texto: 1.800 horas."
         },
         {
           "question": "Como funcionan los festivos?",
@@ -329,15 +419,19 @@
         },
         {
           "question": "Como se pagan las horas extra?",
-          "answer": "Reglas sobre horas extra localizadas en el documento."
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
         },
         {
-          "question": "Existen pluses?",
-          "answer": "Pluses o complementos localizados en el documento."
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
         },
         {
           "question": "Que permisos retribuidos hay?",
-          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento."
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
         },
         {
           "question": "Como consultar mi convenio con IA?",
@@ -357,27 +451,35 @@
         "path": "functions/convenios/processed/Convenio Alojamientos y Hostelería Zaragoza 2022-2025.pdf",
         "years_detected_internal_only": "2022-2025",
         "quality": "alta",
+        "content_score": 8,
+        "manual_fields": [],
+        "manual_verified": false,
         "status": "generar"
       },
       "content": {
-        "resumen": "Resumen orientativo del convenio colectivo de alojamientos de Zaragoza, elaborado a partir del texto disponible en Balance Laboral.",
+        "resumen": "Pagina orientativa del convenio colectivo de alojamientos de Zaragoza. Vigencia detectada en el documento: 2022-2025. Jornada anual localizada en el texto: 1.776 horas. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2022-2025.",
         "ambito": "Ambito del convenio localizado para el sector alojamientos en Zaragoza.",
-        "jornada_anual": "Jornada anual localizada: 1.776 horas.",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.776 horas.",
         "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
         "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
-        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento.",
-        "horas_extra": "Reglas sobre horas extra localizadas en el documento.",
         "pluses": "Pluses o complementos localizados en el documento.",
-        "categorias": "Categorias o grupos profesionales localizados en el documento."
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "No localizado en el texto disponible",
+        "fuente_url": "No localizado en el texto disponible"
       },
       "faq": [
         {
-          "question": "Cuantas horas anuales tiene el convenio de alojamientos de Zaragoza?",
-          "answer": "Jornada anual localizada: 1.776 horas."
+          "question": "Que vigencia tiene el convenio de alojamientos de Zaragoza?",
+          "answer": "Vigencia detectada en el documento: 2022-2025."
         },
         {
-          "question": "Cuantos dias de vacaciones corresponden?",
-          "answer": "No localizado en el texto disponible"
+          "question": "Cuantas horas anuales tiene el convenio de alojamientos de Zaragoza?",
+          "answer": "Jornada anual localizada en el texto: 1.776 horas."
         },
         {
           "question": "Como funcionan los festivos?",
@@ -385,15 +487,19 @@
         },
         {
           "question": "Como se pagan las horas extra?",
-          "answer": "Reglas sobre horas extra localizadas en el documento."
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
         },
         {
-          "question": "Existen pluses?",
-          "answer": "Pluses o complementos localizados en el documento."
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
         },
         {
           "question": "Que permisos retribuidos hay?",
-          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento."
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
         },
         {
           "question": "Como consultar mi convenio con IA?",
@@ -413,27 +519,35 @@
         "path": "functions/convenios/processed/Convenio Limpieza edificios Madrid 2022-2025.pdf",
         "years_detected_internal_only": "2022-2025",
         "quality": "alta",
+        "content_score": 9,
+        "manual_fields": [],
+        "manual_verified": false,
         "status": "generar"
       },
       "content": {
-        "resumen": "Resumen orientativo del convenio colectivo de limpieza de Madrid, elaborado a partir del texto disponible en Balance Laboral.",
+        "resumen": "Pagina orientativa del convenio colectivo de limpieza de Madrid. Vigencia detectada en el documento: 2022-2025. Jornada anual localizada en el texto: 1.739 horas. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2022-2025.",
         "ambito": "Ambito del convenio localizado para el sector limpieza en Madrid.",
-        "jornada_anual": "No localizado en el texto disponible",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.739 horas.",
         "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
         "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
-        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento.",
-        "horas_extra": "Reglas sobre horas extra localizadas en el documento.",
         "pluses": "Pluses o complementos localizados en el documento.",
-        "categorias": "Categorias o grupos profesionales localizados en el documento."
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Comunidad De Madridbocm I.",
+        "fuente_url": "No localizado en el texto disponible"
       },
       "faq": [
         {
-          "question": "Cuantas horas anuales tiene el convenio de limpieza de Madrid?",
-          "answer": "No localizado en el texto disponible"
+          "question": "Que vigencia tiene el convenio de limpieza de Madrid?",
+          "answer": "Vigencia detectada en el documento: 2022-2025."
         },
         {
-          "question": "Cuantos dias de vacaciones corresponden?",
-          "answer": "No localizado en el texto disponible"
+          "question": "Cuantas horas anuales tiene el convenio de limpieza de Madrid?",
+          "answer": "Jornada anual localizada en el texto: 1.739 horas."
         },
         {
           "question": "Como funcionan los festivos?",
@@ -441,15 +555,19 @@
         },
         {
           "question": "Como se pagan las horas extra?",
-          "answer": "Reglas sobre horas extra localizadas en el documento."
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
         },
         {
-          "question": "Existen pluses?",
-          "answer": "Pluses o complementos localizados en el documento."
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
         },
         {
           "question": "Que permisos retribuidos hay?",
-          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento."
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
         },
         {
           "question": "Como consultar mi convenio con IA?",
@@ -469,27 +587,31 @@
         "path": "functions/convenios/processed/Convenio Limpieza Edificios y locales GIPUZKOA 2024-2027.pdf",
         "years_detected_internal_only": "2024-2027",
         "quality": "alta",
+        "content_score": 8,
+        "manual_fields": [],
+        "manual_verified": false,
         "status": "generar"
       },
       "content": {
-        "resumen": "Resumen orientativo del convenio colectivo de limpieza de Gipuzkoa, elaborado a partir del texto disponible en Balance Laboral.",
+        "resumen": "Pagina orientativa del convenio colectivo de limpieza de Gipuzkoa. Vigencia detectada en el documento: 2024-2027. La jornada anual debe comprobarse en el convenio completo. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2024-2027.",
         "ambito": "Ambito del convenio localizado para el sector limpieza en Gipuzkoa.",
         "jornada_anual": "No localizado en el texto disponible",
         "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
         "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
-        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento.",
-        "horas_extra": "Reglas sobre horas extra localizadas en el documento.",
         "pluses": "Pluses o complementos localizados en el documento.",
-        "categorias": "Categorias o grupos profesionales localizados en el documento."
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial Del País Vasco De.",
+        "fuente_url": "No localizado en el texto disponible"
       },
       "faq": [
         {
-          "question": "Cuantas horas anuales tiene el convenio de limpieza de Gipuzkoa?",
-          "answer": "No localizado en el texto disponible"
-        },
-        {
-          "question": "Cuantos dias de vacaciones corresponden?",
-          "answer": "No localizado en el texto disponible"
+          "question": "Que vigencia tiene el convenio de limpieza de Gipuzkoa?",
+          "answer": "Vigencia detectada en el documento: 2024-2027."
         },
         {
           "question": "Como funcionan los festivos?",
@@ -497,15 +619,19 @@
         },
         {
           "question": "Como se pagan las horas extra?",
-          "answer": "Reglas sobre horas extra localizadas en el documento."
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
         },
         {
-          "question": "Existen pluses?",
-          "answer": "Pluses o complementos localizados en el documento."
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
         },
         {
           "question": "Que permisos retribuidos hay?",
-          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento."
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
         },
         {
           "question": "Como consultar mi convenio con IA?",
@@ -525,27 +651,31 @@
         "path": "functions/convenios/processed/Convenio Limpieza edificios BIZKAIA 2021-2025.pdf",
         "years_detected_internal_only": "2021-2025",
         "quality": "alta",
+        "content_score": 8,
+        "manual_fields": [],
+        "manual_verified": false,
         "status": "generar"
       },
       "content": {
-        "resumen": "Resumen orientativo del convenio colectivo de limpieza de Bizkaia, elaborado a partir del texto disponible en Balance Laboral.",
+        "resumen": "Pagina orientativa del convenio colectivo de limpieza de Bizkaia. Vigencia detectada en el documento: 2021-2025. La jornada anual debe comprobarse en el convenio completo. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2021-2025.",
         "ambito": "Ambito del convenio localizado para el sector limpieza en Bizkaia.",
         "jornada_anual": "No localizado en el texto disponible",
-        "vacaciones": "Vacaciones anuales localizadas: 30 dias naturales.",
+        "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
         "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
-        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento.",
-        "horas_extra": "Reglas sobre horas extra localizadas en el documento.",
         "pluses": "Pluses o complementos localizados en el documento.",
-        "categorias": "Categorias o grupos profesionales localizados en el documento."
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Bizkaia.",
+        "fuente_url": "No localizado en el texto disponible"
       },
       "faq": [
         {
-          "question": "Cuantas horas anuales tiene el convenio de limpieza de Bizkaia?",
-          "answer": "No localizado en el texto disponible"
-        },
-        {
-          "question": "Cuantos dias de vacaciones corresponden?",
-          "answer": "Vacaciones anuales localizadas: 30 dias naturales."
+          "question": "Que vigencia tiene el convenio de limpieza de Bizkaia?",
+          "answer": "Vigencia detectada en el documento: 2021-2025."
         },
         {
           "question": "Como funcionan los festivos?",
@@ -553,15 +683,19 @@
         },
         {
           "question": "Como se pagan las horas extra?",
-          "answer": "Reglas sobre horas extra localizadas en el documento."
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
         },
         {
-          "question": "Existen pluses?",
-          "answer": "Pluses o complementos localizados en el documento."
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
         },
         {
           "question": "Que permisos retribuidos hay?",
-          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento."
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
         },
         {
           "question": "Como consultar mi convenio con IA?",
@@ -581,43 +715,47 @@
         "path": "functions/convenios/processed/Convenio Transporte Madrid 2022-2025.pdf",
         "years_detected_internal_only": "2022-2025",
         "quality": "alta",
+        "content_score": 7,
+        "manual_fields": [],
+        "manual_verified": false,
         "status": "generar"
       },
       "content": {
-        "resumen": "Resumen orientativo del convenio colectivo de transporte de Madrid, elaborado a partir del texto disponible en Balance Laboral.",
+        "resumen": "Pagina orientativa del convenio colectivo de transporte de Madrid. Vigencia detectada en el documento: 2022-2025. La jornada anual debe comprobarse en el convenio completo. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2022-2025.",
         "ambito": "Ambito del convenio localizado para el sector transporte en Madrid.",
         "jornada_anual": "No localizado en el texto disponible",
         "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
         "festivos_descansos": "No localizado en el texto disponible",
-        "permisos": "No localizado en el texto disponible",
-        "horas_extra": "Reglas sobre horas extra localizadas en el documento.",
         "pluses": "Pluses o complementos localizados en el documento.",
-        "categorias": "Categorias o grupos profesionales localizados en el documento."
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Comunidad De Madrid Num.",
+        "fuente_url": "No localizado en el texto disponible"
       },
       "faq": [
         {
-          "question": "Cuantas horas anuales tiene el convenio de transporte de Madrid?",
-          "answer": "No localizado en el texto disponible"
-        },
-        {
-          "question": "Cuantos dias de vacaciones corresponden?",
-          "answer": "No localizado en el texto disponible"
-        },
-        {
-          "question": "Como funcionan los festivos?",
-          "answer": "No localizado en el texto disponible"
+          "question": "Que vigencia tiene el convenio de transporte de Madrid?",
+          "answer": "Vigencia detectada en el documento: 2022-2025."
         },
         {
           "question": "Como se pagan las horas extra?",
-          "answer": "Reglas sobre horas extra localizadas en el documento."
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
         },
         {
-          "question": "Existen pluses?",
-          "answer": "Pluses o complementos localizados en el documento."
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
         },
         {
           "question": "Que permisos retribuidos hay?",
-          "answer": "No localizado en el texto disponible"
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
         },
         {
           "question": "Como consultar mi convenio con IA?",
@@ -637,27 +775,31 @@
         "path": "functions/convenios/processed/Convenio Transporte Valencia 2023-2026.pdf",
         "years_detected_internal_only": "2023-2026",
         "quality": "alta",
+        "content_score": 8,
+        "manual_fields": [],
+        "manual_verified": false,
         "status": "generar"
       },
       "content": {
-        "resumen": "Resumen orientativo del convenio colectivo de transporte de Valencia, elaborado a partir del texto disponible en Balance Laboral.",
+        "resumen": "Pagina orientativa del convenio colectivo de transporte de Valencia. Vigencia detectada en el documento: 2023-2026. La jornada anual debe comprobarse en el convenio completo. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2023-2026.",
         "ambito": "Ambito del convenio localizado para el sector transporte en Valencia.",
         "jornada_anual": "No localizado en el texto disponible",
         "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
         "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
-        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento.",
-        "horas_extra": "Reglas sobre horas extra localizadas en el documento.",
         "pluses": "Pluses o complementos localizados en el documento.",
-        "categorias": "Categorias o grupos profesionales localizados en el documento."
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Provincia.",
+        "fuente_url": "No localizado en el texto disponible"
       },
       "faq": [
         {
-          "question": "Cuantas horas anuales tiene el convenio de transporte de Valencia?",
-          "answer": "No localizado en el texto disponible"
-        },
-        {
-          "question": "Cuantos dias de vacaciones corresponden?",
-          "answer": "No localizado en el texto disponible"
+          "question": "Que vigencia tiene el convenio de transporte de Valencia?",
+          "answer": "Vigencia detectada en el documento: 2023-2026."
         },
         {
           "question": "Como funcionan los festivos?",
@@ -665,15 +807,19 @@
         },
         {
           "question": "Como se pagan las horas extra?",
-          "answer": "Reglas sobre horas extra localizadas en el documento."
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
         },
         {
-          "question": "Existen pluses?",
-          "answer": "Pluses o complementos localizados en el documento."
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
         },
         {
           "question": "Que permisos retribuidos hay?",
-          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento."
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
         },
         {
           "question": "Como consultar mi convenio con IA?",
@@ -693,27 +839,39 @@
         "path": "functions/convenios/processed/Convenio Transporte Sevilla 2024-2027.pdf",
         "years_detected_internal_only": "2024-2027",
         "quality": "alta",
+        "content_score": 8,
+        "manual_fields": [],
+        "manual_verified": false,
         "status": "generar"
       },
       "content": {
-        "resumen": "Resumen orientativo del convenio colectivo de transporte de Sevilla, elaborado a partir del texto disponible en Balance Laboral.",
+        "resumen": "Pagina orientativa del convenio colectivo de transporte de Sevilla. Vigencia detectada en el documento: 2024-2027. Jornada anual localizada en el texto: 1.800 horas. Vacaciones localizadas en el texto: 30 días naturales.",
+        "vigencia": "Vigencia detectada en el documento: 2024-2027.",
         "ambito": "Ambito del convenio localizado para el sector transporte en Sevilla.",
-        "jornada_anual": "No localizado en el texto disponible",
-        "vacaciones": "Vacaciones anuales localizadas: 30 dias naturales.",
-        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.800 horas.",
+        "vacaciones": "Vacaciones localizadas en el texto: 30 días naturales.",
         "permisos": "No localizado en el texto disponible",
-        "horas_extra": "Reglas sobre horas extra localizadas en el documento.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "No localizado en el texto disponible",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
         "pluses": "Pluses o complementos localizados en el documento.",
-        "categorias": "Categorias o grupos profesionales localizados en el documento."
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Provincia.",
+        "fuente_url": "No localizado en el texto disponible"
       },
       "faq": [
         {
+          "question": "Que vigencia tiene el convenio de transporte de Sevilla?",
+          "answer": "Vigencia detectada en el documento: 2024-2027."
+        },
+        {
           "question": "Cuantas horas anuales tiene el convenio de transporte de Sevilla?",
-          "answer": "No localizado en el texto disponible"
+          "answer": "Jornada anual localizada en el texto: 1.800 horas."
         },
         {
           "question": "Cuantos dias de vacaciones corresponden?",
-          "answer": "Vacaciones anuales localizadas: 30 dias naturales."
+          "answer": "Vacaciones localizadas en el texto: 30 días naturales."
         },
         {
           "question": "Como funcionan los festivos?",
@@ -721,15 +879,1060 @@
         },
         {
           "question": "Como se pagan las horas extra?",
-          "answer": "Reglas sobre horas extra localizadas en el documento."
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
         },
         {
-          "question": "Existen pluses?",
-          "answer": "Pluses o complementos localizados en el documento."
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "alojamientos",
+      "sectorLabel": "Alojamientos",
+      "provincia": "BARCELONA",
+      "provinciaDisplay": "Barcelona",
+      "slug": "alojamientos-barcelona",
+      "title": "Convenio de Alojamientos de Barcelona",
+      "source": {
+        "documento": "Convenio Alojamientos y Hostelería Barcelona 2022-2024.pdf",
+        "path": "functions/convenios/processed/Convenio Alojamientos y Hostelería Barcelona 2022-2024.pdf",
+        "years_detected_internal_only": "2022-2024",
+        "quality": "alta",
+        "content_score": 7,
+        "manual_fields": [],
+        "manual_verified": false,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de alojamientos de Barcelona. Vigencia detectada en el documento: 2022-2024. La jornada anual debe comprobarse en el convenio completo. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2022-2024.",
+        "ambito": "Ambito del convenio localizado para el sector alojamientos en Barcelona.",
+        "jornada_anual": "No localizado en el texto disponible",
+        "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "No localizado en el texto disponible",
+        "fuente_url": "No localizado en el texto disponible"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de alojamientos de Barcelona?",
+          "answer": "Vigencia detectada en el documento: 2022-2024."
+        },
+        {
+          "question": "Como funcionan los festivos?",
+          "answer": "Reglas sobre festivos trabajados localizadas en el documento."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
         },
         {
           "question": "Que permisos retribuidos hay?",
-          "answer": "No localizado en el texto disponible"
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "alojamientos",
+      "sectorLabel": "Alojamientos",
+      "provincia": "NAVARRA",
+      "provinciaDisplay": "Navarra",
+      "slug": "alojamientos-navarra",
+      "title": "Convenio de Alojamientos de Navarra",
+      "source": {
+        "documento": "Convenio Alojamientos y Hostelería Navarra 2022-2025.pdf",
+        "path": "functions/convenios/processed/Convenio Alojamientos y Hostelería Navarra 2022-2025.pdf",
+        "years_detected_internal_only": "2022-2025",
+        "quality": "alta",
+        "content_score": 9,
+        "manual_fields": [],
+        "manual_verified": false,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de alojamientos de Navarra. Vigencia detectada en el documento: 2022-2025. Jornada anual localizada en el texto: 1.724 horas. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2022-2025.",
+        "ambito": "Ambito del convenio localizado para el sector alojamientos en Navarra.",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.724 horas.",
+        "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Navarra Número.",
+        "fuente_url": "No localizado en el texto disponible"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de alojamientos de Navarra?",
+          "answer": "Vigencia detectada en el documento: 2022-2025."
+        },
+        {
+          "question": "Cuantas horas anuales tiene el convenio de alojamientos de Navarra?",
+          "answer": "Jornada anual localizada en el texto: 1.724 horas."
+        },
+        {
+          "question": "Como funcionan los festivos?",
+          "answer": "Reglas sobre festivos trabajados localizadas en el documento."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "hosteleria",
+      "sectorLabel": "Hosteleria",
+      "provincia": "MALAGA",
+      "provinciaDisplay": "Malaga",
+      "slug": "hosteleria-malaga",
+      "title": "Convenio de Hosteleria de Malaga",
+      "source": {
+        "documento": "Convenio Hosteleria Malaga 2018-2027.pdf",
+        "path": "functions/convenios/processed/Convenio Hosteleria Malaga 2018-2027.pdf",
+        "years_detected_internal_only": "2018-2027",
+        "quality": "alta",
+        "content_score": 11,
+        "manual_fields": [
+          "vigencia",
+          "jornada_anual",
+          "vacaciones",
+          "fuente_oficial",
+          "fuente_url"
+        ],
+        "manual_verified": true,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de hosteleria de Malaga. Vigencia detectada en el documento: 2018-2027. Jornada anual localizada en el texto: 1.800 horas. Vacaciones localizadas en el texto: 30 días naturales.",
+        "vigencia": "Vigencia verificada en el texto: 2018-2027.",
+        "ambito": "Ambito del convenio localizado para el sector hosteleria en Malaga.",
+        "jornada_anual": "Jornada anual verificada en el texto: 1.800 horas.",
+        "vacaciones": "Vacaciones verificadas en el texto: 30 dias naturales.",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Boletin Oficial de la Provincia de Malaga.",
+        "fuente_url": "https://www.bopmalaga.es/cve.php"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de hosteleria de Malaga?",
+          "answer": "Vigencia verificada en el texto: 2018-2027."
+        },
+        {
+          "question": "Cuantas horas anuales tiene el convenio de hosteleria de Malaga?",
+          "answer": "Jornada anual verificada en el texto: 1.800 horas."
+        },
+        {
+          "question": "Cuantos dias de vacaciones corresponden?",
+          "answer": "Vacaciones verificadas en el texto: 30 dias naturales."
+        },
+        {
+          "question": "Como funcionan los festivos?",
+          "answer": "Reglas sobre festivos trabajados localizadas en el documento."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "hosteleria",
+      "sectorLabel": "Hosteleria",
+      "provincia": "VALENCIA",
+      "provinciaDisplay": "Valencia",
+      "slug": "hosteleria-valencia",
+      "title": "Convenio de Hosteleria de Valencia",
+      "source": {
+        "documento": "Convenio Alojamientos y Hostelería Valencia2022-2025.pdf",
+        "path": "functions/convenios/processed/Convenio Alojamientos y Hostelería Valencia2022-2025.pdf",
+        "years_detected_internal_only": "2022-2025",
+        "quality": "alta",
+        "content_score": 11,
+        "manual_fields": [
+          "vigencia",
+          "jornada_anual",
+          "vacaciones",
+          "fuente_oficial",
+          "fuente_url"
+        ],
+        "manual_verified": true,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de hosteleria de Valencia. Vigencia detectada en el documento: 2022-2025. Jornada anual localizada en el texto: 1.794 horas. Vacaciones localizadas en el texto: 30 días naturales.",
+        "vigencia": "Vigencia verificada en el texto: 2022-2025.",
+        "ambito": "Ambito del convenio localizado para el sector hosteleria en Valencia.",
+        "jornada_anual": "Jornada anual verificada en el texto: 1.794 horas.",
+        "vacaciones": "Vacaciones verificadas en el texto: 30 dias naturales.",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Boletin Oficial de la Provincia de Valencia.",
+        "fuente_url": "https://bop.dival.es/bop"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de hosteleria de Valencia?",
+          "answer": "Vigencia verificada en el texto: 2022-2025."
+        },
+        {
+          "question": "Cuantas horas anuales tiene el convenio de hosteleria de Valencia?",
+          "answer": "Jornada anual verificada en el texto: 1.794 horas."
+        },
+        {
+          "question": "Cuantos dias de vacaciones corresponden?",
+          "answer": "Vacaciones verificadas en el texto: 30 dias naturales."
+        },
+        {
+          "question": "Como funcionan los festivos?",
+          "answer": "Reglas sobre festivos trabajados localizadas en el documento."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "limpieza",
+      "sectorLabel": "Limpieza",
+      "provincia": "BARCELONA",
+      "provinciaDisplay": "Barcelona",
+      "slug": "limpieza-barcelona",
+      "title": "Convenio de Limpieza de Barcelona",
+      "source": {
+        "documento": "Convenio Limpieza edificios Barcelona 2022-2025.pdf",
+        "path": "functions/convenios/processed/Convenio Limpieza edificios Barcelona 2022-2025.pdf",
+        "years_detected_internal_only": "2022-2025",
+        "quality": "alta",
+        "content_score": 7,
+        "manual_fields": [],
+        "manual_verified": false,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de limpieza de Barcelona. Vigencia detectada en el documento: 2022-2025. La jornada anual debe comprobarse en el convenio completo. Vacaciones localizadas en el texto: 31 días naturales.",
+        "vigencia": "Vigencia detectada en el documento: 2022-2025.",
+        "ambito": "No localizado en el texto disponible",
+        "jornada_anual": "No localizado en el texto disponible",
+        "vacaciones": "Vacaciones localizadas en el texto: 31 días naturales.",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "No localizado en el texto disponible",
+        "fuente_oficial": "No localizado en el texto disponible",
+        "fuente_url": "No localizado en el texto disponible"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de limpieza de Barcelona?",
+          "answer": "Vigencia detectada en el documento: 2022-2025."
+        },
+        {
+          "question": "Cuantos dias de vacaciones corresponden?",
+          "answer": "Vacaciones localizadas en el texto: 31 días naturales."
+        },
+        {
+          "question": "Como funcionan los festivos?",
+          "answer": "Reglas sobre festivos trabajados localizadas en el documento."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "limpieza",
+      "sectorLabel": "Limpieza",
+      "provincia": "NAVARRA",
+      "provinciaDisplay": "Navarra",
+      "slug": "limpieza-navarra",
+      "title": "Convenio de Limpieza de Navarra",
+      "source": {
+        "documento": "Convenio Limpieza edificioos Navarra 2024-2027.pdf",
+        "path": "functions/convenios/processed/Convenio Limpieza edificioos Navarra 2024-2027.pdf",
+        "years_detected_internal_only": "2024-2027",
+        "quality": "alta",
+        "content_score": 10,
+        "manual_fields": [],
+        "manual_verified": false,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de limpieza de Navarra. Vigencia detectada en el documento: 2024-2027. Jornada anual localizada en el texto: 1.673 horas. Vacaciones localizadas en el texto: 30 días naturales.",
+        "vigencia": "Vigencia detectada en el documento: 2024-2027.",
+        "ambito": "Ambito del convenio localizado para el sector limpieza en Navarra.",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.673 horas.",
+        "vacaciones": "Vacaciones localizadas en el texto: 30 días naturales.",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "No localizado en el texto disponible",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Navarra Del Convenio Colectivo Presentado Por El Sector De Limpieza De Edificios Y Locales De Navarra.",
+        "fuente_url": "No localizado en el texto disponible"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de limpieza de Navarra?",
+          "answer": "Vigencia detectada en el documento: 2024-2027."
+        },
+        {
+          "question": "Cuantas horas anuales tiene el convenio de limpieza de Navarra?",
+          "answer": "Jornada anual localizada en el texto: 1.673 horas."
+        },
+        {
+          "question": "Cuantos dias de vacaciones corresponden?",
+          "answer": "Vacaciones localizadas en el texto: 30 días naturales."
+        },
+        {
+          "question": "Como funcionan los festivos?",
+          "answer": "Reglas sobre festivos trabajados localizadas en el documento."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "limpieza",
+      "sectorLabel": "Limpieza",
+      "provincia": "SEVILLA",
+      "provinciaDisplay": "Sevilla",
+      "slug": "limpieza-sevilla",
+      "title": "Convenio de Limpieza de Sevilla",
+      "source": {
+        "documento": "Convenio Limpieza edificios Sevilla 2024-2027.pdf",
+        "path": "functions/convenios/processed/Convenio Limpieza edificios Sevilla 2024-2027.pdf",
+        "years_detected_internal_only": "2024-2027",
+        "quality": "alta",
+        "content_score": 9,
+        "manual_fields": [],
+        "manual_verified": false,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de limpieza de Sevilla. Vigencia detectada en el documento: 2024-2027. Jornada anual localizada en el texto: 1.728 horas. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2024-2027.",
+        "ambito": "Ambito del convenio localizado para el sector limpieza en Sevilla.",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.728 horas.",
+        "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Provincia.",
+        "fuente_url": "No localizado en el texto disponible"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de limpieza de Sevilla?",
+          "answer": "Vigencia detectada en el documento: 2024-2027."
+        },
+        {
+          "question": "Cuantas horas anuales tiene el convenio de limpieza de Sevilla?",
+          "answer": "Jornada anual localizada en el texto: 1.728 horas."
+        },
+        {
+          "question": "Como funcionan los festivos?",
+          "answer": "Reglas sobre festivos trabajados localizadas en el documento."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "limpieza",
+      "sectorLabel": "Limpieza",
+      "provincia": "VALENCIA",
+      "provinciaDisplay": "Valencia",
+      "slug": "limpieza-valencia",
+      "title": "Convenio de Limpieza de Valencia",
+      "source": {
+        "documento": "Convenio Limpieza edificios Valencia 2021-2025.pdf",
+        "path": "functions/convenios/processed/Convenio Limpieza edificios Valencia 2021-2025.pdf",
+        "years_detected_internal_only": "2021-2025",
+        "quality": "alta",
+        "content_score": 10,
+        "manual_fields": [],
+        "manual_verified": false,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de limpieza de Valencia. Vigencia detectada en el documento: 2021-2025. Jornada anual localizada en el texto: 1.589 horas. Vacaciones localizadas en el texto: 26 días laborables.",
+        "vigencia": "Vigencia detectada en el documento: 2021-2025.",
+        "ambito": "Ambito del convenio localizado para el sector limpieza en Valencia.",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.589 horas.",
+        "vacaciones": "Vacaciones localizadas en el texto: 26 días laborables.",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Provincia.",
+        "fuente_url": "No localizado en el texto disponible"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de limpieza de Valencia?",
+          "answer": "Vigencia detectada en el documento: 2021-2025."
+        },
+        {
+          "question": "Cuantas horas anuales tiene el convenio de limpieza de Valencia?",
+          "answer": "Jornada anual localizada en el texto: 1.589 horas."
+        },
+        {
+          "question": "Cuantos dias de vacaciones corresponden?",
+          "answer": "Vacaciones localizadas en el texto: 26 días laborables."
+        },
+        {
+          "question": "Como funcionan los festivos?",
+          "answer": "Reglas sobre festivos trabajados localizadas en el documento."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "limpieza",
+      "sectorLabel": "Limpieza",
+      "provincia": "ZARAGOZA",
+      "provinciaDisplay": "Zaragoza",
+      "slug": "limpieza-zaragoza",
+      "title": "Convenio de Limpieza de Zaragoza",
+      "source": {
+        "documento": "Convenio Limpieza edificios Zaragoza 2022-2025.pdf",
+        "path": "functions/convenios/processed/Convenio Limpieza edificios Zaragoza 2022-2025.pdf",
+        "years_detected_internal_only": "2022-2025",
+        "quality": "alta",
+        "content_score": 8,
+        "manual_fields": [],
+        "manual_verified": false,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de limpieza de Zaragoza. Vigencia detectada en el documento: 2022-2025. Jornada anual localizada en el texto: 1.774 horas. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2022-2025.",
+        "ambito": "Ambito del convenio localizado para el sector limpieza en Zaragoza.",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.774 horas.",
+        "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "No localizado en el texto disponible",
+        "fuente_url": "No localizado en el texto disponible"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de limpieza de Zaragoza?",
+          "answer": "Vigencia detectada en el documento: 2022-2025."
+        },
+        {
+          "question": "Cuantas horas anuales tiene el convenio de limpieza de Zaragoza?",
+          "answer": "Jornada anual localizada en el texto: 1.774 horas."
+        },
+        {
+          "question": "Como funcionan los festivos?",
+          "answer": "Reglas sobre festivos trabajados localizadas en el documento."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "transporte",
+      "sectorLabel": "Transporte",
+      "provincia": "ALAVA",
+      "provinciaDisplay": "Alava",
+      "slug": "transporte-alava",
+      "title": "Convenio de Transporte de Alava",
+      "source": {
+        "documento": "Convenio Transporte Alava 201-2026.pdf",
+        "path": "functions/convenios/processed/Convenio Transporte Alava 201-2026.pdf",
+        "years_detected_internal_only": "2020-2026",
+        "quality": "alta",
+        "content_score": 10,
+        "manual_fields": [
+          "vigencia",
+          "vacaciones",
+          "fuente_oficial",
+          "fuente_url"
+        ],
+        "manual_verified": true,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de transporte de Alava. Vigencia detectada en el documento: 2020-2026. Jornada anual localizada en el texto: 1.727 horas. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia verificada en el texto: 2020-2026.",
+        "ambito": "Ambito del convenio localizado para el sector transporte en Alava.",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.727 horas.",
+        "vacaciones": "Vacaciones verificadas en el texto: 32 dias naturales.",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "No localizado en el texto disponible",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "No localizado en el texto disponible",
+        "fuente_oficial": "Boletin Oficial del Territorio Historico de Alava.",
+        "fuente_url": "https://www.araba.eus"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de transporte de Alava?",
+          "answer": "Vigencia verificada en el texto: 2020-2026."
+        },
+        {
+          "question": "Cuantas horas anuales tiene el convenio de transporte de Alava?",
+          "answer": "Jornada anual localizada en el texto: 1.727 horas."
+        },
+        {
+          "question": "Cuantos dias de vacaciones corresponden?",
+          "answer": "Vacaciones verificadas en el texto: 32 dias naturales."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "transporte",
+      "sectorLabel": "Transporte",
+      "provincia": "BARCELONA",
+      "provinciaDisplay": "Barcelona",
+      "slug": "transporte-barcelona",
+      "title": "Convenio de Transporte de Barcelona",
+      "source": {
+        "documento": "Convenio Transporte Barcelona 2011-2023.pdf",
+        "path": "functions/convenios/processed/Convenio Transporte Barcelona 2011-2023.pdf",
+        "years_detected_internal_only": "2011-2023",
+        "quality": "alta",
+        "content_score": 7,
+        "manual_fields": [],
+        "manual_verified": false,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de transporte de Barcelona. Vigencia detectada en el documento: 2011-2023. La jornada anual debe comprobarse en el convenio completo. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2011-2023.",
+        "ambito": "Ambito del convenio localizado para el sector transporte en Barcelona.",
+        "jornada_anual": "No localizado en el texto disponible",
+        "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "No localizado en el texto disponible",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "No localizado en el texto disponible",
+        "fuente_url": "https://bop.diba.cat"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de transporte de Barcelona?",
+          "answer": "Vigencia detectada en el documento: 2011-2023."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "transporte",
+      "sectorLabel": "Transporte",
+      "provincia": "BIZKAIA",
+      "provinciaDisplay": "Bizkaia",
+      "slug": "transporte-bizkaia",
+      "title": "Convenio de Transporte de Bizkaia",
+      "source": {
+        "documento": "Convenio Transporte BIZKAIA 2021-2024.pdf",
+        "path": "functions/convenios/processed/Convenio Transporte BIZKAIA 2021-2024.pdf",
+        "years_detected_internal_only": "2021-2024",
+        "quality": "alta",
+        "content_score": 9,
+        "manual_fields": [],
+        "manual_verified": false,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de transporte de Bizkaia. Vigencia detectada en el documento: 2021-2024. Jornada anual localizada en el texto: 1.724 horas. Vacaciones localizadas en el texto: 22 días laborables.",
+        "vigencia": "Vigencia detectada en el documento: 2021-2024.",
+        "ambito": "Ambito del convenio localizado para el sector transporte en Bizkaia.",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.724 horas.",
+        "vacaciones": "Vacaciones localizadas en el texto: 22 días laborables.",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "No localizado en el texto disponible",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "No localizado en el texto disponible",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Bizkaia.",
+        "fuente_url": "No localizado en el texto disponible"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de transporte de Bizkaia?",
+          "answer": "Vigencia detectada en el documento: 2021-2024."
+        },
+        {
+          "question": "Cuantas horas anuales tiene el convenio de transporte de Bizkaia?",
+          "answer": "Jornada anual localizada en el texto: 1.724 horas."
+        },
+        {
+          "question": "Cuantos dias de vacaciones corresponden?",
+          "answer": "Vacaciones localizadas en el texto: 22 días laborables."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "transporte",
+      "sectorLabel": "Transporte",
+      "provincia": "GIPUZKOA",
+      "provinciaDisplay": "Gipuzkoa",
+      "slug": "transporte-gipuzkoa",
+      "title": "Convenio de Transporte de Gipuzkoa",
+      "source": {
+        "documento": "Convenio Transporte Gipuzkoa 2010-2014.pdf",
+        "path": "functions/convenios/processed/Convenio Transporte Gipuzkoa 2010-2014.pdf",
+        "years_detected_internal_only": "2010-2014",
+        "quality": "alta",
+        "content_score": 10,
+        "manual_fields": [],
+        "manual_verified": false,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de transporte de Gipuzkoa. Vigencia detectada en el documento: 2010-2014. Jornada anual localizada en el texto: 1.692 horas. Vacaciones localizadas en el texto: 27 días laborables.",
+        "vigencia": "Vigencia detectada en el documento: 2010-2014.",
+        "ambito": "Ambito del convenio localizado para el sector transporte en Gipuzkoa.",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.692 horas.",
+        "vacaciones": "Vacaciones localizadas en el texto: 27 días laborables.",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas sobre festivos y descansos compensatorios localizadas en el documento.",
+        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Gipuzkoa.",
+        "fuente_url": "No localizado en el texto disponible"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de transporte de Gipuzkoa?",
+          "answer": "Vigencia detectada en el documento: 2010-2014."
+        },
+        {
+          "question": "Cuantas horas anuales tiene el convenio de transporte de Gipuzkoa?",
+          "answer": "Jornada anual localizada en el texto: 1.692 horas."
+        },
+        {
+          "question": "Cuantos dias de vacaciones corresponden?",
+          "answer": "Vacaciones localizadas en el texto: 27 días laborables."
+        },
+        {
+          "question": "Como funcionan los festivos?",
+          "answer": "Reglas sobre festivos trabajados localizadas en el documento."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas sobre festivos y descansos compensatorios localizadas en el documento."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "transporte",
+      "sectorLabel": "Transporte",
+      "provincia": "NAVARRA",
+      "provinciaDisplay": "Navarra",
+      "slug": "transporte-navarra",
+      "title": "Convenio de Transporte de Navarra",
+      "source": {
+        "documento": "Convenio Transporte Navarra 2007-2008.pdf",
+        "path": "functions/convenios/processed/Convenio Transporte Navarra 2007-2008.pdf",
+        "years_detected_internal_only": "2007-2008",
+        "quality": "alta",
+        "content_score": 10,
+        "manual_fields": [],
+        "manual_verified": false,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de transporte de Navarra. Vigencia detectada en el documento: 2007-2008. Jornada anual localizada en el texto: 1.744 horas. Vacaciones localizadas en el texto: 30 días naturales.",
+        "vigencia": "Vigencia detectada en el documento: 2007-2008.",
+        "ambito": "Ambito del convenio localizado para el sector transporte en Navarra.",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.744 horas.",
+        "vacaciones": "Vacaciones localizadas en el texto: 30 días naturales.",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas sobre festivos y descansos compensatorios localizadas en el documento.",
+        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Navarra El Texto Del Convenio Colectivo De Trabajo Del Sector.",
+        "fuente_url": "No localizado en el texto disponible"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de transporte de Navarra?",
+          "answer": "Vigencia detectada en el documento: 2007-2008."
+        },
+        {
+          "question": "Cuantas horas anuales tiene el convenio de transporte de Navarra?",
+          "answer": "Jornada anual localizada en el texto: 1.744 horas."
+        },
+        {
+          "question": "Cuantos dias de vacaciones corresponden?",
+          "answer": "Vacaciones localizadas en el texto: 30 días naturales."
+        },
+        {
+          "question": "Como funcionan los festivos?",
+          "answer": "Reglas sobre festivos trabajados localizadas en el documento."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas sobre festivos y descansos compensatorios localizadas en el documento."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
+        },
+        {
+          "question": "Como consultar mi convenio con IA?",
+          "answer": "Entra en Balance Laboral y abre el asesor de convenio con IA para buscar informacion concreta dentro del documento."
+        }
+      ]
+    },
+    {
+      "sector": "transporte",
+      "sectorLabel": "Transporte",
+      "provincia": "ZARAGOZA",
+      "provinciaDisplay": "Zaragoza",
+      "slug": "transporte-zaragoza",
+      "title": "Convenio de Transporte de Zaragoza",
+      "source": {
+        "documento": "Convenio Transporte Zaragoza 2022-2025.pdf",
+        "path": "functions/convenios/processed/Convenio Transporte Zaragoza 2022-2025.pdf",
+        "years_detected_internal_only": "2022-2025",
+        "quality": "alta",
+        "content_score": 9,
+        "manual_fields": [],
+        "manual_verified": false,
+        "status": "generar"
+      },
+      "content": {
+        "resumen": "Pagina orientativa del convenio colectivo de transporte de Zaragoza. Vigencia detectada en el documento: 2022-2025. Jornada anual localizada en el texto: 1.792 horas. Las vacaciones deben comprobarse en el convenio completo.",
+        "vigencia": "Vigencia detectada en el documento: 2022-2025.",
+        "ambito": "Ambito del convenio localizado para el sector transporte en Zaragoza.",
+        "jornada_anual": "Jornada anual localizada en el texto: 1.792 horas.",
+        "vacaciones": "No localizado en el texto disponible",
+        "permisos": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos.",
+        "horas_extra": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones.",
+        "nocturnidad": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable.",
+        "descansos": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones.",
+        "festivos_descansos": "Reglas sobre festivos trabajados localizadas en el documento.",
+        "pluses": "Pluses o complementos localizados en el documento.",
+        "categorias": "Categorias o grupos profesionales localizados en el documento.",
+        "fuente_oficial": "Referencia de publicacion localizada en el PDF: Boe.",
+        "fuente_url": "No localizado en el texto disponible"
+      },
+      "faq": [
+        {
+          "question": "Que vigencia tiene el convenio de transporte de Zaragoza?",
+          "answer": "Vigencia detectada en el documento: 2022-2025."
+        },
+        {
+          "question": "Cuantas horas anuales tiene el convenio de transporte de Zaragoza?",
+          "answer": "Jornada anual localizada en el texto: 1.792 horas."
+        },
+        {
+          "question": "Como funcionan los festivos?",
+          "answer": "Reglas sobre festivos trabajados localizadas en el documento."
+        },
+        {
+          "question": "Como se pagan las horas extra?",
+          "answer": "Reglas sobre horas extraordinarias localizadas en el documento; consulta el convenio para limites, compensacion y excepciones."
+        },
+        {
+          "question": "Hay regla de nocturnidad?",
+          "answer": "Regla de nocturnidad localizada en el texto; consulta el convenio para el tramo horario y la compensacion aplicable."
+        },
+        {
+          "question": "Que descansos aparecen en el convenio?",
+          "answer": "Reglas de descansos localizadas en el documento; consulta el convenio para calendario, descansos semanales y posibles compensaciones."
+        },
+        {
+          "question": "Que permisos retribuidos hay?",
+          "answer": "Articulo o cuadro de permisos y licencias localizado en el documento; revisa el texto completo para duraciones y supuestos concretos."
         },
         {
           "question": "Como consultar mi convenio con IA?",
@@ -738,7 +1941,1018 @@
       ]
     }
   ],
-  "omitted": [
+  "contentReport": {
+    "fields": [
+      {
+        "field": "vigencia",
+        "label": "Vigencia",
+        "extracted": 28,
+        "missing": 0,
+        "missingSlugs": []
+      },
+      {
+        "field": "jornada_anual",
+        "label": "Jornada anual",
+        "extracted": 21,
+        "missing": 7,
+        "missingSlugs": [
+          "limpieza-gipuzkoa",
+          "limpieza-bizkaia",
+          "transporte-madrid",
+          "transporte-valencia",
+          "alojamientos-barcelona",
+          "limpieza-barcelona",
+          "transporte-barcelona"
+        ]
+      },
+      {
+        "field": "vacaciones",
+        "label": "Vacaciones",
+        "extracted": 14,
+        "missing": 14,
+        "missingSlugs": [
+          "hosteleria-bizkaia",
+          "alojamientos-sevilla",
+          "alojamientos-zaragoza",
+          "limpieza-madrid",
+          "limpieza-gipuzkoa",
+          "limpieza-bizkaia",
+          "transporte-madrid",
+          "transporte-valencia",
+          "alojamientos-barcelona",
+          "alojamientos-navarra",
+          "limpieza-sevilla",
+          "limpieza-zaragoza",
+          "transporte-barcelona",
+          "transporte-zaragoza"
+        ]
+      },
+      {
+        "field": "permisos",
+        "label": "Permisos",
+        "extracted": 27,
+        "missing": 1,
+        "missingSlugs": [
+          "transporte-sevilla"
+        ]
+      },
+      {
+        "field": "horas_extra",
+        "label": "Horas extra",
+        "extracted": 28,
+        "missing": 0,
+        "missingSlugs": []
+      },
+      {
+        "field": "nocturnidad",
+        "label": "Nocturnidad",
+        "extracted": 27,
+        "missing": 1,
+        "missingSlugs": [
+          "transporte-sevilla"
+        ]
+      },
+      {
+        "field": "descansos",
+        "label": "Descansos",
+        "extracted": 28,
+        "missing": 0,
+        "missingSlugs": []
+      },
+      {
+        "field": "festivos_descansos",
+        "label": "Festivos",
+        "extracted": 24,
+        "missing": 4,
+        "missingSlugs": [
+          "transporte-madrid",
+          "transporte-alava",
+          "transporte-barcelona",
+          "transporte-bizkaia"
+        ]
+      },
+      {
+        "field": "fuente_oficial",
+        "label": "Fuente oficial/boletin",
+        "extracted": 23,
+        "missing": 5,
+        "missingSlugs": [
+          "alojamientos-zaragoza",
+          "alojamientos-barcelona",
+          "limpieza-barcelona",
+          "limpieza-zaragoza",
+          "transporte-barcelona"
+        ]
+      },
+      {
+        "field": "fuente_url",
+        "label": "URL del boletin",
+        "extracted": 5,
+        "missing": 23,
+        "missingSlugs": [
+          "hosteleria-gipuzkoa",
+          "alojamientos-gipuzkoa",
+          "hosteleria-bizkaia",
+          "hosteleria-madrid",
+          "alojamientos-sevilla",
+          "alojamientos-zaragoza",
+          "limpieza-madrid",
+          "limpieza-gipuzkoa",
+          "limpieza-bizkaia",
+          "transporte-madrid",
+          "transporte-valencia",
+          "transporte-sevilla",
+          "alojamientos-barcelona",
+          "alojamientos-navarra",
+          "limpieza-barcelona",
+          "limpieza-navarra",
+          "limpieza-sevilla",
+          "limpieza-valencia",
+          "limpieza-zaragoza",
+          "transporte-bizkaia",
+          "transporte-gipuzkoa",
+          "transporte-navarra",
+          "transporte-zaragoza"
+        ]
+      }
+    ],
+    "pages": [
+      {
+        "slug": "hosteleria-gipuzkoa",
+        "title": "Convenio de Hosteleria de Gipuzkoa",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Vacaciones",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 3,
+          "index": 2
+        }
+      },
+      {
+        "slug": "alojamientos-gipuzkoa",
+        "title": "Convenio de Alojamientos de Gipuzkoa",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Vacaciones",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 3,
+          "index": 2
+        }
+      },
+      {
+        "slug": "hosteleria-bizkaia",
+        "title": "Convenio de Hosteleria de Bizkaia",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "Vacaciones",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "hosteleria-madrid",
+        "title": "Convenio de Hosteleria de Madrid",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Vacaciones",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "alojamientos-alava",
+        "title": "Convenio de Alojamientos de Alava",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Vacaciones",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin",
+          "URL del boletin"
+        ],
+        "notLocated": [],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 1,
+          "index": 2
+        }
+      },
+      {
+        "slug": "alojamientos-sevilla",
+        "title": "Convenio de Alojamientos de Sevilla",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "Vacaciones",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "alojamientos-zaragoza",
+        "title": "Convenio de Alojamientos de Zaragoza",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos"
+        ],
+        "notLocated": [
+          "Vacaciones",
+          "Fuente oficial/boletin",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "limpieza-madrid",
+        "title": "Convenio de Limpieza de Madrid",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "Vacaciones",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "limpieza-gipuzkoa",
+        "title": "Convenio de Limpieza de Gipuzkoa",
+        "extracted": [
+          "Vigencia",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "Jornada anual",
+          "Vacaciones",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 3,
+          "index": 2
+        }
+      },
+      {
+        "slug": "limpieza-bizkaia",
+        "title": "Convenio de Limpieza de Bizkaia",
+        "extracted": [
+          "Vigencia",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "Jornada anual",
+          "Vacaciones",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "transporte-madrid",
+        "title": "Convenio de Transporte de Madrid",
+        "extracted": [
+          "Vigencia",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "Jornada anual",
+          "Vacaciones",
+          "Festivos",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "transporte-valencia",
+        "title": "Convenio de Transporte de Valencia",
+        "extracted": [
+          "Vigencia",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "Jornada anual",
+          "Vacaciones",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "transporte-sevilla",
+        "title": "Convenio de Transporte de Sevilla",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Vacaciones",
+          "Horas extra",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "Permisos",
+          "Nocturnidad",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "alojamientos-barcelona",
+        "title": "Convenio de Alojamientos de Barcelona",
+        "extracted": [
+          "Vigencia",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos"
+        ],
+        "notLocated": [
+          "Jornada anual",
+          "Vacaciones",
+          "Fuente oficial/boletin",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "alojamientos-navarra",
+        "title": "Convenio de Alojamientos de Navarra",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "Vacaciones",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "hosteleria-malaga",
+        "title": "Convenio de Hosteleria de Malaga",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Vacaciones",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin",
+          "URL del boletin"
+        ],
+        "notLocated": [],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 0,
+          "index": 2
+        }
+      },
+      {
+        "slug": "hosteleria-valencia",
+        "title": "Convenio de Hosteleria de Valencia",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Vacaciones",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin",
+          "URL del boletin"
+        ],
+        "notLocated": [],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "limpieza-barcelona",
+        "title": "Convenio de Limpieza de Barcelona",
+        "extracted": [
+          "Vigencia",
+          "Vacaciones",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos"
+        ],
+        "notLocated": [
+          "Jornada anual",
+          "Fuente oficial/boletin",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "limpieza-navarra",
+        "title": "Convenio de Limpieza de Navarra",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Vacaciones",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "limpieza-sevilla",
+        "title": "Convenio de Limpieza de Sevilla",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "Vacaciones",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "limpieza-valencia",
+        "title": "Convenio de Limpieza de Valencia",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Vacaciones",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "limpieza-zaragoza",
+        "title": "Convenio de Limpieza de Zaragoza",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos"
+        ],
+        "notLocated": [
+          "Vacaciones",
+          "Fuente oficial/boletin",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "transporte-alava",
+        "title": "Convenio de Transporte de Alava",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Vacaciones",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Fuente oficial/boletin",
+          "URL del boletin"
+        ],
+        "notLocated": [
+          "Festivos"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 1,
+          "index": 2
+        }
+      },
+      {
+        "slug": "transporte-barcelona",
+        "title": "Convenio de Transporte de Barcelona",
+        "extracted": [
+          "Vigencia",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "URL del boletin"
+        ],
+        "notLocated": [
+          "Jornada anual",
+          "Vacaciones",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "transporte-bizkaia",
+        "title": "Convenio de Transporte de Bizkaia",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Vacaciones",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "Festivos",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "transporte-gipuzkoa",
+        "title": "Convenio de Transporte de Gipuzkoa",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Vacaciones",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 3,
+          "index": 2
+        }
+      },
+      {
+        "slug": "transporte-navarra",
+        "title": "Convenio de Transporte de Navarra",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Vacaciones",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      },
+      {
+        "slug": "transporte-zaragoza",
+        "title": "Convenio de Transporte de Zaragoza",
+        "extracted": [
+          "Vigencia",
+          "Jornada anual",
+          "Permisos",
+          "Horas extra",
+          "Nocturnidad",
+          "Descansos",
+          "Festivos",
+          "Fuente oficial/boletin"
+        ],
+        "notLocated": [
+          "Vacaciones",
+          "URL del boletin"
+        ],
+        "links": {
+          "app": 3,
+          "sameSector": 4,
+          "sameProvince": 2,
+          "index": 2
+        }
+      }
+    ],
+    "totals": {
+      "extracted": 225,
+      "missing": 55,
+      "internalLinksAdded": 308
+    }
+  },
+  "duplicateRisks": [
+    "Hay 4 paginas con 4 o mas campos no localizados; conviene enriquecerlas para reducir similitud textual.",
+    "El sector limpieza concentra 8 paginas; revisar snippets especificos de jornada/vacaciones para evitar patrones repetidos.",
+    "El sector transporte concentra 9 paginas; revisar snippets especificos de jornada/vacaciones para evitar patrones repetidos."
+  ],
+  "manualRecovery": {
+    "newPublished": [
+      {
+        "slug": "hosteleria-malaga",
+        "title": "Convenio de Hosteleria de Malaga",
+        "documento": "Convenio Hosteleria Malaga 2018-2027.pdf"
+      },
+      {
+        "slug": "hosteleria-valencia",
+        "title": "Convenio de Hosteleria de Valencia",
+        "documento": "Convenio Alojamientos y Hostelería Valencia2022-2025.pdf"
+      },
+      {
+        "slug": "transporte-alava",
+        "title": "Convenio de Transporte de Alava",
+        "documento": "Convenio Transporte Alava 201-2026.pdf"
+      }
+    ],
+    "recoveredData": [
+      {
+        "slug": "hosteleria-malaga",
+        "fields": [
+          "vigencia",
+          "jornada_anual",
+          "vacaciones",
+          "fuente_oficial",
+          "fuente_url"
+        ]
+      },
+      {
+        "slug": "hosteleria-valencia",
+        "fields": [
+          "vigencia",
+          "jornada_anual",
+          "vacaciones",
+          "fuente_oficial",
+          "fuente_url"
+        ]
+      },
+      {
+        "slug": "transporte-alava",
+        "fields": [
+          "vigencia",
+          "vacaciones",
+          "fuente_oficial",
+          "fuente_url"
+        ]
+      }
+    ],
+    "officialSources": [
+      {
+        "slug": "hosteleria-gipuzkoa",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial Del País Vasco De.",
+        "url": null
+      },
+      {
+        "slug": "alojamientos-gipuzkoa",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial Del País Vasco De.",
+        "url": null
+      },
+      {
+        "slug": "hosteleria-bizkaia",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Bizkaia.",
+        "url": null
+      },
+      {
+        "slug": "hosteleria-madrid",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Comunidad De Madridbocm I.",
+        "url": null
+      },
+      {
+        "slug": "alojamientos-alava",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial Del Territorio Histórico De Álava C.",
+        "url": "https://araba.eus"
+      },
+      {
+        "slug": "alojamientos-sevilla",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Provincia.",
+        "url": null
+      },
+      {
+        "slug": "limpieza-madrid",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Comunidad De Madridbocm I.",
+        "url": null
+      },
+      {
+        "slug": "limpieza-gipuzkoa",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial Del País Vasco De.",
+        "url": null
+      },
+      {
+        "slug": "limpieza-bizkaia",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Bizkaia.",
+        "url": null
+      },
+      {
+        "slug": "transporte-madrid",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Comunidad De Madrid Num.",
+        "url": null
+      },
+      {
+        "slug": "transporte-valencia",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Provincia.",
+        "url": null
+      },
+      {
+        "slug": "transporte-sevilla",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Provincia.",
+        "url": null
+      },
+      {
+        "slug": "alojamientos-navarra",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Navarra Número.",
+        "url": null
+      },
+      {
+        "slug": "hosteleria-malaga",
+        "source": "Boletin Oficial de la Provincia de Malaga.",
+        "url": "https://www.bopmalaga.es/cve.php"
+      },
+      {
+        "slug": "hosteleria-valencia",
+        "source": "Boletin Oficial de la Provincia de Valencia.",
+        "url": "https://bop.dival.es/bop"
+      },
+      {
+        "slug": "limpieza-navarra",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Navarra Del Convenio Colectivo Presentado Por El Sector De Limpieza De Edificios Y Locales De Navarra.",
+        "url": null
+      },
+      {
+        "slug": "limpieza-sevilla",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Provincia.",
+        "url": null
+      },
+      {
+        "slug": "limpieza-valencia",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De La Provincia.",
+        "url": null
+      },
+      {
+        "slug": "transporte-alava",
+        "source": "Boletin Oficial del Territorio Historico de Alava.",
+        "url": "https://www.araba.eus"
+      },
+      {
+        "slug": "transporte-barcelona",
+        "source": null,
+        "url": "https://bop.diba.cat"
+      },
+      {
+        "slug": "transporte-bizkaia",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Bizkaia.",
+        "url": null
+      },
+      {
+        "slug": "transporte-gipuzkoa",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Gipuzkoa.",
+        "url": null
+      },
+      {
+        "slug": "transporte-navarra",
+        "source": "Referencia de publicacion localizada en el PDF: Boletín Oficial De Navarra El Texto Del Convenio Colectivo De Trabajo Del Sector.",
+        "url": null
+      },
+      {
+        "slug": "transporte-zaragoza",
+        "source": "Referencia de publicacion localizada en el PDF: Boe.",
+        "url": null
+      }
+    ]
+  },
+  "needsCorrections": [],
+  "doNotPublish": [
+    {
+      "fileName": "Convenio Alojamientos y Hostelería Malaga parte 1.pdf",
+      "reason": "Fusionado en Convenio Hosteleria Malaga 2018-2027.pdf."
+    },
+    {
+      "fileName": "Convenio Alojamientos y Hostelería Malaga parte 2 2018-2027.pdf",
+      "reason": "Fusionado en Convenio Hosteleria Malaga 2018-2027.pdf."
+    },
+    {
+      "fileName": "Convenio Transporte GIPUZKOA 2007-2010parte1.pdf",
+      "reason": "No se publica: existe documento posterior para transporte-gipuzkoa y la parte pertenece a boletin amplio."
+    },
+    {
+      "fileName": "Convenio Transporte GIPUZKOA 2007-2010parte2.pdf",
+      "reason": "No se publica: no contiene texto suficiente del convenio de transporte y pertenece a boletin amplio."
+    },
+    {
+      "fileName": "Convenio Transporte GIPUZKOA 2007-2010.pdf",
+      "slug": "transporte-gipuzkoa",
+      "reason": "Duplicado para transporte-gipuzkoa; sustituido por documento mas reciente."
+    },
     {
       "fileName": "estatuto_trabajadores.pdf",
       "reason": "No es convenio provincial especifico."
@@ -752,95 +2966,22 @@
       "reason": "No es convenio provincial especifico."
     }
   ],
-  "review": [
-    {
-      "fileName": "Convenio Alojamientos y Hostelería Malaga parte 1.pdf",
-      "reason": "PDF partido o parte no fusionada."
-    },
-    {
-      "fileName": "Convenio Alojamientos y Hostelería Malaga parte 2 2018-2027.pdf",
-      "reason": "PDF partido o parte no fusionada."
-    },
-    {
-      "fileName": "Convenio Alojamientos y Hostelería Valencia2022-2025.pdf",
-      "reason": "Metadata ambigua o rota en nombre de archivo."
-    },
-    {
-      "fileName": "Convenio Transporte Alava 201-2026.pdf",
-      "reason": "Metadata ambigua o rota en nombre de archivo."
-    },
-    {
-      "fileName": "Convenio Transporte GIPUZKOA 2007-2010parte1.pdf",
-      "reason": "PDF partido o parte no fusionada."
-    },
-    {
-      "fileName": "Convenio Transporte GIPUZKOA 2007-2010parte2.pdf",
-      "reason": "PDF partido o parte no fusionada."
-    },
-    {
-      "fileName": "Convenio Transporte GIPUZKOA 2007-2010.pdf",
-      "slug": "transporte-gipuzkoa",
-      "reason": "Duplicado para transporte-gipuzkoa; sustituido por documento mas reciente."
-    },
-    {
-      "fileName": "Convenio Alojamientos y Hostelería Barcelona 2022-2024.pdf",
-      "slug": "alojamientos-barcelona",
-      "reason": "Fuera del limite actual de 10 paginas nuevas."
-    },
-    {
-      "fileName": "Convenio Alojamientos y Hostelería Navarra 2022-2025.pdf",
-      "slug": "alojamientos-navarra",
-      "reason": "Fuera del limite actual de 10 paginas nuevas."
-    },
-    {
-      "fileName": "Convenio Limpieza edificios Barcelona 2022-2025.pdf",
-      "slug": "limpieza-barcelona",
-      "reason": "Fuera del limite actual de 10 paginas nuevas."
-    },
-    {
-      "fileName": "Convenio Limpieza edificioos Navarra 2024-2027.pdf",
-      "slug": "limpieza-navarra",
-      "reason": "Fuera del limite actual de 10 paginas nuevas."
-    },
-    {
-      "fileName": "Convenio Limpieza edificios Sevilla 2024-2027.pdf",
-      "slug": "limpieza-sevilla",
-      "reason": "Fuera del limite actual de 10 paginas nuevas."
-    },
-    {
-      "fileName": "Convenio Limpieza edificios Valencia 2021-2025.pdf",
-      "slug": "limpieza-valencia",
-      "reason": "Fuera del limite actual de 10 paginas nuevas."
-    },
-    {
-      "fileName": "Convenio Limpieza edificios Zaragoza 2022-2025.pdf",
-      "slug": "limpieza-zaragoza",
-      "reason": "Fuera del limite actual de 10 paginas nuevas."
-    },
-    {
-      "fileName": "Convenio Transporte Barcelona 2011-2023.pdf",
-      "slug": "transporte-barcelona",
-      "reason": "Fuera del limite actual de 10 paginas nuevas."
-    },
-    {
-      "fileName": "Convenio Transporte BIZKAIA 2021-2024.pdf",
-      "slug": "transporte-bizkaia",
-      "reason": "Fuera del limite actual de 10 paginas nuevas."
-    },
-    {
-      "fileName": "Convenio Transporte Gipuzkoa 2010-2014.pdf",
-      "slug": "transporte-gipuzkoa",
-      "reason": "Fuera del limite actual de 10 paginas nuevas."
-    },
-    {
-      "fileName": "Convenio Transporte Navarra 2007-2008.pdf",
-      "slug": "transporte-navarra",
-      "reason": "Fuera del limite actual de 10 paginas nuevas."
-    },
-    {
-      "fileName": "Convenio Transporte Zaragoza 2022-2025.pdf",
-      "slug": "transporte-zaragoza",
-      "reason": "Fuera del limite actual de 10 paginas nuevas."
-    }
+  "seoValidation": {
+    "checked": [
+      "title unico",
+      "meta description unica",
+      "canonical",
+      "Open Graph",
+      "Twitter Cards",
+      "JSON-LD",
+      "FAQ cuando hay contenido suficiente",
+      "enlaces hacia la aplicacion"
+    ],
+    "issues": []
+  },
+  "improvements": [
+    "Revisar manualmente las paginas que aun no tienen jornada anual o vacaciones localizadas para evitar completar datos sin evidencia suficiente.",
+    "Sustituir URLs base de boletines por URLs profundas a cada anuncio cuando se incorpore un repositorio oficial de enlaces.",
+    "Mantener el JSON manual como fuente pequena y auditada; evitar usarlo para datos no contrastados en PDF o boletin oficial."
   ]
 }

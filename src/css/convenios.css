@@ -94,6 +94,33 @@ button:focus-visible {
   padding: 34px 0 58px;
 }
 
+.breadcrumbs {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadcrumbs li:not(:last-child)::after {
+  content: "/";
+  margin-left: 8px;
+  color: #94a3b8;
+}
+
+.breadcrumbs a {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 700;
+}
+
 .article-shell {
   background: var(--surface);
   border: 1px solid var(--line);

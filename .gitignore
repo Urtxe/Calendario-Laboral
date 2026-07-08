@@ -104,3 +104,5 @@ google-play-service-account*.json
 **/.kotlin/
 **/.cxx/
 **/captures/
+
+android/twa/balancelaboral-release.jks

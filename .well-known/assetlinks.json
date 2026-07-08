@@ -1,11 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "es.balancelaboral.app",
       "sha256_cert_fingerprints": [
-        "77:BB:E6:62:AA:7E:64:70:45:BA:C6:3F:27:CE:F0:B9:08:6B:26:2A:AB:BC:CD:F5:44:FD:26:3F:B7:2E:9E:49"
+        "CD:94:08:90:60:0F:FC:9F:A0:B5:26:A5:96:83:8B:DD:83:00:27:A8:CE:B0:4E:92:64:5C:96:70:C5:03:03:71"
       ]
     }
   }

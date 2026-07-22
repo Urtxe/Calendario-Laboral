@@ -21,6 +21,11 @@ const {
 const {
     classifyLaborIntent,
 } = require("./intent-classifier");
+const {
+    deleteAccountSafely,
+    deleteFirestoreAccountTree,
+    verifyRecentAuthenticatedUser,
+} = require("./account-deletion");
 require("dotenv").config({ path: __dirname + "/.env" });
 
 function obtenerProjectIdDesdeFirebaseConfig() {
@@ -1529,6 +1534,78 @@ exports.stripeWebhook = onRequest({ cors: true }, async (req, res) => {
     res.json({ received: true });
 });
 
+// BORRADO DE CUENTA: requiere una sesión reciente y solo opera sobre el UID del token.
+// La suscripción activa se cancela antes de borrar datos; las facturas no se alteran.
+exports.deleteAccount = onRequest({ timeoutSeconds: 120, memory: "512MiB" }, async (req, res) => {
+    const corsResult = setCorsHeaders(req, res);
+
+    if (!corsResult.ok) {
+        return res.status(403).json({ error: "Origen no permitido", code: "origin_not_allowed" });
+    }
+
+    if (req.method === "OPTIONS") {
+        return res.status(204).send("");
+    }
+
+    if (req.method !== "POST") {
+        return res.status(405).json({ error: "Método no permitido", code: "method_not_allowed" });
+    }
+
+    const authResult = await verifyRecentAuthenticatedUser({
+        auth: admin.auth(),
+        idToken: extraerBearerToken(req),
+    });
+
+    if (!authResult.ok) {
+        return res.status(authResult.status).json({
+            error: authResult.message,
+            code: authResult.code,
+        });
+    }
+
+    const appCheckResult = await verificarAppCheckConsulta(req);
+    escribirLogConsulta("deleteAccount_app_check", {
+        appCheckStatus: appCheckResult.status,
+        appCheckEnforcement: APP_CHECK_ENFORCEMENT,
+        reason: appCheckResult.reason || null,
+    });
+
+    try {
+        const billing = await deleteAccountSafely({
+            db,
+            auth: admin.auth(),
+            stripe,
+            stripeConfigured: Boolean(stripeSecretKey),
+            uid: authResult.uid,
+        });
+
+        escribirLogConsulta("deleteAccount_completed", {
+            subscriptionStatus: billing.subscription.status,
+            customerStatus: billing.customer.status,
+        });
+
+        return res.status(200).json({
+            deleted: true,
+            subscriptionCancelledImmediately: Boolean(billing.subscription.endsImmediately),
+            billingCustomerStatus: billing.customer.status,
+        });
+    } catch (error) {
+        const status = Number.isInteger(error && error.status) ? error.status : 500;
+        const code = error && error.code ? error.code : "account_deletion_failed";
+        const message = error && error.message
+            ? error.message
+            : "No se pudo eliminar la cuenta. Inténtalo de nuevo o contacta con soporte.";
+
+        console.error("Error en deleteAccount:", {
+            code,
+            status,
+            errorName: error && error.name ? error.name : "Error",
+        });
+
+        return res.status(status).json({ error: message, code });
+    }
+});
+
 // 1.1 CONSULTA LEGAL SOBRE CONVENIOS (V2)
 exports.consultarConvenio = onRequest(CONSULTAR_CONVENIO_FUNCTION_OPTIONS, async (req, res) => {
     const corsResult = setCorsHeaders(req, res);
@@ -2173,18 +2250,6 @@ exports.consultarConvenio = onRequest(CONSULTAR_CONVENIO_FUNCTION_OPTIONS, async
 // 2. LIMPIEZA AL BORRAR USUARIO (Usando la ruta V1 explícita)
 exports.limpiarDatosAlBorrarUsuario = functionsV1.auth.user().onDelete(async (user) => {
     const uid = user.uid;
-    console.log(`🗑️ Borrando datos de Firestore para el UID: ${uid}`);
-
-    const userRef = db.collection('usuarios').doc(uid);
-    const yearsSnap = await userRef.collection('years').get();
-    const visitasSnap = await userRef.collection('visitas').get();
-    const deletes = [];
-
-    yearsSnap.forEach((doc) => deletes.push(doc.ref.delete()));
-    visitasSnap.forEach((doc) => deletes.push(doc.ref.delete()));
-
-    await Promise.all(deletes);
-
-    await userRef.delete();
-    console.log(`✅ Datos del usuario ${uid} borrados correctamente.`);
+    await deleteFirestoreAccountTree({ db, uid });
+    console.log("Datos de Firestore del usuario eliminados tras el borrado de Auth.");
 });

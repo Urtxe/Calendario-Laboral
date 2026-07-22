@@ -90,7 +90,7 @@
             <p>
               Preguntale a la IA sobre jornada, vacaciones, pluses o salario.
             </p>
-            <p>
+            <p id="legal-ai-header-copy">
               Empieza con 3 consultas gratis y escala a Premium cuando quieras.
             </p>
           </div>
@@ -244,6 +244,7 @@
           >
           <a
             href="#"
+            data-account-delete-action
             onclick="
               eliminarCuentaTotalmente();
               return false;
@@ -919,6 +920,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
 
+    <script src="src/js/app/play-twa-context.js"></script>
     <script src="src/js/firebase-config.js"></script>
     <script src="src/js/app/state.js"></script>
     <script src="src/js/app/calendar.js"></script>
@@ -976,16 +978,18 @@
         >
         <span class="separator">|</span>
 
-        <a
-          href="#"
-          id="btn-eliminar-link"
-          onclick="
-            eliminarCuentaTotalmente();
+          <a
+            href="#"
+            id="btn-eliminar-link"
+            data-account-delete-action
+            onclick="
+              eliminarCuentaTotalmente();
             return false;
           "
         >
           Eliminar mi cuenta
         </a>
+        <span id="account-delete-status" role="status" aria-live="polite"></span>
       </div>
     </footer>
 

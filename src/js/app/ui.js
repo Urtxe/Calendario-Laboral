@@ -41,6 +41,48 @@ function puedeAutoenfocarCampo() {
   return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 }
 
+function comercioPremiumBloqueadoEnTwa() {
+  return (
+    typeof window.esContextoPlayTwa === "function" &&
+    window.esContextoPlayTwa()
+  );
+}
+
+function mostrarAvisoComercioPremiumNoDisponible() {
+  alert(
+    "La contratación y gestión de Premium no están disponibles en esta versión de Android. Si ya tienes Premium, puedes seguir utilizando sus funciones.",
+  );
+}
+
+function aplicarRestriccionComercioPremiumTwa() {
+  if (!comercioPremiumBloqueadoEnTwa()) return;
+
+  document.body.classList.add("is-play-twa");
+  document
+    .querySelectorAll(
+      '[onclick*="abrirModalPremium"], [onclick*="seleccionarPlan"], [onclick*="redirigirPortalStripe"]',
+    )
+    .forEach((element) => {
+      element.style.display = "none";
+      element.setAttribute("aria-hidden", "true");
+      element.setAttribute("tabindex", "-1");
+    });
+
+  const pricingModal = document.getElementById("modal-pricing");
+  if (pricingModal) {
+    pricingModal.style.display = "none";
+    pricingModal.setAttribute("aria-hidden", "true");
+  }
+
+  const headerCopy = document.getElementById("legal-ai-header-copy");
+  if (headerCopy) {
+    headerCopy.textContent =
+      "Incluye consultas gratuitas y acceso completo para cuentas Premium ya activas.";
+  }
+}
+
+aplicarRestriccionComercioPremiumTwa();
+
 function legalAiDebugEnabled() {
   return Boolean(
     window.APP_CONFIG &&
@@ -240,6 +282,11 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 window.abrirModalPremium = function () {
+  if (comercioPremiumBloqueadoEnTwa()) {
+    mostrarAvisoComercioPremiumNoDisponible();
+    return;
+  }
+
   if (typeof trackAperturaPremium === "function") trackAperturaPremium();
 
   if (!usuarioTieneSesion()) {
@@ -293,7 +340,7 @@ function actualizarInterfazPremium(activar) {
     document.body.classList.add("is-premium");
     if (btnUpgrade) btnUpgrade.style.display = "none";
     linksCancel.forEach((link) => {
-      link.style.display = "inline";
+      link.style.display = comercioPremiumBloqueadoEnTwa() ? "none" : "inline";
     });
     if (sE) sE.classList.remove("premium-locked");
     if (sH) sH.classList.remove("premium-locked");
@@ -310,7 +357,9 @@ function actualizarInterfazPremium(activar) {
     }
   } else {
     document.body.classList.remove("is-premium");
-    if (btnUpgrade) btnUpgrade.style.display = "block";
+    if (btnUpgrade) {
+      btnUpgrade.style.display = comercioPremiumBloqueadoEnTwa() ? "none" : "block";
+    }
     linksCancel.forEach((link) => {
       link.style.display = "none";
     });
@@ -330,6 +379,8 @@ function actualizarInterfazPremium(activar) {
   if (typeof window.actualizarAsesorLegalUI === "function") {
     window.actualizarAsesorLegalUI();
   }
+
+  aplicarRestriccionComercioPremiumTwa();
 }
 
 function actualizarTarjetaAsesorLegal(activar) {
@@ -454,7 +505,9 @@ function crearMensajeBienvenidaLegal() {
       );
     } else {
       crearMensajeLegal(
-        "Ya has agotado tus 3 consultas gratuitas. Hazte Premium para seguir consultando el convenio sin límite.",
+        comercioPremiumBloqueadoEnTwa()
+          ? "Has agotado tus 3 consultas gratuitas en esta versión de Android."
+          : "Ya has agotado tus 3 consultas gratuitas. Hazte Premium para seguir consultando el convenio sin límite.",
         "assistant",
       );
     }
@@ -717,16 +770,18 @@ function actualizarTextoEstadoLegal() {
     status.style.display = "block";
     note.style.display = "block";
     status.textContent = `Modo gratuito: te quedan ${restantes} de ${LIMITE_CONSULTAS_GRATIS} consultas.`;
-    note.textContent =
-      "Cuando llegues a 0, tendrás que hacerte Premium para seguir consultando.";
+    note.textContent = comercioPremiumBloqueadoEnTwa()
+      ? "El límite gratuito se aplica a esta versión de Android."
+      : "Cuando llegues a 0, tendrás que hacerte Premium para seguir consultando.";
     sendBtn.disabled = false;
     input.disabled = false;
   } else {
     status.style.display = "block";
     note.style.display = "block";
     status.textContent = "Has agotado tus 3 consultas gratuitas.";
-    note.textContent =
-      "Hazte Premium para seguir utilizando el asesor IA sin límite.";
+    note.textContent = comercioPremiumBloqueadoEnTwa()
+      ? "La cuota gratuita se ha agotado en esta versión de Android."
+      : "Hazte Premium para seguir utilizando el asesor IA sin límite.";
     sendBtn.disabled = true;
     input.disabled = true;
   }
@@ -765,7 +820,9 @@ async function enviarConsultaLegal() {
   if (!window.esPremium && getConsultasRestantes() <= 0) {
     actualizarTextoEstadoLegal();
     crearMensajeLegal(
-      "Has agotado las 3 consultas gratuitas. Hazte Premium para seguir utilizando el asesor IA.",
+      comercioPremiumBloqueadoEnTwa()
+        ? "Has agotado las 3 consultas gratuitas en esta versión de Android."
+        : "Has agotado las 3 consultas gratuitas. Hazte Premium para seguir utilizando el asesor IA.",
       "assistant",
     );
     return;
@@ -1060,9 +1117,16 @@ window.actualizarAsesorLegalUI = function () {
   }
   actualizarTarjetaAsesorLegal(esPremiumActivo);
   actualizarTextoEstadoLegal();
+  aplicarRestriccionComercioPremiumTwa();
 };
 
 window.seleccionarPlan = function (tipo) {
+  if (comercioPremiumBloqueadoEnTwa()) {
+    if (typeof cerrarModalPricing === "function") cerrarModalPricing();
+    mostrarAvisoComercioPremiumNoDisponible();
+    return;
+  }
+
   planSeleccionado = "premium";
 
   if (!usuarioActual) {
@@ -1138,35 +1202,167 @@ window.cerrarLegal = function () {
 };
 
 window.redirigirPortalStripe = function () {
+  if (comercioPremiumBloqueadoEnTwa()) {
+    mostrarAvisoComercioPremiumNoDisponible();
+    return;
+  }
+
   if (!usuarioActual) return;
   const portalUrl =
     "https://billing.stripe.com/p/login/00w9AT9aecnDeGm7JLgbm00";
   window.location.href = `${portalUrl}?prefilled_email=${encodeURIComponent(usuarioActual.email)}`;
 };
 
-function eliminarCuentaTotalmente() {
-  const user = auth.currentUser;
+function actualizarEstadoBorradoCuenta(mensaje, esError = false) {
+  const status = document.getElementById("account-delete-status");
+  if (!status) return;
+
+  status.textContent = mensaje;
+  status.style.color = esError ? "#b91c1c" : "";
+}
+
+function marcarBorradoCuentaEnCurso(enCurso) {
+  document
+    .querySelectorAll("[data-account-delete-action]")
+    .forEach((link) => {
+      if (!link.dataset.defaultLabel) link.dataset.defaultLabel = link.textContent.trim();
+      link.setAttribute("aria-disabled", enCurso ? "true" : "false");
+      link.style.pointerEvents = enCurso ? "none" : "";
+      link.style.opacity = enCurso ? "0.65" : "";
+      link.textContent = enCurso ? "Eliminando cuenta…" : link.dataset.defaultLabel;
+    });
+}
+
+async function reautenticarParaBorrarCuenta(user) {
+  const providerIds = (user.providerData || []).map((provider) => provider.providerId);
+
+  if (providerIds.includes("google.com")) {
+    alert("Por seguridad, confirma tu identidad con Google para continuar.");
+    await user.reauthenticateWithPopup(new firebase.auth.GoogleAuthProvider());
+    return;
+  }
+
+  if (providerIds.includes("password")) {
+    const password = window.prompt(
+      "Por seguridad, escribe tu contraseña para confirmar el borrado. Solo se enviará a Firebase para reautenticarte y no se guardará.",
+    );
+
+    if (password === null) {
+      const error = new Error("Has cancelado la reautenticación.");
+      error.code = "auth/reauthentication-cancelled";
+      throw error;
+    }
+
+    if (!password) {
+      const error = new Error("Debes introducir tu contraseña para continuar.");
+      error.code = "auth/reauthentication-required";
+      throw error;
+    }
+
+    const credential = firebase.auth.EmailAuthProvider.credential(user.email, password);
+    await user.reauthenticateWithCredential(credential);
+    return;
+  }
+
+  const error = new Error("Vuelve a iniciar sesión con tu proveedor antes de eliminar la cuenta.");
+  error.code = "auth/reauthentication-unsupported-provider";
+  throw error;
+}
+
+async function solicitarBorradoCuentaBackend(user, permitirReautenticacion = true) {
+  const idToken = await user.getIdToken(true);
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${idToken}`,
+  };
+  const appCheckToken =
+    typeof window.obtenerAppCheckToken === "function"
+      ? await window.obtenerAppCheckToken()
+      : null;
+
+  if (appCheckToken) headers["X-Firebase-AppCheck"] = appCheckToken;
+
+  const response = await fetch("/deleteAccount", {
+    method: "POST",
+    headers,
+    body: "{}",
+  });
+  const data = await response.json().catch(() => ({}));
 
   if (
-    confirm(
-      "¿Estás seguro? Esta acción es irreversible y perderás todos tus registros.",
-    )
+    response.status === 401 &&
+    data.code === "requires_recent_login" &&
+    permitirReautenticacion
   ) {
-    user
-      .delete()
-      .then(() => {
-        alert("Cuenta eliminada correctamente.");
-        window.location.reload();
-      })
-      .catch((error) => {
-        if (error.code === "auth/requires-recent-login") {
-          alert(
-            "Por seguridad, debes haber iniciado sesión hace poco para borrar tu cuenta. Por favor, sal y vuelve a entrar.",
-          );
-        }
-      });
+    actualizarEstadoBorradoCuenta("Confirma tu identidad para continuar…");
+    await reautenticarParaBorrarCuenta(user);
+    return solicitarBorradoCuentaBackend(user, false);
   }
+
+  if (!response.ok || !data.deleted) {
+    const error = new Error(
+      data.error || "No se pudo eliminar la cuenta. Inténtalo de nuevo o contacta con soporte.",
+    );
+    error.code = data.code || "account_deletion_failed";
+    throw error;
+  }
+
+  return data;
 }
+
+function limpiarDatosLocalesTrasBorrado(uid) {
+  try {
+    if (uid) localStorage.removeItem(ASESOR_LEGAL_STORAGE_PREFIX + uid);
+    localStorage.removeItem("esPremium");
+  } catch (error) {
+    console.warn("No se pudieron limpiar todas las preferencias locales de la cuenta:", error);
+  }
+
+  window.usuarioActual = null;
+  if (typeof sincronizarEstadoPremium === "function") sincronizarEstadoPremium(false);
+}
+
+window.eliminarCuentaTotalmente = async function () {
+  const user = auth.currentUser;
+
+  if (!user) {
+    alert("Inicia sesión para eliminar tu cuenta.");
+    return;
+  }
+
+  const confirmed = confirm(
+    "Vas a eliminar tu cuenta y los datos de jornada guardados. Si tienes una suscripción Premium activa, se cancelará inmediatamente y perderás el acceso Premium. Las facturas o registros que Stripe deba conservar pueden mantenerse conforme a sus obligaciones. ¿Quieres continuar?",
+  );
+  if (!confirmed) return;
+
+  marcarBorradoCuentaEnCurso(true);
+  actualizarEstadoBorradoCuenta("Comprobando la cuenta y eliminando tus datos…");
+
+  try {
+    const result = await solicitarBorradoCuentaBackend(user);
+    limpiarDatosLocalesTrasBorrado(user.uid);
+    await auth.signOut().catch(() => {});
+
+    actualizarEstadoBorradoCuenta("Cuenta eliminada correctamente.");
+    alert(
+      result.billingCustomerStatus === "retained"
+        ? "La cuenta y los datos de la aplicación se han eliminado. Stripe puede conservar registros de facturación cuando sea necesario."
+        : "La cuenta y los datos de la aplicación se han eliminado correctamente.",
+    );
+    window.location.assign("/");
+  } catch (error) {
+    const message =
+      error && error.code === "auth/reauthentication-cancelled"
+        ? "El borrado se ha cancelado antes de confirmar tu identidad."
+        : error && error.message
+          ? error.message
+          : "No se pudo eliminar la cuenta. Inténtalo de nuevo o contacta con soporte.";
+    actualizarEstadoBorradoCuenta(message, true);
+    alert(message);
+  } finally {
+    marcarBorradoCuentaEnCurso(false);
+  }
+};
 
 window.exportarMisDatos = function () {
   if (!usuarioActual) return alert("Inicia sesión para exportar tus datos.");

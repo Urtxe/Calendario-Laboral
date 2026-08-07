@@ -244,7 +244,7 @@
         <article class="policy-shell">
             <div class="meta">
                 <span class="tag">Balance Laboral</span>
-                <span>Ultima actualizacion: 14 de mayo de 2026</span>
+                <span>Ultima actualizacion: 22 de julio de 2026</span>
             </div>
 
             <p>
@@ -262,9 +262,10 @@
                 <li>Datos de cuenta e identificacion tecnica necesarios para iniciar sesion mediante Firebase Auth, como correo electronico, identificadores de usuario y metadatos de autenticacion.</li>
                 <li>Datos de configuracion laboral introducidos por el usuario, como localidad, sector, tipo de jornada, horas anuales, calendario, festivos, vacaciones, permisos, horas trabajadas y horas extra.</li>
                 <li>Datos derivados del uso de la aplicacion, como balances de jornada, historicos, ajustes de calendario y preferencias necesarias para prestar el servicio.</li>
-                <li>Informacion incluida en informes PDF generados o exportados por el usuario.</li>
+                <li>Informacion incluida en informes PDF generados o exportados por el usuario. La generacion del PDF se realiza en el dispositivo mediante la aplicacion; el usuario decide si lo guarda o comparte.</li>
                 <li>Consultas que el usuario envie a la funcion de IA integrada para preguntas sobre convenios colectivos, cuando esta funcion este disponible o activada.</li>
-                <li>Informacion tecnica basica del servicio, como registros de funcionamiento, errores, seguridad y llamadas a Cloud Functions.</li>
+                <li>Informacion tecnica y de analitica de uso, como tipo de dispositivo, navegador, sistema operativo, idioma, acciones agregadas, rendimiento, registros de funcionamiento, errores, seguridad y llamadas a Cloud Functions.</li>
+                <li>Si el usuario contrata Premium desde la web, identificadores de cliente, suscripcion, producto, precio y estado de facturacion necesarios para reflejar el acceso. Balance Laboral no necesita almacenar el numero completo de tarjeta.</li>
             </ul>
 
             <h2>3. Finalidades del tratamiento</h2>
@@ -286,20 +287,20 @@
 
             <h2>5. IA integrada para consultas sobre convenios</h2>
             <p>
-                La aplicacion puede incluir una funcion de inteligencia artificial para ayudar a interpretar consultas sobre convenios colectivos o informacion laboral. Las preguntas enviadas por el usuario pueden ser procesadas para generar una respuesta orientativa.
+                La aplicacion puede incluir una funcion de inteligencia artificial para ayudar a interpretar consultas sobre convenios colectivos o informacion laboral. Las preguntas enviadas por el usuario pueden procesarse mediante Google Gemini para generar embeddings, consultar fuentes de convenios y producir una respuesta orientativa. La funcion recibe la pregunta y puede utilizar localidad, sector o la referencia de convenio facilitados para contextualizarla.
             </p>
             <div class="notice">
-                La IA ofrece informacion de apoyo y no sustituye el asesoramiento profesional, sindical, juridico o administrativo. Las respuestas pueden contener errores, estar incompletas o no ajustarse a un caso concreto. El usuario debe verificar la informacion antes de tomar decisiones laborales o legales.
+                La IA ofrece informacion de apoyo y no sustituye el asesoramiento profesional, sindical, juridico o administrativo. No incluyas en las consultas datos personales innecesarios, credenciales, datos bancarios ni informacion de terceros. Las respuestas pueden contener errores, estar incompletas o no ajustarse a un caso concreto. El usuario debe verificar la informacion antes de tomar decisiones laborales o legales.
             </div>
 
             <h2>6. Pagos y funciones premium</h2>
             <p>
-                Algunas funciones pueden ser premium o requerir pago. Cuando se utilicen proveedores externos como Stripe u otros procesadores de pago, el tratamiento de los datos de pago se realizara en la plataforma del proveedor correspondiente. Balance Laboral no necesita almacenar el numero completo de tarjeta bancaria. El proveedor puede tratar datos necesarios para procesar la transaccion, prevenir fraude, emitir justificantes o gestionar suscripciones.
+                Algunas funciones pueden ser premium o requerir pago. La contratacion de Premium se ofrece en la web ordinaria mediante Stripe; no se muestra como compra dentro de la version TWA distribuida por Google Play. Cuando se utiliza Stripe, el tratamiento de los datos de pago se realiza en su plataforma. Balance Laboral no necesita almacenar el numero completo de tarjeta bancaria, aunque puede guardar identificadores tecnicos de cliente o suscripcion para activar y gestionar Premium.
             </p>
 
             <h2>7. Conservacion de los datos</h2>
             <p>
-                Los datos se conservaran mientras la cuenta permanezca activa o mientras sean necesarios para prestar el servicio solicitado. El usuario puede solicitar la eliminacion de su cuenta y de sus datos escribiendo a <a href="mailto:soporte@balancelaboral.es">soporte@balancelaboral.es</a> o usando las opciones disponibles en la aplicacion. Algunos datos podrian conservarse durante plazos adicionales cuando exista una obligacion legal, una incidencia pendiente, una necesidad de seguridad o una relacion contractual que lo justifique.
+                Los datos se conservaran mientras la cuenta permanezca activa o mientras sean necesarios para prestar el servicio solicitado. Al eliminar la cuenta se eliminan los datos de cuenta y jornada almacenados bajo ella en Firebase, incluidos los registros por ano, visitas asociadas y contadores de uso de IA. Algunos datos pueden conservarse durante plazos adicionales cuando exista una obligacion legal, una incidencia pendiente, una necesidad de seguridad o una relacion contractual que lo justifique. Los plazos efectivos de registros tecnicos, analitica, Google Cloud y Stripe dependen de la configuracion y de las politicas aplicables de cada proveedor; no se fija aqui un plazo que no haya sido confirmado.
             </p>
 
             <h2>8. Seguridad</h2>
@@ -309,7 +310,7 @@
 
             <h2>9. Proveedores tecnicos</h2>
             <p>
-                Para prestar el servicio pueden intervenir proveedores tecnicos como Google Firebase, Google Cloud, Stripe u otros servicios equivalentes necesarios para autenticacion, almacenamiento, funciones cloud, pagos, analitica tecnica, seguridad, soporte o infraestructura. Estos proveedores actuan bajo sus propias condiciones y politicas, y solo deberian tratar los datos necesarios para prestar sus servicios.
+                Para prestar el servicio intervienen Google Firebase y Google Cloud para autenticacion, Firestore, Hosting, Cloud Functions, App Check, analitica tecnica, seguridad e infraestructura; Google Gemini para las consultas de IA cuando estan activas; y Stripe para pagos web y suscripciones Premium. Tambien pueden intervenir proveedores de recursos web necesarios para cargar la aplicacion. Estos proveedores actuan bajo sus propias condiciones y politicas y solo deberian tratar los datos necesarios para prestar sus servicios.
             </p>
 
             <h2>10. Derechos del usuario</h2>
@@ -317,17 +318,28 @@
                 El usuario puede solicitar el acceso, rectificacion, supresion, oposicion, limitacion del tratamiento y portabilidad de sus datos cuando proceda. Tambien puede solicitar la eliminacion de la cuenta o la exportacion de los datos disponibles. Para ejercer estos derechos, debe escribir a <a href="mailto:soporte@balancelaboral.es">soporte@balancelaboral.es</a>, indicando la solicitud y el correo asociado a la cuenta.
             </p>
 
-            <h2>11. Eliminacion de cuenta y datos</h2>
+            <h2 id="eliminar-cuenta">11. Eliminar cuenta y datos</h2>
             <p>
-                Balance Laboral incluye opciones para exportar datos y eliminar la cuenta desde el footer de la aplicacion cuando el usuario esta autenticado o cuando la funcionalidad este disponible. Si el usuario no puede completar el proceso desde la app, puede solicitarlo por correo en <a href="mailto:soporte@balancelaboral.es">soporte@balancelaboral.es</a>.
+                Puedes eliminar la cuenta desde el enlace <b>Eliminar cuenta</b> disponible en el footer de la aplicacion tras iniciar sesion. Por seguridad, se puede solicitar una confirmacion reciente de identidad con el mismo metodo de acceso utilizado. Antes de borrar los datos, si existe una suscripcion Premium activa identificada en Stripe, se solicita su cancelacion inmediata; el acceso Premium deja de estar disponible en ese momento.
+            </p>
+            <p>
+                El proceso elimina la cuenta de Firebase Auth y los datos de cuenta, jornada, historico, visitas y uso de IA guardados bajo el perfil de usuario en Firestore. No elimina ni altera facturas, justificantes u otros registros contables que Stripe deba conservar por obligaciones legales, fiscales, de seguridad o contractuales. Cuando sea tecnicamente posible, se solicita tambien la eliminacion o desvinculacion del cliente de Stripe; si Stripe debe retener informacion de facturacion, el borrado de la cuenta de Balance Laboral puede completarse sin eliminar esos registros externos.
+            </p>
+            <p>
+                Si no puedes acceder a la aplicacion, puedes solicitar la eliminacion desde esta pagina publica escribiendo a <a href="mailto:soporte@balancelaboral.es?subject=Solicitud%20de%20eliminacion%20de%20cuenta%20Balance%20Laboral">soporte@balancelaboral.es</a> e indicando el correo asociado a la cuenta. Si hay una suscripcion activa que no pueda verificarse o cancelarse automaticamente, soporte te indicara los pasos necesarios antes de completar la solicitud.
             </p>
 
-            <h2>12. Cambios en esta politica</h2>
+            <h2>12. Permisos y publicidad</h2>
+            <p>
+                El codigo actual de Balance Laboral no solicita acceso a GPS, SMS, registro de llamadas, contactos, camara, microfono ni almacenamiento sensible. La version Android puede solicitar permiso de notificaciones si se utiliza la delegacion de notificaciones de la TWA. El codigo no incorpora SDKs publicitarios ni utiliza publicidad personalizada. Si estas practicas cambian, esta politica se actualizara antes de aplicar el cambio.
+            </p>
+
+            <h2>13. Cambios en esta politica</h2>
             <p>
                 Esta Politica de Privacidad puede actualizarse para reflejar cambios legales, tecnicos o funcionales. La fecha de ultima actualizacion indicara la version vigente. Si los cambios son relevantes, se procurara informar al usuario mediante la aplicacion o por otros medios razonables.
             </p>
 
-            <h2>13. Contacto</h2>
+            <h2>14. Contacto</h2>
             <p>
                 Para cualquier consulta sobre privacidad, soporte, proteccion de datos, eliminacion de cuenta o funcionamiento de Balance Laboral, puede contactar en <a href="mailto:soporte@balancelaboral.es">soporte@balancelaboral.es</a>.
             </p>

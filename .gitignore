@@ -97,6 +97,8 @@ google-play-service-account*.json
 **/app/build/
 **/app-release-signed.apk
 **/app-release-bundle.aab
+**/app-release-*.apk
+**/*.idsig
 **/*-release.apk
 **/*-release.aab
 **/.idea/

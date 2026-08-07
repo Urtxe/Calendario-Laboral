@@ -591,6 +591,11 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================================
 
 window.abrirModalPremium = function() {
+    if (typeof window.esContextoPlayTwa === 'function' && window.esContextoPlayTwa()) {
+        alert("La contratación y gestión de Premium no están disponibles en esta versión de Android. Si ya tienes Premium, puedes seguir utilizando sus funciones.");
+        return;
+    }
+
     const modal = document.getElementById('modal-pricing');
     if (modal) {
         modal.style.display = 'flex'; // ACTIVA EL FLOTANTE CENTRADO
@@ -717,6 +722,12 @@ document.addEventListener('touchstart', function(event) {
 }, {passive: true});
 
 window.seleccionarPlan = function(tipo) {
+    if (typeof window.esContextoPlayTwa === 'function' && window.esContextoPlayTwa()) {
+        if (typeof cerrarModalPricing === 'function') cerrarModalPricing();
+        alert("La contratación y gestión de Premium no están disponibles en esta versión de Android. Si ya tienes Premium, puedes seguir utilizando sus funciones.");
+        return;
+    }
+
     // 1. Verificamos si hay usuario (lo que ya tenías)
     if (!usuarioActual) {
         alert("Debes iniciar sesión primero para elegir un plan.");
@@ -820,6 +831,11 @@ window.cerrarLegal = function() {
 
 // Función para gestionar la suscripción a través de Stripe
 window.redirigirPortalStripe = function() {
+    if (typeof window.esContextoPlayTwa === 'function' && window.esContextoPlayTwa()) {
+        alert("La contratación y gestión de Premium no están disponibles en esta versión de Android. Si ya tienes Premium, puedes seguir utilizando sus funciones.");
+        return;
+    }
+
     if (!usuarioActual) return;
 
     // Aquí pondrás tu URL de "Customer Portal" de Stripe configurada en tu Dashboard
@@ -831,20 +847,29 @@ window.redirigirPortalStripe = function() {
 
 function eliminarCuentaTotalmente() {
     const user = auth.currentUser;
+    if (!user) return alert("Inicia sesión para eliminar tu cuenta.");
+    if (!confirm("Vas a eliminar tu cuenta y los datos guardados. Si tienes una suscripción Premium activa, se cancelará inmediatamente. ¿Quieres continuar?")) return;
 
-    if (confirm("¿Estás seguro? Esta acción es irreversible y perderás todos tus registros.")) {
-        // 1. Opcional: Aquí podrías llamar a Stripe para cancelar su suscripción si existe
-        
-        // 2. Borrar de Firebase Auth
-        user.delete().then(() => {
-            alert("Cuenta eliminada correctamente.");
-            window.location.reload();
-        }).catch((error) => {
-            if (error.code === 'auth/requires-recent-login') {
-                alert("Por seguridad, debes haber iniciado sesión hace poco para borrar tu cuenta. Por favor, sal y vuelve a entrar.");
-            }
-        });
-    }
+    user.getIdToken(true)
+        .then((idToken) => fetch("/deleteAccount", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${idToken}`
+            },
+            body: "{}"
+        }))
+        .then((response) => response.json().then((data) => ({ response, data })))
+        .then(({ response, data }) => {
+            if (!response.ok || !data.deleted) throw new Error(data.error || "No se pudo eliminar la cuenta.");
+            localStorage.removeItem("esPremium");
+            return auth.signOut().catch(() => {});
+        })
+        .then(() => {
+            alert("La cuenta y los datos de la aplicación se han eliminado correctamente.");
+            window.location.assign("/");
+        })
+        .catch((error) => alert(error.message || "No se pudo eliminar la cuenta. Inténtalo de nuevo o contacta con soporte."));
 }
 
 

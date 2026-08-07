@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2.0.6';
+const CACHE_VERSION = 'v2.0.8';
 const SHELL_CACHE = `balance-laboral-shell-${CACHE_VERSION}`;
 const STATIC_CACHE = `balance-laboral-static-${CACHE_VERSION}`;
 const APP_BASE = new URL('./', self.location);
@@ -20,6 +20,7 @@ const APP_SHELL_URLS = [
   'src/css/components/_form.css',
   'src/css/components/_modal.css',
   'src/js/firebase-config.js',
+  'src/js/app/play-twa-context.js',
   'src/js/app/state.js',
   'src/js/app/calendar.js',
   'src/js/app/sync.js',

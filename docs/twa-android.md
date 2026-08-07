@@ -45,11 +45,36 @@ Display mode: standalone
 Orientation: portrait
 Theme color: #24344D
 Background color: #FFFFFF
-Version code: 1
-Version name: 1.0.0
+Version code: 3
+Version name: 1.0.2
 Signing key path: C:/keys/balance-laboral/balance-laboral-release.jks
 Signing key alias: balance-laboral-release
 ```
+
+## Toolchain Android actual
+
+La TWA se compila con esta configuracion, preparada para Android 16 / API 36:
+
+```text
+compileSdk: 36
+targetSdk: 36
+minSdk: 21
+Android Gradle Plugin: 8.10.1
+Gradle wrapper: 8.11.1
+JDK: 17
+```
+
+No cambiar el Gradle wrapper ni el JDK para esta actualizacion: AGP 8.10.1 es compatible con Gradle 8.11.1 y JDK 17.
+
+## Contexto de Google Play y comercio Premium
+
+La version Android distribuida por Google Play no inicia ni gestiona compras Premium mediante Stripe. El navegador, escritorio, iPhone y la PWA web normal conservan el flujo Stripe sin cambios.
+
+`LauncherActivity` anade `play_twa=1` solo a URL HTTPS internas de `balancelaboral.es`. El mismo metodo recibe tanto el arranque desde el icono como los deep links verificados, por lo que ambos llegan a la web con el marcador.
+
+`src/js/app/play-twa-context.js` detecta ese marcador, lo conserva unicamente en `sessionStorage` durante la navegacion de esa sesion y lo elimina de la barra de direcciones con `history.replaceState`. No usa user-agent, no usa `localStorage` y no se utiliza para autenticar usuarios ni conceder Premium.
+
+Dentro de ese contexto, la interfaz oculta los CTA y enlaces de Stripe, y las acciones directas de abrir precios, seleccionar plan y abrir el portal de facturacion quedan bloqueadas. Los usuarios que ya tengan `tipoCuenta: "premium"` mantienen el acceso a sus funciones Premium.
 
 La keystore no existe todavia y no se ha generado dentro del repositorio. La ruta anterior es externa al repo y debe crearse manualmente solo en la maquina segura de release.
 

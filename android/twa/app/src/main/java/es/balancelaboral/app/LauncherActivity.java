@@ -24,6 +24,12 @@ import android.os.Bundle;
 
 public class LauncherActivity
         extends com.google.androidbrowserhelper.trusted.LauncherActivity {
+
+    // The web app uses this marker only to hide Premium commerce in the Play TWA.
+    // It is not an authentication or entitlement signal.
+    private static final String PLAY_TWA_CONTEXT_PARAM = "play_twa";
+    private static final String PLAY_TWA_CONTEXT_VALUE = "1";
+    private static final String TRUSTED_HOST = "balancelaboral.es";
     
 
     
@@ -44,11 +50,20 @@ public class LauncherActivity
 
     @Override
     protected Uri getLaunchingUrl() {
-        // Get the original launch Url.
+        // Bubblewrap resolves both the launcher URL and verified deep links here.
         Uri uri = super.getLaunchingUrl();
 
-        
+        // Mark only internal HTTPS navigations. This preserves the package, origin,
+        // asset links and the original deep-link path/query parameters.
+        if (uri == null
+                || !"https".equals(uri.getScheme())
+                || !TRUSTED_HOST.equals(uri.getHost())
+                || PLAY_TWA_CONTEXT_VALUE.equals(uri.getQueryParameter(PLAY_TWA_CONTEXT_PARAM))) {
+            return uri;
+        }
 
-        return uri;
+        return uri.buildUpon()
+                .appendQueryParameter(PLAY_TWA_CONTEXT_PARAM, PLAY_TWA_CONTEXT_VALUE)
+                .build();
     }
 }

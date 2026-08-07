@@ -47,6 +47,15 @@ function extractConsultarConvenioHandler(source) {
   return nextExport === -1 ? source.slice(start) : source.slice(start, nextExport);
 }
 
+function extractExportHandler(source, exportName) {
+  const startToken = `exports.${exportName} = onRequest`;
+  const start = source.indexOf(startToken);
+  assert(start !== -1, `No se encontro el handler ${exportName}`);
+
+  const nextExport = source.indexOf("\nexports.", start + startToken.length);
+  return nextExport === -1 ? source.slice(start) : source.slice(start, nextExport);
+}
+
 function assertReservedFieldsListed(rules, fields) {
   for (const field of fields) {
     assertIncludes(
@@ -221,6 +230,26 @@ addCheck("CORS allowlist corta origenes no permitidos antes de cuota o IA", () =
       "const vectorPregunta = await generarEmbeddingPregunta(pregunta);",
     ],
     "CORS debe evaluarse antes de payload, cuota e IA",
+  );
+});
+
+addCheck("/deleteAccount exige sesion reciente y solo borra el UID autenticado", () => {
+  const functionsSource = normalize(read("functions/index.js"));
+  const handler = extractExportHandler(functionsSource, "deleteAccount");
+
+  assertIncludes(handler, "verifyRecentAuthenticatedUser({");
+  assertIncludes(handler, "idToken: extraerBearerToken(req)");
+  assertIncludes(handler, "uid: authResult.uid");
+  assertIncludes(handler, "deleteAccountSafely({");
+  assertOrder(
+    handler,
+    [
+      "const authResult = await verifyRecentAuthenticatedUser({",
+      "if (!authResult.ok)",
+      "const billing = await deleteAccountSafely({",
+      "uid: authResult.uid",
+    ],
+    "El borrado debe validar una sesion reciente antes de operar sobre el UID autenticado",
   );
 });
 

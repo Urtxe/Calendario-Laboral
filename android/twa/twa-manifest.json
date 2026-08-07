@@ -18,10 +18,10 @@
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "C:/keys/balance-laboral/balance-laboral-release.jks",
-    "alias": "balance-laboral-release"
+    "alias": "balance-release"
   },
-  "appVersionName": "1.0.1",
-  "appVersionCode": 2,
+  "appVersionName": "1.0.3",
+  "appVersionCode": 4,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://balancelaboral.es/manifest.json",
@@ -43,5 +43,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "1.0.1"
+  "appVersion": "1.0.3"
 }

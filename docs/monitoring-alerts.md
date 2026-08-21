@@ -97,30 +97,14 @@ Decision: Stripe es critico porque activa y desactiva premium. Un solo error de 
 
 ### 4. Errores Firestore
 
-Archivo:
+La metrica `firestore.googleapis.com/api/request_count` expone los labels `response_code` y `api_method`, pero no `response_code_class`. Las politicas separan explicitamente disponibilidad, cuota y rechazos esperables, y reducen las series por metodo API.
 
-```text
-docs/monitoring-alerts/firestore-api-non-ok-errors.json
-```
+- `docs/monitoring-alerts/firestore-server-errors.json`: `INTERNAL`, `UNAVAILABLE`, `UNKNOWN`, `DATA_LOSS` y `DEADLINE_EXCEEDED`; 2 o mas en 5 minutos por metodo. Severidad `warning` de disponibilidad.
+- `docs/monitoring-alerts/firestore-quota-exhaustion.json`: `RESOURCE_EXHAUSTED`; 3 o mas en 10 minutos por metodo. Severidad `warning`.
+- `docs/monitoring-alerts/firestore-permission-denials.json`: `PERMISSION_DENIED`; 10 o mas en 10 minutos por metodo. Senal `warning` informativa, no critica de disponibilidad.
+- `docs/monitoring-alerts/firestore-client-request-errors.json`: `UNAUTHENTICATED` e `INVALID_ARGUMENT`; 20 o mas en 10 minutos por metodo. Senal `warning` informativa, no critica de disponibilidad.
 
-Detecta:
-
-- mas de 5 respuestas no OK en 10 minutos.
-
-Metrica:
-
-```text
-firestore.googleapis.com/api/request_count
-```
-
-Filtro principal:
-
-```text
-resource.type="firestore.googleapis.com/Database"
-metric.labels.response_code!="OK"
-```
-
-Limitacion: el descriptor real de Firestore expone `metric.labels.response_code`, pero no `response_code_class`. Por eso esta alerta no puede limitarse limpiamente a 5xx con esta metrica. Si se necesita distinguir errores internos frente a permisos/cuotas, crear una alerta basada en logs con filtros sobre errores concretos del SDK/backend.
+La politica generica `firestore-api-non-ok-errors.json` queda retirada. No debe volver a importarse: mezclaba rechazos normales de reglas/sesion con errores reales de plataforma.
 
 ### 5. Errores 5xx en Gemini API
 
@@ -200,9 +184,27 @@ gcloud alpha monitoring policies create \
 ```
 
 ```bash
-gcloud alpha monitoring policies create \
+gcloud monitoring policies create \
   --project=calendario-laboral-252b1 \
-  --policy-from-file=docs/monitoring-alerts/firestore-api-non-ok-errors.json
+  --policy-from-file=docs/monitoring-alerts/firestore-server-errors.json
+```
+
+```bash
+gcloud monitoring policies create \
+  --project=calendario-laboral-252b1 \
+  --policy-from-file=docs/monitoring-alerts/firestore-quota-exhaustion.json
+```
+
+```bash
+gcloud monitoring policies create \
+  --project=calendario-laboral-252b1 \
+  --policy-from-file=docs/monitoring-alerts/firestore-permission-denials.json
+```
+
+```bash
+gcloud monitoring policies create \
+  --project=calendario-laboral-252b1 \
+  --policy-from-file=docs/monitoring-alerts/firestore-client-request-errors.json
 ```
 
 ```bash
@@ -302,7 +304,10 @@ Opciones recomendadas:
 - `consultarconvenio-5xx-errors`: puede saltar durante despliegues, cold starts problematicos o errores transitorios de dependencias.
 - `consultarconvenio-p95-latency`: puede saltar si Gemini esta lento o si hay consultas especialmente largas.
 - `stripewebhook-5xx-errors`: intencionadamente sensible; un solo 5xx alerta.
-- `firestore-api-non-ok-errors`: puede incluir errores no 5xx, por ejemplo permisos, cuotas o parametros invalidos.
+- `firestore-server-errors`: cubre errores reales de plataforma y se mantiene separado por metodo API.
+- `firestore-quota-exhaustion`: puede indicar limite de cuota o recurso y requiere revisar el volumen del metodo afectado.
+- `firestore-permission-denials`: normalmente refleja reglas, sesion o App Check; es informativa y no una senal de disponibilidad por si sola.
+- `firestore-client-request-errors`: normalmente refleja sesiones ausentes o peticiones malformadas del cliente; es informativa.
 - `gemini-api-5xx-errors`: puede saltar por incidencias temporales del proveedor.
 - `consultarconvenio-request-spike`: puede saltar por pruebas internas, bots, bucles o lanzamiento con trafico real superior al esperado.
 

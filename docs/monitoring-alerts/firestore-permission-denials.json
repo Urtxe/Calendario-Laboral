@@ -1,0 +1,43 @@
+{
+  "displayName": "Balance Laboral - Firestore permission denials",
+  "documentation": {
+    "content": "Detecta 10 o mas respuestas PERMISSION_DENIED de Firestore en 10 minutos por metodo API. Es una senal informativa de reglas, sesion o App Check; no representa por si sola una incidencia critica de disponibilidad.",
+    "mimeType": "text/markdown"
+  },
+  "userLabels": {
+    "app": "balance-laboral",
+    "service": "firestore",
+    "severity": "warning",
+    "signal_class": "security_rejection",
+    "managed_by": "repo"
+  },
+  "conditions": [
+    {
+      "displayName": "Firestore: 10 o mas PERMISSION_DENIED en 10 minutos por metodo API",
+      "conditionThreshold": {
+        "filter": "metric.type=\"firestore.googleapis.com/api/request_count\" resource.type=\"firestore.googleapis.com/Database\" metric.labels.response_code=\"PERMISSION_DENIED\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "600s",
+            "perSeriesAligner": "ALIGN_DELTA",
+            "crossSeriesReducer": "REDUCE_SUM",
+            "groupByFields": [
+              "metric.labels.api_method"
+            ]
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 9,
+        "duration": "0s",
+        "trigger": {
+          "count": 1
+        }
+      }
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "alertStrategy": {
+    "autoClose": "3600s"
+  }
+}

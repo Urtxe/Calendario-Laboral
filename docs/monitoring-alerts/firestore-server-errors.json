@@ -1,0 +1,43 @@
+{
+  "displayName": "Balance Laboral - Firestore server errors",
+  "documentation": {
+    "content": "Detecta 2 o mas errores de plataforma Firestore en 5 minutos por metodo API. Incluye INTERNAL, UNAVAILABLE, UNKNOWN, DATA_LOSS y DEADLINE_EXCEEDED; no incluye rechazos de reglas, autenticacion, argumentos ni cuota.",
+    "mimeType": "text/markdown"
+  },
+  "userLabels": {
+    "app": "balance-laboral",
+    "service": "firestore",
+    "severity": "warning",
+    "signal_class": "availability",
+    "managed_by": "repo"
+  },
+  "conditions": [
+    {
+      "displayName": "Firestore: 2 o mas errores de servidor en 5 minutos por metodo API",
+      "conditionThreshold": {
+        "filter": "metric.type=\"firestore.googleapis.com/api/request_count\" resource.type=\"firestore.googleapis.com/Database\" metric.labels.response_code=one_of(\"INTERNAL\", \"UNAVAILABLE\", \"UNKNOWN\", \"DATA_LOSS\", \"DEADLINE_EXCEEDED\")",
+        "aggregations": [
+          {
+            "alignmentPeriod": "300s",
+            "perSeriesAligner": "ALIGN_DELTA",
+            "crossSeriesReducer": "REDUCE_SUM",
+            "groupByFields": [
+              "metric.labels.api_method"
+            ]
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 1,
+        "duration": "0s",
+        "trigger": {
+          "count": 1
+        }
+      }
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "alertStrategy": {
+    "autoClose": "3600s"
+  }
+}

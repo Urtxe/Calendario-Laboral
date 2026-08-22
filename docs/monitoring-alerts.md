@@ -50,7 +50,8 @@ docs/monitoring-alerts/consultarconvenio-p95-latency.json
 
 Detecta:
 
-- p95 > 10 segundos durante 10 minutos.
+- p95 > 20 segundos durante 10 minutos; y
+- al menos 5 solicitudes HTTP `POST` reales en esos mismos 10 minutos.
 
 Metrica:
 
@@ -65,7 +66,28 @@ resource.type="cloud_run_revision"
 resource.labels.service_name="consultarconvenio"
 ```
 
-Decision: 10 segundos es prudente porque `consultarConvenio` usa IA/RAG y algunas peticiones pueden tardar. Si el p95 supera 10 segundos de forma sostenida, probablemente hay degradacion de Gemini, Firestore, cold starts, saturacion o fallback lento.
+El volumen se obtiene de la metrica basada en logs:
+
+```text
+docs/monitoring-metrics/consultarconvenio-user-post-requests.json
+```
+
+Su filtro exige simultaneamente el request log de Cloud Run y
+`httpRequest.requestMethod="POST"`. Por ello no cuenta preflights `OPTIONS`,
+health checks `GET`, arranques ni despliegues sin solicitud HTTP. La metrica
+`run.googleapis.com/request_count` no expone el metodo HTTP (solo
+`response_code`, `response_code_class` y `route`), por lo que no sirve para
+este minimo de volumen sin incluir preflights.
+
+Cloud Monitoring solo admite comparaciones estrictas para esta condición, por
+lo que el requisito de 5 o más se expresa como suma `> 4` en 10 minutos.
+
+Decision: `consultarConvenio` puede recorrer RAG, fuentes oficiales e IA
+general; con poco trafico, una respuesta correcta de 10-15 s convierte una
+unica muestra en p95. El umbral pasa de 10 s a 20 s y exige 5 POST en 10
+minutos para alertar solo ante degradacion repetida con impacto real. Las
+alertas independientes de 5xx, cuota y seguridad permanecen sin cambios y
+cubren los errores inmediatos.
 
 ### 3. Errores 5xx en Stripe webhook
 
@@ -171,8 +193,25 @@ gcloud alpha monitoring policies create \
   --policy-from-file=docs/monitoring-alerts/consultarconvenio-5xx-errors.json
 ```
 
+Primero crear la métrica basada en logs (o actualizarla si ya existe):
+
 ```bash
-gcloud alpha monitoring policies create \
+gcloud logging metrics create consultarconvenio_user_post_requests \
+  --project=calendario-laboral-252b1 \
+  --config-from-file=docs/monitoring-metrics/consultarconvenio-user-post-requests.json
+```
+
+```bash
+gcloud logging metrics update consultarconvenio_user_post_requests \
+  --project=calendario-laboral-252b1 \
+  --config-from-file=docs/monitoring-metrics/consultarconvenio-user-post-requests.json
+```
+
+La política de latencia ya existe: se actualiza por su identificador y no se
+crea otra.
+
+```bash
+gcloud monitoring policies update 7896947353331905430 \
   --project=calendario-laboral-252b1 \
   --policy-from-file=docs/monitoring-alerts/consultarconvenio-p95-latency.json
 ```
@@ -222,12 +261,17 @@ gcloud alpha monitoring policies create \
 Importar todas desde PowerShell:
 
 ```powershell
-Get-ChildItem docs/monitoring-alerts/*.json | ForEach-Object {
+Get-ChildItem docs/monitoring-alerts/*.json |
+  Where-Object Name -ne "consultarconvenio-p95-latency.json" |
+  ForEach-Object {
   gcloud alpha monitoring policies create `
     --project=calendario-laboral-252b1 `
     --policy-from-file=$_.FullName
 }
 ```
+
+La política de p95 se excluye porque en este proyecto ya existe y debe
+actualizarse con el comando anterior, conservando su canal e identificador.
 
 ## Listar politicas existentes
 

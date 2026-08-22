@@ -1,0 +1,4 @@
+{
+  "description": "Cuenta exclusivamente solicitudes HTTP POST de consultarConvenio en los request logs de Cloud Run. Excluye preflights OPTIONS, health checks GET, despliegues y arranques sin solicitud HTTP.",
+  "filter": "resource.type=\"cloud_run_revision\"\nresource.labels.service_name=\"consultarconvenio\"\nlog_id(\"run.googleapis.com/requests\")\nhttpRequest.requestMethod=\"POST\""
+}

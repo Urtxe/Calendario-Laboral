@@ -1,7 +1,7 @@
 {
   "displayName": "Balance Laboral - consultarConvenio p95 latency",
   "documentation": {
-    "content": "Detecta latencia p95 superior a 10 segundos sostenida durante 10 minutos en consultarConvenio. Es prudente para una ruta con IA/RAG porque algunas respuestas pueden tardar, pero mas de 10 s sostenidos indica degradacion real o saturacion.",
+    "content": "Detecta degradacion real de latencia en consultarConvenio: p95 superior a 20 segundos durante 10 minutos y, simultaneamente, al menos 5 solicitudes HTTP POST reales en la misma ventana. La ruta IA/RAG puede responder correctamente en 10-15 s con poco trafico; el minimo de volumen evita que una unica prueba lenta se interprete como p95 sostenido. Los errores inmediatos siguen cubiertos por las alertas independientes de 5xx, cuota y seguridad.",
     "mimeType": "text/markdown"
   },
   "userLabels": {
@@ -12,7 +12,7 @@
   },
   "conditions": [
     {
-      "displayName": "consultarconvenio: p95 > 10 s durante 10 minutos",
+      "displayName": "consultarconvenio: p95 > 20 s durante 10 minutos",
       "conditionThreshold": {
         "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.labels.service_name=\"consultarconvenio\"",
         "aggregations": [
@@ -23,17 +23,39 @@
           }
         ],
         "comparison": "COMPARISON_GT",
-        "thresholdValue": 10000,
+        "thresholdValue": 20000,
         "duration": "600s",
+        "trigger": {
+          "count": 1
+        }
+      }
+    },
+    {
+      "displayName": "consultarconvenio: al menos 5 POST reales en 10 minutos",
+      "conditionThreshold": {
+        "filter": "metric.type=\"logging.googleapis.com/user/consultarconvenio_user_post_requests\" resource.type=\"cloud_run_revision\" resource.labels.service_name=\"consultarconvenio\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "600s",
+            "perSeriesAligner": "ALIGN_SUM",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 4,
+        "duration": "0s",
         "trigger": {
           "count": 1
         }
       }
     }
   ],
-  "combiner": "OR",
+  "combiner": "AND",
   "enabled": true,
   "alertStrategy": {
     "autoClose": "3600s"
-  }
+  },
+  "notificationChannels": [
+    "projects/calendario-laboral-252b1/notificationChannels/16034029599269640206"
+  ]
 }

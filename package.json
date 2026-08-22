@@ -4,9 +4,12 @@
   "scripts": {
     "generate:seo": "node scripts/generate-seo-convenios.js",
     "plan:seo-derived": "node scripts/plan-derived-seo-pages.js",
-    "test": "npm run test:security && npm run test:intent && npm run test:play-twa && npm run test:account-deletion",
+    "test": "npm run test:security && npm run test:intent && npm run test:ai-consultation && npm run test:ai-ui && npm run test:service-worker && npm run test:play-twa && npm run test:account-deletion",
     "test:security": "node scripts/security-checks.js",
     "test:intent": "node scripts/intent-classifier-checks.js",
+    "test:ai-consultation": "node functions/ai-consultation.test.js",
+    "test:ai-ui": "node scripts/ai-ui-checks.js",
+    "test:service-worker": "node scripts/service-worker-checks.js",
     "test:play-twa": "node scripts/play-twa-context-checks.js",
     "test:account-deletion": "node functions/account-deletion.test.js && node scripts/account-deletion-ui-checks.js"
   }

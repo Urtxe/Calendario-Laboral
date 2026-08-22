@@ -2,6 +2,7 @@ const { normalizeText } = require("./convenio-metadata");
 
 const GEMINI_SEARCH_ENDPOINT =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const WEB_FALLBACK_TIMEOUT_MS = 20000;
 
 const DEFAULT_ALLOWED_DOMAINS = [
     "boe.es",
@@ -86,7 +87,9 @@ const NON_LABOR_TERMS = [
 ];
 
 function isEnabled(env = process.env) {
-    return String(env.ENABLE_WEB_FALLBACK || "false").toLowerCase() === "true";
+    // Se activa por defecto en producción. ENABLE_WEB_FALLBACK=false permite
+    // desactivarlo de inmediato sin cambiar código ni abrir búsqueda general.
+    return String(env.ENABLE_WEB_FALLBACK ?? "true").toLowerCase() !== "false";
 }
 
 function maxCallsPerRequest(env = process.env) {
@@ -301,14 +304,22 @@ async function consultarFallbackWebOficial({ question, apiKey, env = process.env
         },
     };
 
-    const response = await fetch(GEMINI_SEARCH_ENDPOINT, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify(body),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), WEB_FALLBACK_TIMEOUT_MS);
+    let response;
+    try {
+        response = await fetch(GEMINI_SEARCH_ENDPOINT, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": apiKey,
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+        });
+    } finally {
+        clearTimeout(timeout);
+    }
 
     const responseJson = await response.json().catch(() => ({}));
 

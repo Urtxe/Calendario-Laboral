@@ -43,8 +43,8 @@ function extractConsultarConvenioHandler(source) {
   const start = source.indexOf(startToken);
   assert(start !== -1, "No se encontro el handler consultarConvenio");
 
-  const nextExport = source.indexOf("\nexports.", start + startToken.length);
-  return nextExport === -1 ? source.slice(start) : source.slice(start, nextExport);
+  const nextHandler = source.indexOf("\nasync function consultarConvenioLegacy", start + startToken.length);
+  return nextHandler === -1 ? source.slice(start) : source.slice(start, nextHandler);
 }
 
 function extractExportHandler(source, exportName) {
@@ -159,7 +159,7 @@ addCheck("/consultarConvenio exige Firebase Auth antes de cuota o IA", () => {
     handler,
     [
       "const authResult = await verificarUsuarioConsulta(req);",
-      "quotaInfo = await consumirCuotaConsultaIA(uid);",
+      "if (!await reservarCuota()) return;",
       "const vectorPregunta = await generarEmbeddingPregunta(pregunta);",
     ],
     "Auth debe ocurrir antes de cuota y embeddings",
@@ -176,8 +176,7 @@ addCheck("/consultarConvenio valida payload antes de Auth, cuota e IA", () => {
     [
       "const payloadValidation = validarPayloadBasicoConsulta(req);",
       "const authResult = await verificarUsuarioConsulta(req);",
-      "quotaInfo = await consumirCuotaConsultaIA(uid);",
-      "const vectorPregunta = await generarEmbeddingPregunta(pregunta);",
+      "if (!await reservarCuota()) return;",
     ],
     "La validacion basica de payload debe cortar antes de Auth, cuota e IA",
   );
@@ -185,25 +184,68 @@ addCheck("/consultarConvenio valida payload antes de Auth, cuota e IA", () => {
     handler,
     [
       "const preguntaValidation = validarPreguntaConsulta(payloadValidation.body);",
-      "quotaInfo = await consumirCuotaConsultaIA(uid);",
-      "const vectorPregunta = await generarEmbeddingPregunta(pregunta);",
+      "if (!await reservarCuota()) return;",
     ],
     "La validacion de pregunta debe cortar antes de cuota e IA",
   );
 });
 
-addCheck("Cuota IA se consume antes de embeddings/Gemini", () => {
+addCheck("Cuota IA se reserva antes de embeddings/Gemini y se liquida después", () => {
   const handler = extractConsultarConvenioHandler(normalize(read("functions/index.js")));
 
   assertOrder(
     handler,
     [
-      "quotaInfo = await consumirCuotaConsultaIA(uid);",
+      "if (!await reservarCuota()) return;",
       "const vectorPregunta = await generarEmbeddingPregunta(pregunta);",
-      "await buscarChunksBase(vectorPregunta);",
     ],
-    "La cuota debe consumirse antes de iniciar RAG/embeddings",
+    "La cuota debe reservarse antes de iniciar RAG/embeddings",
   );
+  assertIncludes(handler, "liquidarReservaCuotaIA(quotaInfo, { consume: false })");
+  assertIncludes(handler, "liquidarReservaCuotaIA(quotaInfo, { consume: true })");
+});
+
+addCheck("Las aclaraciones no reservan cuota y toda respuesta útil declara procedencia", () => {
+  const handler = extractConsultarConvenioHandler(normalize(read("functions/index.js")));
+  assertOrder(
+    handler,
+    [
+      "if (CLARIFICATION_STATUSES.has(resolucionCatalogo.status) && requiereContextoConvenio)",
+      "return res.status(200).json(payload);",
+      "if (!await reservarCuota()) return;",
+    ],
+    "Una aclaracion debe salir antes de reservar cuota",
+  );
+  assertIncludes(handler, "sourceType: \"convenio\"");
+  assertIncludes(handler, "sourceType: \"official_web\"");
+  assertIncludes(handler, "sourceType: \"general_ai\"");
+  assertIncludes(handler, "sourceType: \"clarification\"");
+  assertIncludes(handler, "if (!esLaboral)");
+  assertOrder(
+    handler,
+    ["if (!esLaboral)", "generarRespuestaGeneral({ pregunta, idiomaRespuesta, esLaboral: false })", "const vectorPregunta = await generarEmbeddingPregunta(pregunta);"],
+    "Las preguntas no laborales deben ir a IA general sin RAG",
+  );
+});
+
+addCheck("La ruta laboral prioriza convenio, fuente oficial y después IA general", () => {
+  const handler = extractConsultarConvenioHandler(normalize(read("functions/index.js")));
+  assertOrder(
+    handler,
+    [
+      "if (evidencia.suficiente)",
+      "webFallbackResponse = await intentarFallbackWebOficial({",
+      "generarRespuestaGeneral({ pregunta, idiomaRespuesta, esLaboral: true })",
+    ],
+    "La jerarquia debe ser convenio -> web oficial -> IA general",
+  );
+  assertIncludes(handler, "generarRespuestaGeneral({ pregunta, idiomaRespuesta, esLaboral: false })");
+});
+
+addCheck("El fallback web se activa por defecto y mantiene apagado explícito", () => {
+  const fallbackSource = normalize(read("functions/official-web-fallback.js"));
+  assertIncludes(fallbackSource, "env.ENABLE_WEB_FALLBACK ?? \"true\"");
+  assertIncludes(fallbackSource, '!== "false"');
 });
 
 addCheck("CORS allowlist corta origenes no permitidos antes de cuota o IA", () => {
@@ -226,8 +268,7 @@ addCheck("CORS allowlist corta origenes no permitidos antes de cuota o IA", () =
       "const corsResult = setCorsHeaders(req, res);",
       "return res.status(403).json({ error: \"Origen no permitido\" });",
       "const payloadValidation = validarPayloadBasicoConsulta(req);",
-      "quotaInfo = await consumirCuotaConsultaIA(uid);",
-      "const vectorPregunta = await generarEmbeddingPregunta(pregunta);",
+      "if (!await reservarCuota()) return;",
     ],
     "CORS debe evaluarse antes de payload, cuota e IA",
   );

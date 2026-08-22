@@ -401,7 +401,7 @@ function actualizarTarjetaAsesorLegal(activar) {
       paragraphs[0].textContent =
         "Preguntale a la IA sobre jornada, vacaciones, pluses o salario.";
     } else if (usuarioTieneSesion()) {
-      paragraphs[0].textContent = "Tienes 3 consultas gratuitas.";
+      paragraphs[0].textContent = "Tienes 50 consultas gratuitas al día.";
     } else {
       paragraphs[0].textContent = "Preguntale a la IA sobre tu convenio.";
     }
@@ -410,7 +410,7 @@ function actualizarTarjetaAsesorLegal(activar) {
 
   if (paragraphs[1]) {
     if (isPremiumUser) {
-      paragraphs[1].textContent = "Abre el modal y consulta sin límites.";
+      paragraphs[1].textContent = "Hasta 200 consultas IA al día.";
       paragraphs[1].style.display = "";
     } else if (usuarioTieneSesion()) {
       paragraphs[1].textContent = "";
@@ -444,7 +444,7 @@ function actualizarTarjetaAsesorLegal(activar) {
 // 8.2 ASESOR LEGAL IA (RAG)
 // ============================================
 
-const LIMITE_CONSULTAS_GRATIS = 3;
+const LIMITE_CONSULTAS_GRATIS = 50;
 const LIMITE_CARACTERES_PREGUNTA_IA = 1200;
 const ASESOR_LEGAL_STORAGE_PREFIX = "balance_laboral_asesor_legal_";
 
@@ -455,11 +455,12 @@ function getModoAsesorLegal() {
 }
 
 function getAsesorLegalStorageKey() {
+  const dayKey = new Date().toISOString().slice(0, 10);
   if (window.usuarioActual && window.usuarioActual.uid) {
-    return ASESOR_LEGAL_STORAGE_PREFIX + window.usuarioActual.uid;
+    return ASESOR_LEGAL_STORAGE_PREFIX + window.usuarioActual.uid + "_" + dayKey;
   }
 
-  return ASESOR_LEGAL_STORAGE_PREFIX + "anonimo";
+  return ASESOR_LEGAL_STORAGE_PREFIX + "anonimo_" + dayKey;
 }
 
 function getConsultasUsadas() {
@@ -506,8 +507,8 @@ function crearMensajeBienvenidaLegal() {
     } else {
       crearMensajeLegal(
         comercioPremiumBloqueadoEnTwa()
-          ? "Has agotado tus 3 consultas gratuitas en esta versión de Android."
-          : "Ya has agotado tus 3 consultas gratuitas. Hazte Premium para seguir consultando el convenio sin límite.",
+          ? "Has agotado tus 50 consultas gratuitas de hoy en esta versión de Android."
+          : "Ya has agotado tus 50 consultas gratuitas de hoy. Vuelve mañana o hazte Premium para disponer de 200 consultas diarias.",
         "assistant",
       );
     }
@@ -729,6 +730,33 @@ function crearMensajeLegal(texto, tipo) {
   return el;
 }
 
+function anadirProcedenciaRespuestaLegal(mensaje, data) {
+  if (!mensaje || !data || !data.sourceType) return;
+
+  const etiquetas = {
+    convenio: "Según tu convenio",
+    official_web: "Información oficial actualizada",
+    general_ai: "Orientación general de IA",
+    clarification: "Necesito concretar tu convenio",
+  };
+  const etiqueta = etiquetas[data.sourceType];
+  if (!etiqueta) return;
+
+  const source = document.createElement("div");
+  source.className = "legal-ai-source";
+  source.textContent = etiqueta;
+  source.style.cssText = "margin-top:8px;font-size:.78rem;font-weight:700;color:#334155;";
+  mensaje.appendChild(source);
+
+  if (data.warning) {
+    const warning = document.createElement("div");
+    warning.className = "legal-ai-warning";
+    warning.textContent = data.warning;
+    warning.style.cssText = "margin-top:6px;font-size:.78rem;line-height:1.35;color:#64748b;";
+    mensaje.appendChild(warning);
+  }
+}
+
 function crearHtmlLegal(html, tipo) {
   const messages = document.getElementById("legal-ai-messages");
   if (!messages || !html) return null;
@@ -778,10 +806,10 @@ function actualizarTextoEstadoLegal() {
   } else {
     status.style.display = "block";
     note.style.display = "block";
-    status.textContent = "Has agotado tus 3 consultas gratuitas.";
+    status.textContent = `Has agotado tus ${LIMITE_CONSULTAS_GRATIS} consultas gratuitas de hoy.`;
     note.textContent = comercioPremiumBloqueadoEnTwa()
-      ? "La cuota gratuita se ha agotado en esta versión de Android."
-      : "Hazte Premium para seguir utilizando el asesor IA sin límite.";
+      ? "La cuota gratuita diaria se ha agotado en esta versión de Android."
+      : "Vuelve mañana o hazte Premium para disponer de 200 consultas IA al día.";
     sendBtn.disabled = true;
     input.disabled = true;
   }
@@ -821,8 +849,8 @@ async function enviarConsultaLegal() {
     actualizarTextoEstadoLegal();
     crearMensajeLegal(
       comercioPremiumBloqueadoEnTwa()
-        ? "Has agotado las 3 consultas gratuitas en esta versión de Android."
-        : "Has agotado las 3 consultas gratuitas. Hazte Premium para seguir utilizando el asesor IA.",
+        ? "Has agotado las 50 consultas gratuitas de hoy en esta versión de Android."
+        : "Has agotado las 50 consultas gratuitas de hoy. Vuelve mañana o hazte Premium para disponer de 200 consultas IA al día.",
       "assistant",
     );
     return;
@@ -925,7 +953,7 @@ async function enviarConsultaLegal() {
         throw new Error(
           quotaPlan === "premium"
             ? "Has alcanzado temporalmente el límite de uso razonable. Inténtalo más tarde."
-            : "Has alcanzado el límite gratuito de consultas IA.",
+            : "Has alcanzado el límite diario gratuito de consultas IA. Inténtalo mañana.",
         );
       }
 
@@ -960,7 +988,8 @@ async function enviarConsultaLegal() {
       }
     }
 
-    crearMensajeLegal(respuesta, "assistant");
+    const mensajeRespuesta = crearMensajeLegal(respuesta, "assistant");
+    anadirProcedenciaRespuestaLegal(mensajeRespuesta, data);
 
     const searchEntryPoint =
       data.searchSuggestions &&

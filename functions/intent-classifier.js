@@ -45,6 +45,16 @@ const LABOR_TERMS = [
   "inspección de trabajo",
   "boda",
   "matrimonio",
+  "trabajo",
+  "empresa",
+  "empleador",
+  "pagar",
+  "pago",
+  "cobrar",
+  "cobro",
+  "turno",
+  "turnos",
+  "huelga",
 ];
 
 const COLLECTIVE_TERMS = [

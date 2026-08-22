@@ -1,4 +1,5 @@
 const { onRequest } = require("firebase-functions/v2/https");
+const { randomUUID } = require("crypto");
 // Forzamos la carga de la versión 1 específicamente para el disparador de usuario
 const functionsV1 = require("firebase-functions/v1"); 
 const admin = require("firebase-admin");
@@ -21,6 +22,23 @@ const {
 const {
     classifyLaborIntent,
 } = require("./intent-classifier");
+const {
+    GENERAL_LABOR_WARNING,
+    construirRespuestaConsulta,
+} = require("./consultation-contract");
+const {
+    evaluarEvidenciaConvenio,
+} = require("./rag-evidence");
+const {
+    FREE_AI_DAILY_LIMIT,
+    PREMIUM_AI_DAILY_LIMIT,
+} = require("./quota-policy");
+const {
+    AI_QUOTA_RESERVATION_TTL_MS,
+    isReservationExpired,
+    liquidarEstadoReserva,
+    resumirReservasCaducadas,
+} = require("./quota-reservation-policy");
 const {
     deleteAccountSafely,
     deleteFirestoreAccountTree,
@@ -79,10 +97,9 @@ if (stripeSecretKey && webhookSecret && !hasPremiumStripeConfig()) {
 
 const COLLECTION_VECTORES = "vectores_convenios";
 const EMBEDDING_DIMENSIONS = 768;
-const FREE_AI_TOTAL_LIMIT = 3;
-const PREMIUM_AI_DAILY_LIMIT = 100;
 const AI_USAGE_COLLECTION = "usage";
 const AI_USAGE_DOC = "ai";
+const AI_QUOTA_RESERVATIONS_COLLECTION = "ai_reservations";
 const AI_QUESTION_MAX_LENGTH = 1200;
 const APP_CHECK_ENFORCEMENT =
     String(process.env.APP_CHECK_ENFORCEMENT || "false").toLowerCase() === "true";
@@ -486,13 +503,23 @@ function responderConCuota(payload, quotaInfo) {
     return quota ? { ...payload, quota } : payload;
 }
 
-async function consumirCuotaConsultaIA(uid) {
+async function reservarCuotaConsultaIA(uid) {
     const userRef = db.collection("usuarios").doc(uid);
     const usageRef = userRef.collection(AI_USAGE_COLLECTION).doc(AI_USAGE_DOC);
+    const reservationsRef = userRef.collection(AI_QUOTA_RESERVATIONS_COLLECTION);
+    const reservationRef = userRef
+        .collection(AI_QUOTA_RESERVATIONS_COLLECTION)
+        .doc(randomUUID());
     const today = obtenerDiaCuota();
+    const nowMs = Date.now();
+    const expiresAt = new Date(nowMs + AI_QUOTA_RESERVATION_TTL_MS);
 
     return db.runTransaction(async (transaction) => {
-        const userSnap = await transaction.get(userRef);
+        const [userSnap, usageSnap, pendingReservationsSnap] = await Promise.all([
+            transaction.get(userRef),
+            transaction.get(usageRef),
+            transaction.get(reservationsRef.where("state", "==", "reserved")),
+        ]);
 
         if (!userSnap.exists) {
             throw new QuotaError({
@@ -504,16 +531,45 @@ async function consumirCuotaConsultaIA(uid) {
 
         const userData = userSnap.data() || {};
         const isPremium = userData.tipoCuenta === "premium";
-        const usageSnap = await transaction.get(usageRef);
         const usageData = usageSnap.exists ? usageSnap.data() || {} : {};
         const now = FieldValue.serverTimestamp();
+        const pendingReservations = pendingReservationsSnap.docs.map((doc) => ({
+            id: doc.id,
+            ref: doc.ref,
+            ...doc.data(),
+        }));
+        const { expiredReservations, expiredByPlan } = resumirReservasCaducadas(
+            pendingReservations,
+            { today, nowMs },
+        );
+
+        expiredReservations.forEach((reservation) => {
+            transaction.update(reservation.ref, {
+                state: "expired",
+                expiredAt: now,
+            });
+        });
+
+        const currentPremiumDailyCount = usageData.premiumDailyKey === today
+            ? Math.max(0, normalizarContador(usageData.premiumDailyCount) - expiredByPlan.premium)
+            : 0;
+        const currentFreeDailyCount = usageData.freeDailyKey === today
+            ? Math.max(0, normalizarContador(usageData.freeDailyCount) - expiredByPlan.free)
+            : 0;
+        const expiryUsageUpdate = { updatedAt: now };
+        if (expiredReservations.length) {
+            expiryUsageUpdate.totalExpired = FieldValue.increment(expiredReservations.length);
+        }
+
+        if (usageData.premiumDailyKey === today && expiredByPlan.premium) {
+            expiryUsageUpdate.premiumDailyCount = currentPremiumDailyCount;
+        }
+        if (usageData.freeDailyKey === today && expiredByPlan.free) {
+            expiryUsageUpdate.freeDailyCount = currentFreeDailyCount;
+        }
 
         if (isPremium) {
-            const currentDailyCount = usageData.premiumDailyKey === today
-                ? normalizarContador(usageData.premiumDailyCount)
-                : 0;
-
-            if (currentDailyCount >= PREMIUM_AI_DAILY_LIMIT) {
+            if (currentPremiumDailyCount >= PREMIUM_AI_DAILY_LIMIT) {
                 throw new QuotaError({
                     status: 429,
                     code: "premium_daily_quota_exceeded",
@@ -521,61 +577,148 @@ async function consumirCuotaConsultaIA(uid) {
                     quota: {
                         plan: "premium",
                         limit: PREMIUM_AI_DAILY_LIMIT,
-                        used: currentDailyCount,
+                        used: currentPremiumDailyCount,
                         period: "day",
                     },
                 });
             }
 
-            const nextDailyCount = currentDailyCount + 1;
+            const nextDailyCount = currentPremiumDailyCount + 1;
             transaction.set(usageRef, {
+                ...expiryUsageUpdate,
                 plan: "premium",
                 premiumDailyKey: today,
                 premiumDailyCount: nextDailyCount,
                 premiumDailyLimit: PREMIUM_AI_DAILY_LIMIT,
-                totalAccepted: FieldValue.increment(1),
+                totalReserved: FieldValue.increment(1),
                 updatedAt: now,
             }, { merge: true });
+            transaction.set(reservationRef, {
+                state: "reserved",
+                plan: "premium",
+                dayKey: today,
+                createdAt: now,
+                expiresAt,
+            });
 
             return {
                 plan: "premium",
                 limit: PREMIUM_AI_DAILY_LIMIT,
                 used: nextDailyCount,
                 period: "day",
+                reservationRef,
+                reservationId: reservationRef.id,
+                userRef,
+                dayKey: today,
             };
         }
 
-        const currentFreeTotal = normalizarContador(usageData.freeTotalCount);
-
-        if (currentFreeTotal >= FREE_AI_TOTAL_LIMIT) {
+        if (currentFreeDailyCount >= FREE_AI_DAILY_LIMIT) {
             throw new QuotaError({
                 status: 429,
-                code: "free_total_quota_exceeded",
-                message: "Has alcanzado el límite gratuito de consultas IA.",
+                code: "free_daily_quota_exceeded",
+                message: "Has alcanzado el límite diario gratuito de consultas IA. Inténtalo mañana.",
                 quota: {
                     plan: "free",
-                    limit: FREE_AI_TOTAL_LIMIT,
-                    used: currentFreeTotal,
-                    period: "total",
+                    limit: FREE_AI_DAILY_LIMIT,
+                    used: currentFreeDailyCount,
+                    period: "day",
                 },
             });
         }
 
-        const nextFreeTotal = currentFreeTotal + 1;
+        const nextFreeDailyCount = currentFreeDailyCount + 1;
         transaction.set(usageRef, {
+            ...expiryUsageUpdate,
             plan: "free",
-            freeTotalCount: nextFreeTotal,
-            freeTotalLimit: FREE_AI_TOTAL_LIMIT,
-            totalAccepted: FieldValue.increment(1),
+            freeDailyKey: today,
+            freeDailyCount: nextFreeDailyCount,
+            freeDailyLimit: FREE_AI_DAILY_LIMIT,
+            totalReserved: FieldValue.increment(1),
             updatedAt: now,
         }, { merge: true });
+        transaction.set(reservationRef, {
+            state: "reserved",
+            plan: "free",
+            dayKey: today,
+            createdAt: now,
+            expiresAt,
+        });
 
         return {
             plan: "free",
-            limit: FREE_AI_TOTAL_LIMIT,
-            used: nextFreeTotal,
-            period: "total",
+            limit: FREE_AI_DAILY_LIMIT,
+            used: nextFreeDailyCount,
+            period: "day",
+            reservationRef,
+            reservationId: reservationRef.id,
+            userRef,
+            dayKey: today,
         };
+    });
+}
+
+// La reserva vence a los cinco minutos y se autocura en la siguiente reserva.
+// Cada cambio de estado se hace dentro de la transacción: una reserva solo puede
+// consumirse, devolverse o expirar una vez, incluso ante reintentos concurrentes.
+async function liquidarReservaCuotaIA(quotaInfo, { consume }) {
+    if (!quotaInfo || !quotaInfo.reservationRef) return false;
+
+    return db.runTransaction(async (transaction) => {
+        const reservationSnap = await transaction.get(quotaInfo.reservationRef);
+        if (!reservationSnap.exists) {
+            return false;
+        }
+
+        const reservation = reservationSnap.data() || {};
+        const transition = liquidarEstadoReserva(reservation.state, consume);
+        if (!transition.changed) return false;
+
+        const now = FieldValue.serverTimestamp();
+        const usageRef = quotaInfo.userRef
+            .collection(AI_USAGE_COLLECTION).doc(AI_USAGE_DOC);
+        const usageSnap = await transaction.get(usageRef);
+        const usageData = usageSnap.exists ? usageSnap.data() || {} : {};
+
+        const devolverContador = (reason) => {
+            const plan = reservation.plan || quotaInfo.plan;
+            const dayKey = reservation.dayKey || quotaInfo.dayKey;
+            const isSameDay = plan === "premium"
+                ? usageData.premiumDailyKey === dayKey
+                : usageData.freeDailyKey === dayKey;
+            const counterField = plan === "premium" ? "premiumDailyCount" : "freeDailyCount";
+            const current = normalizarContador(usageData[counterField]);
+            transaction.set(usageRef, {
+                ...(isSameDay ? { [counterField]: Math.max(0, current - 1) } : {}),
+                [reason === "expired" ? "totalExpired" : "totalRefunded"]: FieldValue.increment(1),
+                updatedAt: now,
+            }, { merge: true });
+        };
+
+        if (isReservationExpired(reservation)) {
+            transaction.update(quotaInfo.reservationRef, {
+                state: "expired",
+                expiredAt: now,
+            });
+            devolverContador("expired");
+            return false;
+        }
+
+        transaction.update(quotaInfo.reservationRef, {
+            state: transition.state,
+            settledAt: now,
+        });
+
+        if (consume) {
+            transaction.set(usageRef, {
+                totalConsumed: FieldValue.increment(1),
+                updatedAt: now,
+            }, { merge: true });
+        } else {
+            devolverContador("refunded");
+        }
+
+        return true;
     });
 }
 
@@ -606,11 +749,14 @@ function logResultadoConsulta({
     webFallbackReason = null,
     finishReason = null,
     chunksUsed = 0,
+    modelRoute = null,
+    useful = true,
+    quotaConsumed = null,
+    latencyMs = null,
 }) {
     const payload = {
         response_source: responseSource,
         status,
-        uid: uid || null,
         quotaPlan: quotaPlan || null,
         quotaRemaining: typeof quotaRemaining === "number" ? quotaRemaining : null,
         convenioUsado: convenioUsado || null,
@@ -619,6 +765,10 @@ function logResultadoConsulta({
         webFallbackReason: webFallbackReason || null,
         finishReason: finishReason || null,
         chunksUsed,
+        modelRoute: modelRoute || null,
+        useful: Boolean(useful),
+        quotaConsumed: typeof quotaConsumed === "boolean" ? quotaConsumed : null,
+        latencyMs: typeof latencyMs === "number" ? latencyMs : null,
         questionLength: String(pregunta || "").length,
     };
 
@@ -971,23 +1121,27 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
     };
 }
 
-async function generarRespuestaLaboralGeneral({ pregunta, idiomaRespuesta }) {
+async function generarRespuestaGeneral({ pregunta, idiomaRespuesta, esLaboral }) {
     if (!chatModel) {
         return {
-            respuesta: "Puedo ayudarte con dudas laborales generales, pero ahora mismo la IA no está configurada.",
+            respuesta: "",
             finishReason: null,
             respuestaCompleta: false,
         };
     }
 
     const promptSistema = [
-        "Eres un asistente laboral especializado en España.",
-        "Responde sólo sobre legislación laboral, relaciones laborales y conceptos de trabajo.",
-        "No respondas como chatbot generalista.",
-        "Explica el concepto de forma clara y breve para una persona trabajadora.",
+        esLaboral
+            ? "Eres un asistente laboral especializado en España."
+            : "Eres un asistente general útil y prudente.",
+        esLaboral
+            ? "Da orientación laboral clara y breve. No afirmes haber consultado un convenio, fuente oficial o dato actualizado."
+            : "Responde de forma directa, clara y breve a la pregunta general.",
         "Máximo 6 líneas. Evita listas largas.",
         "No inventes datos vigentes, importes, fechas o porcentajes actualizados.",
-        "Si la respuesta puede variar por convenio colectivo, contrato o caso concreto, indícalo brevemente al final.",
+        esLaboral
+            ? "Si puede variar por convenio colectivo, contrato o caso concreto, indícalo brevemente."
+            : "Si no tienes información fiable, dilo con claridad.",
         idiomaRespuesta === "euskera"
             ? "Responde siempre en euskera."
             : "Responde siempre en castellano.",
@@ -1606,8 +1760,353 @@ exports.deleteAccount = onRequest({ timeoutSeconds: 120, memory: "512MiB" }, asy
     }
 });
 
+function esRespuestaGeneradaUtil(generacion) {
+    const texto = String(generacion && generacion.respuesta || "").trim();
+    const finishReason = String(generacion && generacion.finishReason || "").toUpperCase();
+    return Boolean(texto) && !["SAFETY", "RECITATION", "BLOCKLIST"].includes(finishReason);
+}
+
+function construirFuentesChunks(chunks) {
+    return (chunks || []).map((chunk) => ({
+        id: chunk.id,
+        fileName: chunk.fileName,
+        file_name: chunk.file_name,
+        convenioId: chunk.convenioId,
+        chunkIndex: chunk.chunkIndex,
+        doc_type: chunk.doc_type,
+        fuente: "especifica",
+        distancia: chunk.distancia ?? null,
+    }));
+}
+
+function construirOrientacionClarificacion(message, reason, options = []) {
+    return construirRespuestaConsulta({
+        respuesta: `${message}\n\nComo orientación general, los derechos sobre jornada, vacaciones, permisos o salario pueden variar por convenio y contrato. Indícame esos datos para poder comprobar la regla específica.`,
+        sourceType: "clarification",
+        grounded: false,
+        warning: GENERAL_LABOR_WARNING,
+        fallbackReason: reason,
+        requiereAclaracion: true,
+        opcionesConvenio: options,
+        convenioUsado: null,
+        conveniosUsados: [],
+        convenioDetectado: null,
+        fuentes: [],
+    });
+}
+
 // 1.1 CONSULTA LEGAL SOBRE CONVENIOS (V2)
 exports.consultarConvenio = onRequest(CONSULTAR_CONVENIO_FUNCTION_OPTIONS, async (req, res) => {
+    const startedAt = Date.now();
+    let pregunta = "";
+    let uid = null;
+    let quotaInfo = null;
+
+    const registrarResultado = ({ sourceType, status = 200, fallbackReason = null, modelRoute = null, useful = true, chunksUsed = 0, quotaConsumed = null }) => {
+        const quota = construirQuotaPublica(quotaInfo);
+        logResultadoConsulta({
+            responseSource: sourceType,
+            status,
+            quotaPlan: quota ? quota.plan : null,
+            quotaRemaining: quota ? quota.remaining : null,
+            pregunta,
+            fallbackReason,
+            modelRoute,
+            useful,
+            chunksUsed,
+            quotaConsumed,
+            latencyMs: Date.now() - startedAt,
+        });
+    };
+
+    const responderUtil = async (payload, metadata) => {
+        if (quotaInfo) {
+            try {
+                const consumed = await liquidarReservaCuotaIA(quotaInfo, { consume: true });
+                escribirLogConsulta("consultarConvenio_quota_settled", {
+                    action: consumed ? "consumed" : "already_settled",
+                    plan: quotaInfo.plan,
+                });
+            } catch (error) {
+                escribirLogConsulta("consultarConvenio_quota_settled", {
+                    action: "settlement_failed",
+                    plan: quotaInfo.plan,
+                    errorName: error && error.name ? error.name : "Error",
+                });
+            }
+        }
+        registrarResultado({ ...metadata, quotaConsumed: Boolean(quotaInfo) });
+        return res.status(200).json(responderConCuota(payload, quotaInfo));
+    };
+
+    const responderFalloTecnico = async (error, modelRoute = null) => {
+        if (quotaInfo) {
+            try {
+                const refunded = await liquidarReservaCuotaIA(quotaInfo, { consume: false });
+                escribirLogConsulta("consultarConvenio_quota_settled", {
+                    action: refunded ? "refunded" : "already_settled",
+                    plan: quotaInfo.plan,
+                });
+            } catch (settlementError) {
+                escribirLogConsulta("consultarConvenio_quota_settled", {
+                    action: "settlement_failed",
+                    plan: quotaInfo.plan,
+                    errorName: settlementError && settlementError.name ? settlementError.name : "Error",
+                });
+            }
+        }
+        escribirLogConsulta("consultarConvenio_error", {
+            response_source: "error",
+            status: 503,
+            errorName: error && error.name ? error.name : "Error",
+            modelRoute,
+        });
+        registrarResultado({ sourceType: "error", status: 503, modelRoute, useful: false, quotaConsumed: false });
+        return res.status(503).json({
+            error: "No puedo ofrecer una respuesta fiable en este momento. Inténtalo de nuevo más tarde.",
+            code: "consultation_unavailable",
+        });
+    };
+
+    const reservarCuota = async () => {
+        try {
+            quotaInfo = await reservarCuotaConsultaIA(uid);
+            escribirLogConsulta("consultarConvenio_quota_reserved", { plan: quotaInfo.plan });
+            return true;
+        } catch (error) {
+            if (!(error instanceof QuotaError)) throw error;
+            const quota = construirQuotaPublica(error.quota);
+            escribirLogConsulta("consultarConvenio_quota_rejected", {
+                status: error.status,
+                code: error.code,
+                quotaPlan: quota ? quota.plan : null,
+            });
+            registrarResultado({ sourceType: "error", status: error.status, useful: false, quotaConsumed: false });
+            res.status(error.status).json({ error: error.message, code: error.code, quota });
+            return false;
+        }
+    };
+
+    const corsResult = setCorsHeaders(req, res);
+    if (!corsResult.ok) {
+        registrarResultado({ sourceType: "error", status: 403, useful: false });
+        return res.status(403).json({ error: "Origen no permitido" });
+    }
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST") {
+        registrarResultado({ sourceType: "error", status: 405, useful: false });
+        return res.status(405).json({ error: "Método no permitido" });
+    }
+
+    const payloadValidation = validarPayloadBasicoConsulta(req);
+    if (!payloadValidation.ok) {
+        registrarResultado({ sourceType: "error", status: payloadValidation.status, useful: false });
+        return res.status(payloadValidation.status).json({ error: payloadValidation.error });
+    }
+
+    const appCheckResult = await verificarAppCheckConsulta(req);
+    escribirLogConsulta("consultarConvenio_app_check", {
+        appCheckStatus: appCheckResult.status,
+        appCheckEnforcement: APP_CHECK_ENFORCEMENT,
+        reason: appCheckResult.reason || null,
+    });
+    if (APP_CHECK_ENFORCEMENT && !appCheckResult.ok) {
+        registrarResultado({ sourceType: "error", status: 403, useful: false });
+        return res.status(403).json({ error: "App Check requerido" });
+    }
+
+    const authResult = await verificarUsuarioConsulta(req);
+    if (!authResult.ok) {
+        registrarResultado({ sourceType: "error", status: 401, useful: false });
+        return res.status(401).json({ error: "Debes iniciar sesión para usar la consulta IA" });
+    }
+    uid = authResult.uid;
+
+    const preguntaValidation = validarPreguntaConsulta(payloadValidation.body);
+    if (!preguntaValidation.ok) {
+        registrarResultado({ sourceType: "error", status: preguntaValidation.status, useful: false });
+        return res.status(preguntaValidation.status).json({ error: preguntaValidation.error });
+    }
+    pregunta = preguntaValidation.pregunta;
+
+    try {
+        const idiomaRespuesta = detectarIdiomaPregunta(pregunta);
+        const intentClassification = classifyLaborIntent({
+            pregunta,
+            ciudad: req.body && (req.body.ciudad || req.body.ciudadActual || req.body.location || ""),
+            sector: req.body && (req.body.sector || req.body.sectorUsuario || req.body.profesion || ""),
+        });
+        const esLaboral = intentClassification.intent !== "out_of_scope";
+
+        if (!esLaboral) {
+            if (!await reservarCuota()) return;
+            const general = await generarRespuestaGeneral({ pregunta, idiomaRespuesta, esLaboral: false });
+            if (!esRespuestaGeneradaUtil(general)) return responderFalloTecnico(null, "general_ai");
+            return responderUtil(construirRespuestaConsulta({
+                respuesta: general.respuesta,
+                sourceType: "general_ai",
+                grounded: false,
+                warning: null,
+                fallbackReason: null,
+                convenioUsado: null,
+                conveniosUsados: [],
+                convenioDetectado: null,
+                fuentes: [],
+            }), { sourceType: "general_labor", modelRoute: "general_ai" });
+        }
+
+        let convenioFileName = obtenerReferenciaConvenio(req.body);
+        let conveniosFileName = convenioFileName ? [convenioFileName] : [];
+        let convenioResuelto = null;
+        let fallbackReason = null;
+        const requiereContextoConvenio = ["collective_agreement", "needs_clarification", "mixed_labor"]
+            .includes(intentClassification.intent);
+
+        if (!convenioFileName) {
+            const resolucionCatalogo = await resolverConvenioDesdeEntrada(req.body, pregunta);
+            if (CLARIFICATION_STATUSES.has(resolucionCatalogo.status) && requiereContextoConvenio) {
+                const reason = resolucionCatalogo.status === "ambiguous"
+                    ? "ambiguous_context"
+                    : "missing_convenio_context";
+                const payload = construirOrientacionClarificacion(
+                    resolucionCatalogo.message || "Indícame tu sector y provincia para localizar el convenio correcto.",
+                    reason,
+                    resolucionCatalogo.options || [],
+                );
+                registrarResultado({ sourceType: "clarification", fallbackReason: reason, useful: true, quotaConsumed: false });
+                return res.status(200).json(payload);
+            }
+            if (resolucionCatalogo.status === "resolved" && resolucionCatalogo.entry) {
+                convenioResuelto = resolucionCatalogo.entry;
+                conveniosFileName = resolucionCatalogo.entry.fileNames || [];
+                convenioFileName = conveniosFileName[0] || "";
+            } else {
+                fallbackReason = "no_convenio";
+            }
+        }
+
+        if (!await reservarCuota()) return;
+
+        let chunksEspecificos = [];
+        let evidencia = { suficiente: false, reason: "no_convenio" };
+        if (convenioFileName) {
+            try {
+                const vectorPregunta = await generarEmbeddingPregunta(pregunta);
+                const [keywordPermisos, keywordDisciplinario, vectoriales] = await Promise.all([
+                    buscarChunksKeywordPermisos(pregunta, conveniosFileName),
+                    buscarChunksKeywordDisciplinario(pregunta, conveniosFileName),
+                    buscarChunksEspecificos(vectorPregunta, conveniosFileName),
+                ]);
+                chunksEspecificos = combinarChunksEspecificos(
+                    [
+                        ...keywordPermisos.map((chunk) => ({ ...chunk, retrievalMethod: "keyword" })),
+                        ...keywordDisciplinario.map((chunk) => ({ ...chunk, retrievalMethod: "keyword" })),
+                    ],
+                    vectoriales.map((chunk) => ({ ...chunk, retrievalMethod: "vector" })),
+                    10,
+                );
+                evidencia = evaluarEvidenciaConvenio(chunksEspecificos);
+                fallbackReason = evidencia.reason;
+            } catch (error) {
+                fallbackReason = "rag_unavailable";
+                escribirLogConsulta("consultarConvenio_rag_failed", {
+                    errorName: error && error.name ? error.name : "Error",
+                });
+            }
+        }
+
+        if (evidencia.suficiente) {
+            const contexto = construirBloqueContexto(chunksEspecificos, "NORMA ESPECÍFICA - CONVENIO");
+            try {
+                const generacion = await generarRespuestaConvenio({
+                    idiomaRespuesta,
+                    pregunta,
+                    contexto,
+                    promptSistema: [
+                        "Responde exclusivamente con los fragmentos del convenio facilitados.",
+                        "No completes con conocimiento externo ni afirmes datos no incluidos.",
+                        "Si los fragmentos no bastan, responde exactamente: No he encontrado el dato exacto en los fragmentos disponibles.",
+                        "Cita la fuente disponible al final cuando aparezca.",
+                        idiomaRespuesta === "euskera" ? "Responde en euskera." : "Responde en castellano.",
+                    ].join(" "),
+                });
+                if (esRespuestaGeneradaUtil(generacion) && !respuestaIndicaDatoNoEncontrado(generacion.respuesta)) {
+                    return responderUtil(construirRespuestaConsulta({
+                        respuesta: generacion.respuesta,
+                        sourceType: "convenio",
+                        grounded: true,
+                        warning: null,
+                        fallbackReason: null,
+                        convenioUsado: convenioFileName,
+                        conveniosUsados: conveniosFileName,
+                        convenioDetectado: construirConvenioDetectado(convenioResuelto),
+                        fuentes: construirFuentesChunks(chunksEspecificos),
+                    }), { sourceType: "convenio", modelRoute: "convenio_rag", chunksUsed: chunksEspecificos.length });
+                }
+            } catch (error) {
+                escribirLogConsulta("consultarConvenio_rag_generation_failed", {
+                    errorName: error && error.name ? error.name : "Error",
+                });
+                fallbackReason = "rag_generation_unavailable";
+            }
+            if (!fallbackReason || fallbackReason === "no_convenio") {
+                fallbackReason = "insufficient_rag_evidence";
+            }
+        }
+
+        let webFallbackResponse = null;
+        try {
+            webFallbackResponse = await intentarFallbackWebOficial({
+                pregunta,
+                convenioFileName,
+                conveniosFileName,
+                convenioResuelto,
+            });
+        } catch (error) {
+            escribirLogConsulta("web_fallback_failed", {
+                errorName: error && error.name ? error.name : "Error",
+            });
+            webFallbackResponse = null;
+        }
+
+        if (webFallbackResponse && webFallbackResponse.webFallbackUsed) {
+            return responderUtil(construirRespuestaConsulta({
+                respuesta: webFallbackResponse.respuesta,
+                sourceType: "official_web",
+                grounded: true,
+                warning: null,
+                fallbackReason: fallbackReason || "official_sources_unavailable",
+                convenioUsado: convenioFileName || null,
+                conveniosUsados: conveniosFileName,
+                convenioDetectado: construirConvenioDetectado(convenioResuelto),
+                fuentes: webFallbackResponse.fuentes,
+                webFallbackUsed: true,
+                webFallbackReason: webFallbackResponse.webFallbackReason,
+                searchSuggestions: webFallbackResponse.searchSuggestions,
+            }), { sourceType: "web_official", modelRoute: "official_web", fallbackReason, chunksUsed: chunksEspecificos.length });
+        }
+
+        const general = await generarRespuestaGeneral({ pregunta, idiomaRespuesta, esLaboral: true });
+        if (!esRespuestaGeneradaUtil(general)) return responderFalloTecnico(null, "general_ai");
+        return responderUtil(construirRespuestaConsulta({
+            respuesta: general.respuesta,
+            sourceType: "general_ai",
+            grounded: false,
+            warning: GENERAL_LABOR_WARNING,
+            fallbackReason: fallbackReason || "official_sources_unavailable",
+            convenioUsado: convenioFileName || null,
+            conveniosUsados: conveniosFileName,
+            convenioDetectado: construirConvenioDetectado(convenioResuelto),
+            fuentes: [],
+            webFallbackUsed: false,
+            webFallbackReason: webFallbackResponse ? webFallbackResponse.webFallbackReason : "official_sources_unavailable",
+        }), { sourceType: "general_labor", modelRoute: "general_ai", fallbackReason, chunksUsed: chunksEspecificos.length });
+    } catch (error) {
+        return responderFalloTecnico(error, "consultation_pipeline");
+    }
+});
+
+async function consultarConvenioLegacy(req, res) {
     const corsResult = setCorsHeaders(req, res);
 
     if (!corsResult.ok) {
@@ -2245,7 +2744,7 @@ exports.consultarConvenio = onRequest(CONSULTAR_CONVENIO_FUNCTION_OPTIONS, async
             error: "No se pudo consultar el convenio.",
         });
     }
-});
+}
 
 // 2. LIMPIEZA AL BORRAR USUARIO (Usando la ruta V1 explícita)
 exports.limpiarDatosAlBorrarUsuario = functionsV1.auth.user().onDelete(async (user) => {

@@ -36,6 +36,10 @@ const cases = [
     question: "cocinero en Madrid, asuntos propios",
     expected: "collective_agreement",
   },
+  {
+    question: "mi empresa no me paga las horas extra",
+    expected: "collective_agreement",
+  },
 ];
 
 let failures = 0;

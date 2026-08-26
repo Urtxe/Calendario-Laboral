@@ -4,12 +4,20 @@
 
 const analytics = (() => {
     try {
-        return firebase.analytics();
+        const firebaseAnalytics = firebase.analytics();
+        if (window.APP_CONFIG && window.APP_CONFIG.analyticsEnabled === false) {
+            if (typeof firebaseAnalytics.setAnalyticsCollectionEnabled === 'function') {
+                firebaseAnalytics.setAnalyticsCollectionEnabled(false);
+            }
+            return { logEvent() {} };
+        }
+        return firebaseAnalytics;
     } catch (error) {
         console.warn('Analytics no disponible, se usará un cliente sin-op:', error);
         return { logEvent() {} };
     }
 })();
+window.analytics = analytics;
 const APP_VERSION = '1.0.7';
 const ANON_SESSION_STORAGE_KEY = 'balance_laboral_anon_session_v1';
 const DEFAULT_ANON_ACTIONS = {
@@ -193,15 +201,10 @@ function asegurarDocumentoSesionAnonima() {
 }
 
 function incrementarAccionAnonima(nombreAccion, cantidad = 1) {
-    if (window.usuarioActual) return;
-
-    asegurarDocumentoSesionAnonima()
-        .then(() => getAnonSessionRef().set({
-            acciones: {
-                [nombreAccion]: firebase.firestore.FieldValue.increment(cantidad)
-            }
-        }, { merge: true }))
-        .catch(error => console.error(`Error actualizando accion anonima "${nombreAccion}":`, error));
+    // Firebase Analytics is the source of truth for product events. Keep this
+    // compatibility hook so older UI calls remain safe, but do not duplicate
+    // detailed behavioural telemetry in Firestore.
+    return undefined;
 }
 
 async function registrarVisita() {
@@ -223,17 +226,6 @@ async function registrarVisita() {
 
     analytics.logEvent('session_start_advanced', deviceInfo);
 
-    if (window.usuarioActual) {
-        db.collection('usuarios').doc(window.usuarioActual.uid).collection('visitas').add({
-            ...deviceInfo,
-            tiempo_carga_ms: tiempoCarga,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        visitaRegistrada = true;
-        return;
-    }
-
-    await asegurarDocumentoSesionAnonima();
     visitaRegistrada = true;
 }
 
@@ -266,11 +258,9 @@ function trackAperturaPremium() {
     incrementarAccionAnonima('aperturas_premium');
 }
 
-function trackExportacionPDF(resultado, errorMsg = '') {
+function trackExportacionPDF(resultado) {
     analytics.logEvent('exportar_pdf', {
-        resultado: resultado,
-        error: errorMsg,
-        mes: typeof nombresMeses !== 'undefined' ? nombresMeses[mesActual] : ''
+        resultado: resultado
     });
 
     if (resultado === 'intento') {
@@ -280,9 +270,7 @@ function trackExportacionPDF(resultado, errorMsg = '') {
 
 window.onerror = function(message, source, lineno, colno, error) {
     analytics.logEvent('error_tecnico', {
-        mensaje: message,
-        linea: lineno,
-        archivo: source
+        categoria: 'client_error'
     });
 
     incrementarAccionAnonima('errores');

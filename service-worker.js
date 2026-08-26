@@ -1,7 +1,7 @@
 // Si cambia un asset crítico, scripts/service-worker-checks.js obliga a
 // actualizar esta huella y, con ella, el nombre de las cachés cache-first.
-const CRITICAL_ASSET_REVISION = '6efbfdd2baaaa9b9726db0961403df5747aad58eb4cba82c4798fb7374b916db';
-const CACHE_VERSION = 'v2.0.9-ai-rag-6efbfdd2baaa';
+const CRITICAL_ASSET_REVISION = 'b5bb7b638f28166112ef43efbdff4400ccf71bac79a0cfa652ee9e0185e2f49c';
+const CACHE_VERSION = 'v2.0.10-conversion-b5bb7b638f28';
 const SHELL_CACHE = `balance-laboral-shell-${CACHE_VERSION}`;
 const STATIC_CACHE = `balance-laboral-static-${CACHE_VERSION}`;
 const APP_BASE = new URL('./', self.location);
@@ -30,6 +30,7 @@ const APP_SHELL_URLS = [
   'src/js/app/ui.js',
   'src/js/app/pdf.js',
   'src/js/analytics.js',
+  'src/js/conversion-funnel.js',
   'assets/images/logo.png',
   'assets/icons/favicon-32.png',
   'assets/icons/apple-touch-icon.png',

@@ -129,7 +129,7 @@
             <button onclick="mostrarLogin()" class="btn-login-figma">
               Iniciar Sesion
             </button>
-            <button onclick="mostrarRegistro()" class="btn-register-figma">
+            <button onclick="mostrarRegistro('header')" class="btn-register-figma">
               Registrarse
             </button>
           </div>
@@ -817,12 +817,31 @@
         </div>
       </div>
     </div>
+    <div
+      id="registration-prompt-modal"
+      class="modal-overlay"
+      style="display: none"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="registration-prompt-title"
+      aria-describedby="registration-prompt-text"
+      aria-hidden="true"
+    >
+      <div class="modal-content registration-prompt-content" role="document">
+        <h2 id="registration-prompt-title" tabindex="-1"></h2>
+        <p id="registration-prompt-text" class="modal-subtitle"></p>
+        <div class="registration-prompt-actions">
+          <button type="button" class="btn-primary" onclick="aceptarAvisoRegistro()">Crear cuenta gratis</button>
+          <button type="button" id="registration-prompt-dismiss" class="btn-cancel" onclick="cerrarAvisoRegistro()">Ahora no</button>
+        </div>
+      </div>
+    </div>
 
     <div id="modal-pricing" class="modal-overlay" style="display: none">
       <div class="modal-content pricing-content">
         <h2>Eleva tu Control Laboral</h2>
         <p class="modal-subtitle">
-          Desbloquea todas las funciones y cumple con la normativa legal.
+          Pasa a Premium para consultar tu histórico anual y generar informes PDF con tus datos.
         </p>
 
         <div class="perks-list">
@@ -845,12 +864,6 @@
             <p>
               <b>Histórico Anual:</b> Acceso ilimitado a todos tus años
               anteriores.
-            </p>
-          </div>
-          <div class="perk-item">
-            <i data-lucide="refresh-cw" class="perk-icon"></i>
-            <p>
-              <b>Sincronización Total:</b> Tus datos siempre seguros en la nube.
             </p>
           </div>
         </div>
@@ -928,6 +941,7 @@
     <script src="src/js/app/ui.js"></script>
     <script src="src/js/app/pdf.js"></script>
     <script src="src/js/analytics.js"></script>
+    <script src="src/js/conversion-funnel.js"></script>
 
     <script>
       lucide.createIcons();

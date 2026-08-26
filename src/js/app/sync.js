@@ -2,6 +2,9 @@ window.cargarDatosDesdeFirebase = function() {
     if (!usuarioActual) return;
     mostrarSync(true);
     var userRef = obtenerReferenciaUsuario();
+    var datosAnonimos = window.hayMigracionAnonimaPendiente && window.hayMigracionAnonimaPendiente()
+        ? obtenerDatosAnonimosLocales()
+        : null;
 
     diasMarcados = {};
     objetivosAnuales = {};
@@ -32,6 +35,17 @@ window.cargarDatosDesdeFirebase = function() {
         yearsSnap.forEach(function(yearDoc) {
             combinarDatosDeAnio(yearDoc.data(), yearDoc.id);
         });
+
+        if (datosAnonimos && yearsSnap.empty) {
+            ciudadActual = datosAnonimos.ciudadActual || ciudadActual;
+            sectorUsuario = datosAnonimos.sectorUsuario || sectorUsuario;
+            esHosteleria = sectorUsuario === 'hosteleria' || sectorUsuario === 'alojamientos';
+            diasMarcados = datosAnonimos.diasMarcados || diasMarcados;
+            objetivosAnuales = datosAnonimos.objetivosAnuales || objetivosAnuales;
+            tipoJornadaPorAnio = datosAnonimos.tipoJornadaPorAnio || tipoJornadaPorAnio;
+            horasExtraPorDia = datosAnonimos.horasExtraPorDia || horasExtraPorDia;
+            horasExtraCompensadas = datosAnonimos.horasExtraCompensadas || horasExtraCompensadas;
+        }
 
         document.getElementById('ciudadUsuario').value = ciudadActual;
         var selectorSector = document.getElementById('sectorUsuario');
@@ -65,6 +79,7 @@ window.cargarDatosDesdeFirebase = function() {
 
         renderTodo();
         mostrarSync(false);
+        if (datosAnonimos && yearsSnap.empty) guardarTodoEnFirebase();
     }).catch(function(e) {
         console.error("Error Firestore:", e);
         mostrarSync(false);
@@ -74,7 +89,10 @@ window.cargarDatosDesdeFirebase = function() {
 };
 
 function guardarTodoEnFirebase() {
-    if (!usuarioActual) return;
+    if (!usuarioActual) {
+        guardarDatosAnonimosLocales();
+        return;
+    }
     mostrarSync(true);
 
     var userRef = obtenerReferenciaUsuario();
@@ -106,6 +124,9 @@ function guardarTodoEnFirebase() {
         }, { merge: true })
     ]).then(function() {
         mostrarSync(false);
+        if (window.hayMigracionAnonimaPendiente && window.hayMigracionAnonimaPendiente()) {
+            window.confirmarMigracionAnonima();
+        }
         console.log("☁️ Datos sincronizados. Jornada guardada: " + tipoJornadaPorAnio[anioActual]);
         actualizarTablaResumen();
     }).catch(function(e) {

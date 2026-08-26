@@ -48,18 +48,22 @@ function procesarClickDia(dia) {
     if (modoSeleccionado === 'horasExtra') { abrirModalHorasExtra(key); return; }
 
     var tipo = modoSeleccionado || 'trabajado';
-    if (diasMarcados[key] && diasMarcados[key].tipo === tipo) {
+    const wasAdded = !(diasMarcados[key] && diasMarcados[key].tipo === tipo);
+    if (!wasAdded) {
         delete diasMarcados[key];
     } else {
         diasMarcados[key] = { tipo: tipo, esFestivo: esFestivo(fecha) };
     }
     renderTodo();
     guardarTodoEnFirebase();
+    if (wasAdded && window.BalanceLaboralConversion) {
+        window.BalanceLaboralConversion.trackShiftAdded();
+    }
 }
 
 window.seleccionarModo = function(tipo) {
     if (tipo === 'horasExtra' && !usuarioPuedeUsarPremium()) {
-        abrirModalPremium();
+        abrirModalPremium('advanced_overtime');
         return;
     }
 
@@ -106,7 +110,7 @@ function abrirModalHorasExtra(key) {
 window.guardarHorasExtra = function() {
     if (!usuarioPuedeUsarPremium()) {
         cerrarModalHorasExtra();
-        abrirModalPremium();
+        abrirModalPremium('advanced_overtime');
         return;
     }
 
@@ -137,7 +141,7 @@ window.cerrarModalHorasExtra = function() { document.getElementById('modal-horas
 
 window.toggleCompensado = function(m) {
     if (!usuarioPuedeUsarPremium()) {
-        abrirModalPremium();
+        abrirModalPremium('advanced_overtime');
         return;
     }
 
@@ -198,7 +202,8 @@ window.toggleCard = function(headerElement) {
     }
 
     if (card.classList.contains('premium-locked') && !usuarioPuedeUsarPremium()) {
-        abrirModalPremium();
+        const trigger = card.id === 'seccion-pdf' ? 'pdf_export' : card.id === 'seccion-historial' ? 'annual_history' : 'advanced_overtime';
+        abrirModalPremium(trigger);
         return; 
     }
 
@@ -211,6 +216,10 @@ window.toggleCard = function(headerElement) {
 
     if (card.classList.contains('active')) {
         renderTodo();
+        if (card.id === 'card-balance' && window.BalanceLaboralConversion) {
+            const balance = Number((document.getElementById('balanceHoras') || {}).textContent || 0);
+            window.BalanceLaboralConversion.trackBalanceViewed(balance > 0 ? 'positive' : balance < 0 ? 'negative' : 'neutral');
+        }
     }
 };
 

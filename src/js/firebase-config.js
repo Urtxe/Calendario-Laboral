@@ -148,7 +148,7 @@ window.obtenerAppCheckToken = async function() {
 };
 
 // Función para abrir el modal en modo REGISTRO
-window.mostrarRegistro = function() {
+window.mostrarRegistro = function(source) {
     window.authMode = 'register'; 
     document.getElementById('auth-modal').style.display = 'flex';
     document.getElementById('modal-title').textContent = 'Registrarse';
@@ -156,6 +156,7 @@ window.mostrarRegistro = function() {
     document.getElementById('toggle-text').textContent = '¿Ya tienes cuenta?';
     document.getElementById('toggle-link').textContent = 'Inicia sesión aquí';
     document.getElementById('error-message').style.display = 'none';
+    if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackSignupStarted(source || 'other');
 };
 
 // Función para abrir el modal en modo LOGIN
@@ -170,7 +171,7 @@ window.mostrarLogin = function() {
 };
 
 window.toggleAuthMode = () => {
-    window.authMode === 'login' ? window.mostrarRegistro() : window.mostrarLogin();
+    window.authMode === 'login' ? window.mostrarRegistro('other') : window.mostrarLogin();
 };
 
 window.cerrarModal = () => document.getElementById('auth-modal').style.display = 'none';
@@ -220,6 +221,7 @@ window.autenticar = () => {
     // CORRECCIÓN: Usamos window.authMode y comparamos con 'register'
     const promise = (isRegister) 
         ? auth.createUserWithEmailAndPassword(email, password).then(u => {
+            if (window.marcarMigracionAnonimaPendiente) window.marcarMigracionAnonimaPendiente();
             return db.collection('usuarios').doc(u.user.uid).set({ 
                 email, 
                 fechaRegistro: new Date().toISOString(),
@@ -231,6 +233,7 @@ window.autenticar = () => {
         : auth.signInWithEmailAndPassword(email, password);
     
     promise.then(() => {
+        if (isRegister && window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackSignupCompleted();
         window.cerrarModal();
         btn.disabled = false;
         // LÓGICA DE CONVERSIÓN: Si se acaba de registrar y eligió Premium
@@ -260,6 +263,10 @@ window.autenticarConGoogle = () => {
         return userRef.get().then((doc) => {
             if (!doc.exists) {
                 esNuevoUsuario = true; // Marcamos si es nuevo para ofrecerle el Premium luego
+                if (window.authMode !== 'register' && window.BalanceLaboralConversion) {
+                    window.BalanceLaboralConversion.trackSignupStarted('other');
+                }
+                if (window.marcarMigracionAnonimaPendiente) window.marcarMigracionAnonimaPendiente();
                 return userRef.set({
                     email: user.email,
                     fechaRegistro: new Date().toISOString(),
@@ -270,6 +277,7 @@ window.autenticarConGoogle = () => {
             }
         });
     }).then(() => {
+        if (esNuevoUsuario && window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackSignupCompleted();
         // 1. Cerramos el modal de login
         window.cerrarModal();
 

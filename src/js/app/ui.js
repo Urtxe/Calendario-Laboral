@@ -150,7 +150,10 @@ function inicializarNavegacionDashboard() {
       typeof usuarioPuedeUsarPremium === "function" &&
       !usuarioPuedeUsarPremium()
     ) {
-      if (typeof abrirModalPremium === "function") abrirModalPremium();
+      if (typeof abrirModalPremium === "function") {
+        const trigger = targetId === "seccion-pdf" ? "pdf_export" : targetId === "seccion-historial" ? "annual_history" : "advanced_overtime";
+        abrirModalPremium(trigger);
+      }
       return;
     }
 
@@ -220,6 +223,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ciudadActual = this.value;
     cargarFestivosOficiales(ciudadActual, anioActual);
     guardarTodoEnFirebase();
+    if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackCalendarConfigured();
   });
 
   setupListener("inputAnio", "input", function () {
@@ -231,18 +235,21 @@ document.addEventListener("DOMContentLoaded", function () {
     objetivosAnuales[anioActual] = parseInt(this.value) || 0;
     renderTodo();
     guardarTodoEnFirebase();
+    if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackCalendarConfigured();
   });
 
   setupListener("tipoJornada", "change", function () {
     tipoJornadaPorAnio[anioActual] = parseFloat(this.value);
     renderTodo();
     guardarTodoEnFirebase();
+    if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackCalendarConfigured();
   });
 
   setupListener("sectorUsuario", "change", function () {
     sectorUsuario = this.value;
     renderTodo();
     guardarTodoEnFirebase();
+    if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackCalendarConfigured();
   });
 
   const datosUsuarioCard = document.getElementById("cargar-datos");
@@ -281,7 +288,7 @@ document.addEventListener("DOMContentLoaded", function () {
   );
 });
 
-window.abrirModalPremium = function () {
+window.abrirModalPremium = function (trigger) {
   if (comercioPremiumBloqueadoEnTwa()) {
     mostrarAvisoComercioPremiumNoDisponible();
     return;
@@ -299,6 +306,7 @@ window.abrirModalPremium = function () {
     return;
   }
 
+  if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumPrompt(trigger || "other");
   alert("Esta función es Premium. Hazte Premium para utilizarla.");
   const modal = document.getElementById("modal-pricing");
   if (modal) modal.style.display = "flex";
@@ -317,6 +325,7 @@ function verificarNivelPremium(uid) {
       const premiumActivo = doc.exists && doc.data().tipoCuenta === "premium";
       sincronizarEstadoPremium(premiumActivo);
       actualizarInterfazPremium(premiumActivo);
+      if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumActivationConfirmed(premiumActivo);
     })
     .catch((e) => {
       console.error("Error verificando premium:", e);
@@ -1173,6 +1182,7 @@ window.seleccionarPlan = function (tipo) {
   const urlBase = links[tipo];
   if (!urlBase) return;
 
+  if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumCheckoutStarted();
   const urlFinal = `${urlBase}?prefilled_email=${encodeURIComponent(usuarioActual.email)}&client_reference_id=${usuarioActual.uid}`;
   window.location.href = urlFinal;
 };
@@ -1208,11 +1218,12 @@ window.mostrarLegal = function (tipo) {
         `,
     cookies: `
             <h4>1. ¿Qué cookies utilizamos?</h4>
-            <p>Utilizamos únicamente cookies técnicas y de personalización esenciales para el funcionamiento del servicio:</p>
+            <p>Utilizamos cookies y almacenamiento local técnicos para el funcionamiento del servicio y Firebase Analytics para analítica anónima de uso:</p>
             <p>• <b>Sesión:</b> Para mantener su acceso iniciado a través de Firebase Auth.</p>
             <p>• <b>Pagos:</b> Cookies de Stripe necesarias para prevenir el fraude y procesar transacciones seguras.</p>
             <p>• <b>Preferencias:</b> Almacenamiento local de su configuración básica de jornada.</p>
-            <p>No utilizamos cookies de terceros con fines publicitarios o de rastreo.</p>
+            <p>• <b>Analítica:</b> Firebase Analytics recoge eventos de uso y datos de sesión o dispositivo de forma agregada para mejorar la aplicación.</p>
+            <p>No usamos GPS, Google Signals, remarketing ni publicidad personalizada.</p>
         `,
   };
 

@@ -15,8 +15,64 @@ var modoSeleccionado = null;
 var fechaSeleccionadaParaExtras = null;
 var planSeleccionado = 'gratis';
 var usuarioActual = null;
+var ANON_CALENDAR_STORAGE_KEY = 'balance_laboral_anonymous_calendar_v1';
+var ANON_CALENDAR_MIGRATION_KEY = 'balance_laboral_anonymous_calendar_migration_pending_v1';
 
 var nombresMeses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+function obtenerDatosAnonimosLocales() {
+    try {
+        var raw = localStorage.getItem(ANON_CALENDAR_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+        console.warn('No se pudieron leer los datos locales del calendario:', error);
+        return null;
+    }
+}
+
+function cargarDatosAnonimosLocales() {
+    var datos = obtenerDatosAnonimosLocales();
+    if (!datos || typeof datos !== 'object') return false;
+
+    ciudadActual = typeof datos.ciudadActual === 'string' ? datos.ciudadActual : ciudadActual;
+    sectorUsuario = typeof datos.sectorUsuario === 'string' ? datos.sectorUsuario : sectorUsuario;
+    esHosteleria = sectorUsuario === 'hosteleria' || sectorUsuario === 'alojamientos';
+    diasMarcados = datos.diasMarcados && typeof datos.diasMarcados === 'object' ? datos.diasMarcados : {};
+    objetivosAnuales = datos.objetivosAnuales && typeof datos.objetivosAnuales === 'object' ? datos.objetivosAnuales : {};
+    tipoJornadaPorAnio = datos.tipoJornadaPorAnio && typeof datos.tipoJornadaPorAnio === 'object' ? datos.tipoJornadaPorAnio : {};
+    horasExtraPorDia = datos.horasExtraPorDia && typeof datos.horasExtraPorDia === 'object' ? datos.horasExtraPorDia : {};
+    horasExtraCompensadas = datos.horasExtraCompensadas && typeof datos.horasExtraCompensadas === 'object' ? datos.horasExtraCompensadas : {};
+    return true;
+}
+
+function guardarDatosAnonimosLocales() {
+    if (usuarioTieneSesion()) return;
+    try {
+        localStorage.setItem(ANON_CALENDAR_STORAGE_KEY, JSON.stringify({
+            ciudadActual: ciudadActual,
+            sectorUsuario: sectorUsuario,
+            diasMarcados: diasMarcados,
+            objetivosAnuales: objetivosAnuales,
+            tipoJornadaPorAnio: tipoJornadaPorAnio,
+            horasExtraPorDia: horasExtraPorDia,
+            horasExtraCompensadas: horasExtraCompensadas
+        }));
+    } catch (error) {
+        console.warn('No se pudieron guardar los datos locales del calendario:', error);
+    }
+}
+
+window.marcarMigracionAnonimaPendiente = function() {
+    try { localStorage.setItem(ANON_CALENDAR_MIGRATION_KEY, 'true'); } catch (_) { /* Storage is optional. */ }
+};
+window.hayMigracionAnonimaPendiente = function() {
+    try { return localStorage.getItem(ANON_CALENDAR_MIGRATION_KEY) === 'true'; } catch (_) { return false; }
+};
+window.confirmarMigracionAnonima = function() {
+    try { localStorage.removeItem(ANON_CALENDAR_MIGRATION_KEY); } catch (_) { /* Storage is optional. */ }
+};
+
+cargarDatosAnonimosLocales();
 
 function sincronizarEstadoPremium(valor) {
     esPremium = !!valor;

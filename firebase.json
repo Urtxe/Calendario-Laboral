@@ -21,6 +21,13 @@
       ".firebaserc",
       "docs/**",
       "functions/**",
+      "android/**",
+      "**/*.jks",
+      "**/*.apk",
+      "**/*.aab",
+      "**/*.idsig",
+      "**/build/**",
+      "**/local.properties",
       "README.md",
       "Marketing/**"
     ],

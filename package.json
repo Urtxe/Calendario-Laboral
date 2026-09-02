@@ -12,6 +12,7 @@
     "test:service-worker": "node scripts/service-worker-checks.js",
     "test:play-twa": "node scripts/play-twa-context-checks.js",
     "test:account-deletion": "node functions/account-deletion.test.js && node scripts/account-deletion-ui-checks.js",
-    "test:conversion": "node scripts/conversion-funnel-checks.js"
+    "test:conversion": "node scripts/conversion-funnel-checks.js",
+    "verify:metricas-ga4-secret": "node scripts/verify-metricas-ga4-secret.js"
   }
 }

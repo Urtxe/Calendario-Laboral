@@ -294,6 +294,20 @@ addCheck("/deleteAccount exige sesion reciente y solo borra el UID autenticado",
   );
 });
 
+addCheck("/admin/metricas exige claim admin y no consulta Firestore", () => {
+  const functionsSource = normalize(read("functions/index.js"));
+  const metricsSource = normalize(read("functions/metrics-ga4.js"));
+  const analyticsSource = normalize(read("src/js/analytics.js"));
+
+  assertIncludes(functionsSource, "exports.metricasGa4 = onRequest");
+  assertIncludes(functionsSource, "secrets: [ga4PropertyId]");
+  assertIncludes(metricsSource, "decoded.admin !== true");
+  assertIncludes(metricsSource, "return res.status(403)");
+  assert(!metricsSource.includes("firestore") && !metricsSource.includes("visitasAnonimas"), "El endpoint de métricas no debe leer Firestore");
+  assert(!analyticsSource.includes("visitasAnonimas") && !analyticsSource.includes(".collection("), "La analítica cliente no debe registrar visitas en Firestore");
+  assertIncludes(normalize(read("firestore.rules")), "match /visitasAnonimas/{docId} {\n      allow read, write: if false;", "La colección heredada no debe aceptar nuevas visitas");
+});
+
 let failures = 0;
 
 for (const check of checks) {

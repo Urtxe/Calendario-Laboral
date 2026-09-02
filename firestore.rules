@@ -2,28 +2,6 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function esMapaAccionesValido(acciones) {
-      return acciones is map
-        && acciones.keys().hasOnly([
-          "calendario_clicks",
-          "datos_usuario_clicks",
-          "cambios_mes",
-          "cambios_anio",
-          "modos_seleccionados",
-          "aperturas_premium",
-          "intentos_pdf",
-          "errores"
-        ])
-        && acciones.calendario_clicks is number
-        && acciones.datos_usuario_clicks is number
-        && acciones.cambios_mes is number
-        && acciones.cambios_anio is number
-        && acciones.modos_seleccionados is number
-        && acciones.aperturas_premium is number
-        && acciones.intentos_pdf is number
-        && acciones.errores is number;
-    }
-
     function esUsuario(uid) {
       return request.auth != null && request.auth.uid == uid;
     }
@@ -139,51 +117,10 @@ service cloud.firestore {
       }
     }
 
-    // 3. REGLA PARA VISITAS ANÓNIMAS
+    // 3. Colección heredada: GA4 es la fuente de analítica y el cliente ya no
+    // puede crear ni actualizar documentos de visitas individuales.
     match /visitasAnonimas/{docId} {
-      allow create: if request.resource.data.keys().hasOnly([
-        "visit_id",
-        "session_id",
-        "inicio_sesion",
-        "device_class",
-        "browser_family",
-        "os_family",
-        "language",
-        "theme",
-        "load_bucket",
-        "app_version",
-        "timestamp",
-        "acciones"
-      ])
-      && request.resource.data.visit_id == docId
-      && request.resource.data.visit_id is string
-      && request.resource.data.session_id is string
-      && request.resource.data.inicio_sesion is string
-      && request.resource.data.device_class is string
-      && request.resource.data.browser_family is string
-      && request.resource.data.os_family is string
-      && request.resource.data.language is string
-      && request.resource.data.theme is string
-      && request.resource.data.load_bucket is string
-      && request.resource.data.app_version is string
-      && request.resource.data.timestamp is timestamp
-      && esMapaAccionesValido(request.resource.data.acciones);
-
-      allow update: if request.resource.data.diff(resource.data).changedKeys().hasOnly(["acciones"])
-      && request.resource.data.visit_id == resource.data.visit_id
-      && request.resource.data.session_id == resource.data.session_id
-      && request.resource.data.inicio_sesion == resource.data.inicio_sesion
-      && request.resource.data.device_class == resource.data.device_class
-      && request.resource.data.browser_family == resource.data.browser_family
-      && request.resource.data.os_family == resource.data.os_family
-      && request.resource.data.language == resource.data.language
-      && request.resource.data.theme == resource.data.theme
-      && request.resource.data.load_bucket == resource.data.load_bucket
-      && request.resource.data.app_version == resource.data.app_version
-      && request.resource.data.timestamp == resource.data.timestamp
-      && esMapaAccionesValido(request.resource.data.acciones);
-
-      allow read, delete: if false;
+      allow read, write: if false;
     }
 
   } 

@@ -1,4 +1,5 @@
 const { onRequest } = require("firebase-functions/v2/https");
+const { defineSecret } = require("firebase-functions/params");
 const { randomUUID } = require("crypto");
 // Forzamos la carga de la versión 1 específicamente para el disparador de usuario
 const functionsV1 = require("firebase-functions/v1"); 
@@ -44,6 +45,7 @@ const {
     deleteFirestoreAccountTree,
     verifyRecentAuthenticatedUser,
 } = require("./account-deletion");
+const { createGa4MetricsHandler } = require("./metrics-ga4");
 require("dotenv").config({ path: __dirname + "/.env" });
 
 function obtenerProjectIdDesdeFirebaseConfig() {
@@ -78,6 +80,7 @@ const geminiApiKey =
     process.env.API_KEY ||
     "";
 const stripe = require("stripe")(stripeSecretKey);
+const ga4PropertyId = defineSecret("GA4_PROPERTY_ID");
 
 if (admin.apps.length === 0) {
     admin.initializeApp();
@@ -1759,6 +1762,11 @@ exports.deleteAccount = onRequest({ timeoutSeconds: 120, memory: "512MiB" }, asy
         return res.status(status).json({ error: message, code });
     }
 });
+
+exports.metricasGa4 = onRequest({ timeoutSeconds: 60, memory: "256MiB", secrets: [ga4PropertyId] }, createGa4MetricsHandler({
+    verifyIdToken: (token) => admin.auth().verifyIdToken(token),
+    getPropertyId: () => ga4PropertyId.value(),
+}));
 
 function esRespuestaGeneradaUtil(generacion) {
     const texto = String(generacion && generacion.respuesta || "").trim();

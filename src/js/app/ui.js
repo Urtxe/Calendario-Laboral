@@ -1159,6 +1159,7 @@ window.actualizarAsesorLegalUI = function () {
 };
 
 window.seleccionarPlan = function (tipo) {
+  if (typeof trackPremiumCheckoutStarted === "function") trackPremiumCheckoutStarted();
   if (comercioPremiumBloqueadoEnTwa()) {
     if (typeof cerrarModalPricing === "function") cerrarModalPricing();
     mostrarAvisoComercioPremiumNoDisponible();

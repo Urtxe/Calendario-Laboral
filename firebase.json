@@ -45,6 +45,14 @@
         "function": "deleteAccount"
       },
       {
+        "source": "/admin/metricas/datos",
+        "function": "metricasGa4"
+      },
+      {
+        "source": "/admin/metricas",
+        "destination": "/admin/metricas.html"
+      },
+      {
         "source": "/privacy",
         "destination": "/privacy.html"
       },

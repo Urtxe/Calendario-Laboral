@@ -1763,12 +1763,23 @@ exports.deleteAccount = onRequest({ timeoutSeconds: 120, memory: "512MiB" }, asy
     }
 });
 
+function getGa4PropertyId() {
+    const value = process.env.GA4_PROPERTY_ID;
+    // Configuration-only diagnostic: it never emits the secret or property ID.
+    console.info("metricasGa4: secret injection state", {
+        present: typeof value === "string" && value.length > 0,
+        numeric: /^\d+$/.test(String(value || "")),
+        length: typeof value === "string" ? value.length : 0,
+    });
+    return value;
+}
+
 exports.metricasGa4 = onRequest({ timeoutSeconds: 60, memory: "256MiB", secrets: [ga4PropertyId] }, createGa4MetricsHandler({
     verifyIdToken: (token) => admin.auth().verifyIdToken(token),
     // Secret Manager injects this value in the runtime environment. Reading the
     // environment variable keeps the value server-side and avoids an unavailable
     // Params accessor being mistaken for an invalid GA4 query.
-    getPropertyId: () => process.env.GA4_PROPERTY_ID,
+    getPropertyId: getGa4PropertyId,
 }));
 
 function esRespuestaGeneradaUtil(generacion) {

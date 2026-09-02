@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { createGa4MetricsHandler, resolvePeriod } = require("./metrics-ga4");
+const { createGa4MetricsHandler, gaErrorDetails, resolvePeriod } = require("./metrics-ga4");
 
 function response() {
     return { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; return this; } };
@@ -33,4 +33,17 @@ test("el endpoint permite al administrador y no necesita datos de Firestore", as
     assert.equal(result.statusCode, 200);
     assert.equal(result.body.overview.activeUsers, 0);
     assert.equal(result.body.measurement.status, "ok");
+});
+
+test("clasifica y sanea errores HTTP de Analytics Data API", () => {
+    const details = gaErrorDetails({
+        response: {
+            status: 400,
+            data: { error: { status: "INVALID_ARGUMENT", message: "Invalid metric for properties/518524627" } },
+        },
+    });
+    assert.equal(details.status, 400);
+    assert.equal(details.code, "configuration_error");
+    assert.match(details.message, /properties\/\[redacted\]/);
+    assert.doesNotMatch(details.message, /518524627/);
 });

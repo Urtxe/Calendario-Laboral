@@ -38,12 +38,28 @@ function metricByEvent(report) {
     return Object.fromEntries(parseMetricRows(report).map((row) => [row.dimensions[0], row.metrics[0] || 0]));
 }
 
-function classifyGaError(error) {
-    const status = Number(error && error.status) || 0;
-    const message = String((error && error.message) || "");
-    if (status === 401 || status === 403 || /permission|credential|scope/i.test(message)) return "permissions_error";
-    if (status === 400 || /property|invalid argument/i.test(message)) return "configuration_error";
-    return "query_error";
+function gaErrorDetails(error) {
+    // google-auth-library surfaces HTTP failures under response, rather than
+    // directly on Error. Keep the original response out of the client response.
+    const apiError = error && error.response && error.response.data && error.response.data.error || {};
+    const status = Number(error && error.status || error && error.response && error.response.status || apiError.code) || 503;
+    const apiStatus = String(apiError.status || "");
+    const rawMessage = String(apiError.message || error && error.message || "");
+    const message = rawMessage
+        .replace(/properties\/\d+/gi, "properties/[redacted]")
+        .replace(/\b\d{6,}\b/g, "[redacted]")
+        .slice(0, 500);
+    const permissionFailure = status === 401 || status === 403 || /permission|credential|scope|unauthenticated/i.test(`${apiStatus} ${rawMessage}`);
+    const invalidRequest = status === 400 || /invalid argument|invalid.*(metric|dimension|date|property)|unsupported/i.test(`${apiStatus} ${rawMessage}`);
+    const code = error && typeof error.code === "string" && /_error$/.test(error.code)
+        ? error.code
+        : permissionFailure ? "permissions_error" : invalidRequest ? "configuration_error" : "query_error";
+    const clientMessage = code === "permissions_error"
+        ? "GA4 denegó el acceso de lectura a la cuenta de ejecución."
+        : code === "configuration_error"
+            ? "GA4 rechazó el formato de una consulta (propiedad, fechas, métrica o dimensión)."
+            : "GA4 no pudo completar la consulta. Revisa el diagnóstico de metricasGa4.";
+    return { status, code, apiStatus, message, clientMessage };
 }
 
 function createGa4Client({ propertyId, auth = new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/analytics.readonly"] }) }) {
@@ -199,14 +215,20 @@ function createGa4MetricsHandler({ verifyIdToken, getPropertyId, createClient = 
             cache.set(cacheKey, { createdAt: now().getTime(), value });
             return res.json({ ...value, cached: false, updatedAt: now().toISOString(), range });
         } catch (error) {
-            const code = error.code || classifyGaError(error);
-            return res.status(error.status || 503).json({
+            const details = gaErrorDetails(error);
+            // This log deliberately excludes the property ID, credentials and response data.
+            console.error("metricasGa4: Analytics Data API error", {
+                httpStatus: details.status,
+                apiStatus: details.apiStatus || null,
+                message: details.message || null,
+            });
+            return res.status(details.status).json({
                 error: "No se pudieron consultar las métricas de GA4.",
-                code,
-                measurement: { status: code, message: code === "permissions_error" ? "La cuenta de servicio no tiene acceso de lector a la propiedad de GA4." : "Falta configuración de GA4 o la consulta no se pudo completar." },
+                code: details.code,
+                measurement: { status: details.code, message: details.clientMessage },
             });
         }
     };
 }
 
-module.exports = { MAX_CACHE_AGE_MS, createGa4Client, createGa4MetricsHandler, queryMetrics, resolvePeriod };
+module.exports = { MAX_CACHE_AGE_MS, createGa4Client, createGa4MetricsHandler, gaErrorDetails, queryMetrics, resolvePeriod };

@@ -6,13 +6,23 @@ const region = "us-central1";
 const functionName = "metricasGa4";
 const secretName = "GA4_PROPERTY_ID";
 const runtimeServiceAccount = "130172535764-compute@developer.gserviceaccount.com";
+const gcloudCommand = process.env.GCLOUD_COMMAND || (process.platform === "win32"
+    ? "C:\\Program Files (x86)\\Google\\Cloud SDK\\google-cloud-sdk\\bin\\gcloud.ps1"
+    : "gcloud");
 
 function gcloudJson(args) {
-    return JSON.parse(execFileSync("gcloud", args, { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] }));
+    return JSON.parse(gcloudOutput(args));
 }
 
 function gcloudText(args) {
-    return execFileSync("gcloud", args, { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] }).trim();
+    return gcloudOutput(args).trim();
+}
+
+function gcloudOutput(args) {
+    const options = { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] };
+    if (process.platform !== "win32") return execFileSync(gcloudCommand, args, options);
+    const powershell = `${process.env.SystemRoot || "C:\\Windows"}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`;
+    return execFileSync(powershell, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", gcloudCommand, ...args], options);
 }
 
 const functionConfig = gcloudJson(["functions", "describe", functionName, "--gen2", "--region", region, "--project", project, "--format=json"]);

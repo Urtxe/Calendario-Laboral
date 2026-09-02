@@ -1765,7 +1765,10 @@ exports.deleteAccount = onRequest({ timeoutSeconds: 120, memory: "512MiB" }, asy
 
 exports.metricasGa4 = onRequest({ timeoutSeconds: 60, memory: "256MiB", secrets: [ga4PropertyId] }, createGa4MetricsHandler({
     verifyIdToken: (token) => admin.auth().verifyIdToken(token),
-    getPropertyId: () => ga4PropertyId.value(),
+    // Secret Manager injects this value in the runtime environment. Reading the
+    // environment variable keeps the value server-side and avoids an unavailable
+    // Params accessor being mistaken for an invalid GA4 query.
+    getPropertyId: () => process.env.GA4_PROPERTY_ID,
 }));
 
 function esRespuestaGeneradaUtil(generacion) {

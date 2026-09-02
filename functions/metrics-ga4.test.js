@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { createGa4MetricsHandler, gaErrorDetails, resolvePeriod } = require("./metrics-ga4");
+const { createGa4MetricsHandler, gaErrorDetails, queryMetrics, resolvePeriod } = require("./metrics-ga4");
 
 function response() {
     return { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; return this; } };
@@ -46,4 +46,29 @@ test("clasifica y sanea errores HTTP de Analytics Data API", () => {
     assert.equal(details.code, "configuration_error");
     assert.match(details.message, /properties\/\[redacted\]/);
     assert.doesNotMatch(details.message, /518524627/);
+});
+
+test("distingue una configuración segura ausente de una consulta inválida", async () => {
+    const handler = createGa4MetricsHandler({
+        verifyIdToken: async () => ({ admin: true }),
+        getPropertyId: () => "",
+    });
+    const result = response();
+    await handler({ method: "POST", get: () => "Bearer token", body: { period: "7d" } }, result);
+    assert.equal(result.statusCode, 503);
+    assert.equal(result.body.code, "missing_configuration");
+    assert.match(result.body.measurement.message, /configuración segura/);
+});
+
+test("un desglose opcional rechazado no bloquea las métricas estándar", async () => {
+    const value = await queryMetrics({
+        runReport: async (request) => {
+            const dimension = request.dimensions && request.dimensions[0] && request.dimensions[0].name;
+            if (["deviceCategory", "browser", "language"].includes(dimension)) throw new Error("optional report unavailable");
+            return { rows: [] };
+        },
+    }, { startDate: "2026-09-01", endDate: "2026-09-02" });
+    assert.equal(value.overview.activeUsers, 0);
+    assert.deepEqual(value.product.devices, []);
+    assert.equal(value.measurement.status, "ok");
 });

@@ -51,10 +51,12 @@ function gaErrorDetails(error) {
         .slice(0, 500);
     const permissionFailure = status === 401 || status === 403 || /permission|credential|scope|unauthenticated/i.test(`${apiStatus} ${rawMessage}`);
     const invalidRequest = status === 400 || /invalid argument|invalid.*(metric|dimension|date|property)|unsupported/i.test(`${apiStatus} ${rawMessage}`);
-    const code = error && typeof error.code === "string" && /_error$/.test(error.code)
+    const code = error && ["missing_configuration", "permissions_error", "configuration_error", "query_error"].includes(error.code)
         ? error.code
         : permissionFailure ? "permissions_error" : invalidRequest ? "configuration_error" : "query_error";
-    const clientMessage = code === "permissions_error"
+    const clientMessage = code === "missing_configuration"
+        ? "La Function no ha recibido el ID de propiedad GA4 desde su configuración segura."
+        : code === "permissions_error"
         ? "GA4 denegó el acceso de lectura a la cuenta de ejecución."
         : code === "configuration_error"
             ? "GA4 rechazó el formato de una consulta (propiedad, fechas, métrica o dimensión)."
@@ -66,7 +68,7 @@ function createGa4Client({ propertyId, auth = new GoogleAuth({ scopes: ["https:/
     if (!/^\d+$/.test(String(propertyId || ""))) {
         const error = new Error("GA4_PROPERTY_ID no está configurado con un ID numérico de propiedad.");
         error.status = 503;
-        error.code = "configuration_error";
+        error.code = "missing_configuration";
         throw error;
     }
 
@@ -98,6 +100,16 @@ function eventReport(dateRange, events) {
     };
 }
 
+async function optionalReport(client, request) {
+    try {
+        return await client.runReport(request);
+    } catch {
+        // Optional cards must never prevent the standard metrics dashboard from
+        // loading. Their absence is rendered as an empty/unavailable breakdown.
+        return { rows: [] };
+    }
+}
+
 async function queryMetrics(client, dateRange) {
     const productEvents = ["calendar_configured", "shift_added", "balance_viewed"];
     const funnelEvents = [
@@ -112,16 +124,19 @@ async function queryMetrics(client, dateRange) {
     ];
     const last24Hours = { startDate: "yesterday", endDate: "today" };
 
-    const [overview, daily, product, funnelReport, devices, browsers, languages, events24h, lastEvent] = await Promise.all([
+    const [overview, daily, product, funnelReport] = await Promise.all([
         client.runReport({ dateRanges: [dateRange], metrics: [{ name: "activeUsers" }, { name: "sessions" }, { name: "newUsers" }, { name: "returningUsers" }] }),
         client.runReport({ dateRanges: [dateRange], dimensions: [{ name: "date" }], metrics: [{ name: "activeUsers" }, { name: "sessions" }], orderBys: [{ dimension: { dimensionName: "date" } }], limit: 100 }),
         client.runReport(eventReport(dateRange, productEvents)),
         client.runReport(eventReport(dateRange, funnelEvents)),
-        client.runReport({ dateRanges: [dateRange], dimensions: [{ name: "deviceCategory" }], metrics: [{ name: "activeUsers" }], limit: 20 }),
-        client.runReport({ dateRanges: [dateRange], dimensions: [{ name: "browser" }], metrics: [{ name: "activeUsers" }], limit: 20 }),
-        client.runReport({ dateRanges: [dateRange], dimensions: [{ name: "language" }], metrics: [{ name: "activeUsers" }], limit: 20 }),
-        client.runReport({ dateRanges: [last24Hours], dimensions: [{ name: "eventName" }], metrics: [{ name: "eventCount" }], limit: 100 }),
-        client.runReport({ dateRanges: [last24Hours], dimensions: [{ name: "dateHourMinute" }, { name: "eventName" }], metrics: [{ name: "eventCount" }], orderBys: [{ dimension: { dimensionName: "dateHourMinute" }, desc: true }], limit: 1 }),
+    ]);
+
+    const [devices, browsers, languages, events24h, lastEvent] = await Promise.all([
+        optionalReport(client, { dateRanges: [dateRange], dimensions: [{ name: "deviceCategory" }], metrics: [{ name: "activeUsers" }], limit: 20 }),
+        optionalReport(client, { dateRanges: [dateRange], dimensions: [{ name: "browser" }], metrics: [{ name: "activeUsers" }], limit: 20 }),
+        optionalReport(client, { dateRanges: [dateRange], dimensions: [{ name: "language" }], metrics: [{ name: "activeUsers" }], limit: 20 }),
+        optionalReport(client, { dateRanges: [last24Hours], dimensions: [{ name: "eventName" }], metrics: [{ name: "eventCount" }], limit: 100 }),
+        optionalReport(client, { dateRanges: [last24Hours], dimensions: [{ name: "date" }, { name: "eventName" }], metrics: [{ name: "eventCount" }], orderBys: [{ dimension: { dimensionName: "date" }, desc: true }], limit: 1 }),
     ]);
 
     let accessMode = { available: false, values: [], reason: "La dimensión personalizada modo_acceso no está registrada en GA4." };

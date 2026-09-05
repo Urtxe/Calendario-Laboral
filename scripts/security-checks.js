@@ -298,6 +298,9 @@ addCheck("/admin/metricas exige claim admin y no consulta Firestore", () => {
   const functionsSource = normalize(read("functions/index.js"));
   const metricsSource = normalize(read("functions/metrics-ga4.js"));
   const analyticsSource = normalize(read("src/js/analytics.js"));
+  const indexSource = normalize(read("index.html"));
+  const privacySource = normalize(read("privacy.html"));
+  const panelStyles = normalize(read("src/css/admin-metricas.css"));
 
   assertIncludes(functionsSource, "exports.metricasGa4 = onRequest");
   assertIncludes(functionsSource, "secrets: [ga4PropertyId]");
@@ -306,6 +309,16 @@ addCheck("/admin/metricas exige claim admin y no consulta Firestore", () => {
   assert(!metricsSource.includes("firestore") && !metricsSource.includes("visitasAnonimas"), "El endpoint de métricas no debe leer Firestore");
   assert(!analyticsSource.includes("visitasAnonimas") && !analyticsSource.includes(".collection("), "La analítica cliente no debe registrar visitas en Firestore");
   assertIncludes(normalize(read("firestore.rules")), "match /visitasAnonimas/{docId} {\n      allow read, write: if false;", "La colección heredada no debe aceptar nuevas visitas");
+  assert(!analyticsSource.includes("usuariosRepetidos") && !analyticsSource.includes("setUserId"), "La analítica no debe crear identificadores de usuario ni enviar UID");
+  assert(!indexSource.includes("firebase-analytics-compat.js\"></script>"), "El SDK de Analytics no debe cargarse antes del consentimiento");
+  assertIncludes(analyticsSource, "ANALYTICS_CONSENT_STORAGE_KEY", "Debe persistirse la elección de consentimiento en el dispositivo");
+  assertIncludes(analyticsSource, "ANALYTICS_SDK_URL", "El SDK debe cargarse dinámicamente tras aceptar");
+  assertIncludes(analyticsSource, "if (!hasAnalyticsConsent() || !analytics) return;", "No deben enviarse eventos sin consentimiento");
+  assertIncludes(analyticsSource, "localStorage.removeItem(ANALYTICS_RETURN_VISIT_KEY)", "Retirar el consentimiento debe eliminar la marca local de retorno");
+  assertOrder(analyticsSource, ["if (!hasAnalyticsConsent() || analyticsInitialized) return;", "await loadAnalyticsSdk();", "analytics = firebase.analytics();"], "Analytics debe inicializarse solo después de comprobar el consentimiento");
+  assertIncludes(privacySource, "Google Analytics y Firebase Analytics", "La política de privacidad debe declarar Analytics");
+  assertIncludes(indexSource, "Preferencias de analítica", "La retirada del consentimiento debe ser accesible desde el footer");
+  assertIncludes(panelStyles, "@media(max-width:540px)", "El panel de métricas debe conservar su diseño móvil");
 });
 
 let failures = 0;

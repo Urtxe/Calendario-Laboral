@@ -1,3 +1,10 @@
+const analyticsMeasurementId = "G-TMJ9H1T8QG";
+
+// Analytics is opt-in. Set the Google Analytics disable flag before its SDK is
+// ever loaded; src/js/analytics.js removes it only after explicit consent.
+window.BALANCE_LABORAL_ANALYTICS_MEASUREMENT_ID = analyticsMeasurementId;
+window[`ga-disable-${analyticsMeasurementId}`] = true;
+
 const firebaseConfig = {
     apiKey: "AIzaSyBmQuRp81uG8XktUCyEo-XdIJ4RTta_YK4",
     authDomain: "calendario-laboral-252b1.firebaseapp.com",
@@ -5,7 +12,7 @@ const firebaseConfig = {
     storageBucket: "calendario-laboral-252b1.firebasestorage.app",
     messagingSenderId: "130172535764",
     appId: "1:130172535764:web:fc0119ba1d36b0718acc41",
-    measurementId: "G-TMJ9H1T8QG"
+    measurementId: analyticsMeasurementId
 };
 
 firebase.initializeApp(firebaseConfig);

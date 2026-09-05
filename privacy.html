@@ -244,7 +244,7 @@
         <article class="policy-shell">
             <div class="meta">
                 <span class="tag">Balance Laboral</span>
-                <span>Ultima actualizacion: 27 de agosto de 2026</span>
+                <span>Ultima actualizacion: 5 de septiembre de 2026</span>
             </div>
 
             <p>
@@ -264,7 +264,7 @@
                 <li>Datos derivados del uso de la aplicacion, como balances de jornada, historicos, ajustes de calendario y preferencias necesarias para prestar el servicio.</li>
                 <li>Informacion incluida en informes PDF generados o exportados por el usuario. La generacion del PDF se realiza en el dispositivo mediante la aplicacion; el usuario decide si lo guarda o comparte.</li>
                 <li>Consultas que el usuario envie a la funcion de IA integrada para preguntas sobre convenios colectivos, cuando esta funcion este disponible o activada.</li>
-                <li>Informacion tecnica y de analitica de uso, como tipo de dispositivo, navegador, sistema operativo, idioma, acciones agregadas, rendimiento, registros de funcionamiento, errores, seguridad y llamadas a Cloud Functions.</li>
+                <li>Si aceptas la analitica opcional, eventos agregados de uso enviados a Google Analytics mediante Firebase Analytics, como apertura de la aplicacion, funciones utilizadas y contexto tecnico general. La aplicacion no envia a Analytics el email, UID de Firebase ni identificadores locales propios.</li>
                 <li>Si el usuario contrata Premium desde la web, identificadores de cliente, suscripcion, producto, precio y estado de facturacion necesarios para reflejar el acceso. Balance Laboral no necesita almacenar el numero completo de tarjeta.</li>
             </ul>
 
@@ -277,6 +277,7 @@
                 <li>Gestionar funciones premium actuales o futuras, incluyendo pagos o validaciones mediante proveedores externos cuando sea aplicable.</li>
                 <li>Responder consultas del usuario mediante la IA integrada sobre convenios o informacion laboral relacionada.</li>
                 <li>Mantener la seguridad, prevenir abusos, resolver incidencias tecnicas y mejorar la estabilidad del servicio.</li>
+                <li>Medir de forma agregada el uso y la mejora del producto mediante Google Analytics y Firebase Analytics, solo cuando el usuario lo haya aceptado.</li>
                 <li>Atender solicitudes de soporte, privacidad, exportacion o eliminacion de datos.</li>
             </ul>
 
@@ -287,10 +288,10 @@
 
             <h2>5. Analitica y telemetria</h2>
             <p>
-                Utilizamos Firebase Analytics para comprender de forma agregada el uso de la aplicacion y mejorar sus funciones. La analitica puede registrar eventos de uso, datos de sesion y dispositivo (por ejemplo, tipo de dispositivo, navegador, sistema operativo, idioma y rendimiento) y telemetria de errores. Cuando el usuario elige manualmente una ciudad o provincia para el calendario, ese dato puede usarse para el funcionamiento de festivos y en analitica agregada.
+                La analitica de comportamiento se mantiene en Google Analytics mediante Firebase Analytics y solo se activa despues de una aceptacion expresa. No se crean documentos individuales de visitas en Firestore. Los eventos se usan de forma agregada para comprender el uso de la aplicacion y mejorar sus funciones.
             </p>
             <p>
-                No solicitamos GPS ni empleamos la ubicacion precisa, no enviamos el correo, el UID de Firebase ni otros identificadores personales como identificadores de analitica, y no usamos Google Signals, remarketing ni publicidad personalizada. Un identificador aleatorio guardado solo en el navegador permite limitar avisos y reconocer visitas recurrentes de la misma instalacion; no se vincula retrospectivamente a una cuenta.
+                No solicitamos GPS ni empleamos la ubicacion precisa, no enviamos el correo, el UID de Firebase ni identificadores locales propios como identificadores de analitica, y no usamos fingerprinting, Google Signals, remarketing ni publicidad personalizada. La marca local usada para saber si el navegador ya abrio la aplicacion permanece en el dispositivo y no se envia como identificador a Firestore ni a Analytics. Puedes aceptar, rechazar o retirar el consentimiento desde <a href="/?analytics=preferences">Preferencias de analitica</a>.
             </p>
 
             <h2>6. IA integrada para consultas sobre convenios</h2>
@@ -308,7 +309,7 @@
 
             <h2>8. Conservacion de los datos</h2>
             <p>
-                Los datos se conservaran mientras la cuenta permanezca activa o mientras sean necesarios para prestar el servicio solicitado. Al eliminar la cuenta se eliminan los datos de cuenta y jornada almacenados bajo ella en Firebase, incluidos los registros por ano, visitas asociadas y contadores de uso de IA. Algunos datos pueden conservarse durante plazos adicionales cuando exista una obligacion legal, una incidencia pendiente, una necesidad de seguridad o una relacion contractual que lo justifique. Los plazos efectivos de registros tecnicos, analitica, Google Cloud y Stripe dependen de la configuracion y de las politicas aplicables de cada proveedor; no se fija aqui un plazo que no haya sido confirmado.
+                Los datos se conservaran mientras la cuenta permanezca activa o mientras sean necesarios para prestar el servicio solicitado. Al eliminar la cuenta se eliminan los datos de cuenta y jornada almacenados bajo ella en Firebase, incluidos los registros por ano y contadores de uso de IA. Los datos de Analytics se someten a la configuracion de retencion de la propiedad de Google Analytics y no se guardan como visitas individuales en Firestore. Algunos datos pueden conservarse durante plazos adicionales cuando exista una obligacion legal, una incidencia pendiente, una necesidad de seguridad o una relacion contractual que lo justifique.
             </p>
 
             <h2>9. Seguridad</h2>
@@ -318,7 +319,7 @@
 
             <h2>10. Proveedores tecnicos</h2>
             <p>
-                Para prestar el servicio intervienen Google Firebase y Google Cloud para autenticacion, Firestore, Hosting, Cloud Functions, App Check, analitica tecnica, seguridad e infraestructura; Google Gemini para las consultas de IA cuando estan activas; y Stripe para pagos web y suscripciones Premium. Tambien pueden intervenir proveedores de recursos web necesarios para cargar la aplicacion. Estos proveedores actuan bajo sus propias condiciones y politicas y solo deberian tratar los datos necesarios para prestar sus servicios.
+                Para prestar el servicio intervienen Google Firebase y Google Cloud para autenticacion, Firestore, Hosting, Cloud Functions, App Check, seguridad e infraestructura; Google Analytics y Firebase Analytics para la analitica opcional; Google Gemini para las consultas de IA cuando estan activas; y Stripe para pagos web y suscripciones Premium. Tambien pueden intervenir proveedores de recursos web necesarios para cargar la aplicacion. Estos proveedores actuan bajo sus propias condiciones y politicas y solo deberian tratar los datos necesarios para prestar sus servicios.
             </p>
 
             <h2>11. Derechos del usuario</h2>

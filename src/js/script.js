@@ -812,11 +812,14 @@ window.mostrarLegal = function(tipo) {
         `,
         cookies: `
             <h4>1. ¿Qué cookies utilizamos?</h4>
-            <p>Utilizamos únicamente cookies técnicas y de personalización esenciales para el funcionamiento del servicio:</p>
+            <p>Utilizamos cookies y almacenamiento técnico necesarios para el funcionamiento del servicio:</p>
             <p>• <b>Sesión:</b> Para mantener su acceso iniciado a través de Firebase Auth.</p>
             <p>• <b>Pagos:</b> Cookies de Stripe necesarias para prevenir el fraude y procesar transacciones seguras.</p>
             <p>• <b>Preferencias:</b> Almacenamiento local de su configuración básica de jornada.</p>
-            <p>No utilizamos cookies de terceros con fines publicitarios o de rastreo.</p>
+            <h4>2. Analítica opcional</h4>
+            <p>Solo tras tu aceptación expresa cargamos Google Analytics mediante Firebase Analytics para medir uso agregado. No enviamos email, UID de Firebase ni identificadores locales propios. No usamos fingerprinting ni publicidad personalizada.</p>
+            <p>Puedes aceptar, rechazar o retirar el consentimiento en cualquier momento.</p>
+            <button type="button" onclick="abrirPreferenciasAnalitica()">Gestionar analítica</button>
         `
     };
     

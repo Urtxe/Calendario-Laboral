@@ -1,7 +1,7 @@
 // Si cambia un asset crítico, scripts/service-worker-checks.js obliga a
 // actualizar esta huella y, con ella, el nombre de las cachés cache-first.
-const CRITICAL_ASSET_REVISION = 'b5bb7b638f28166112ef43efbdff4400ccf71bac79a0cfa652ee9e0185e2f49c';
-const CACHE_VERSION = 'v2.0.10-conversion-b5bb7b638f28';
+const CRITICAL_ASSET_REVISION = '3218b04db836c4cb0b85a3886e2b1af363507337c849add913f4de76ee9fe0a4';
+const CACHE_VERSION = 'v2.0.11-consent-3218b04db836';
 const SHELL_CACHE = `balance-laboral-shell-${CACHE_VERSION}`;
 const STATIC_CACHE = `balance-laboral-static-${CACHE_VERSION}`;
 const APP_BASE = new URL('./', self.location);
@@ -22,6 +22,7 @@ const APP_SHELL_URLS = [
   'src/css/components/_badge.css',
   'src/css/components/_form.css',
   'src/css/components/_modal.css',
+  'src/css/components/_analytics-consent.css',
   'src/js/firebase-config.js',
   'src/js/app/play-twa-context.js',
   'src/js/app/state.js',

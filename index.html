@@ -223,6 +223,7 @@
             "
             >Cookies</a
           >
+          <a href="#" onclick="abrirPreferenciasAnalitica(); return false;">Analítica</a>
           <a
             href="#"
             class="link-cancelar-sub"
@@ -931,8 +932,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
-
     <script src="src/js/app/play-twa-context.js"></script>
     <script src="src/js/firebase-config.js"></script>
     <script src="src/js/app/state.js"></script>
@@ -968,6 +967,7 @@
           "
           >Cookies</a
         >
+        <a href="#" onclick="abrirPreferenciasAnalitica(); return false;">Preferencias de analítica</a>
 
         <a
           href="#"
@@ -1006,6 +1006,18 @@
         <span id="account-delete-status" role="status" aria-live="polite"></span>
       </div>
     </footer>
+
+    <section id="analytics-consent" class="analytics-consent" role="dialog" aria-modal="false" aria-labelledby="analytics-consent-title" hidden>
+      <div class="analytics-consent__content">
+        <h2 id="analytics-consent-title">Analítica opcional</h2>
+        <p>Con tu permiso usamos Google Analytics y Firebase Analytics para conocer el uso agregado de Balance Laboral. No enviamos tu email, UID de Firebase ni identificadores locales propios.</p>
+        <p><a href="/privacy">Consulta la política de privacidad</a> y puedes cambiar esta elección en cualquier momento desde “Preferencias de analítica”.</p>
+        <div class="analytics-consent__actions">
+          <button type="button" class="analytics-consent__reject" data-analytics-consent="denied">Rechazar</button>
+          <button type="button" class="analytics-consent__accept" data-analytics-consent="granted">Aceptar analítica</button>
+        </div>
+      </div>
+    </section>
 
     <div class="floating-buttons-container">
       <button

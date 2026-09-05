@@ -30,6 +30,6 @@ firebase deploy --only functions:metricasGa4,hosting --project calendario-labora
 
 ## Medición y privacidad
 
-La web ya no escribe documentos por visita en `visitasAnonimas`. Los eventos de uso se envían a GA4 sin email, UID, identificador de instalación ni otros identificadores personales. Para ver el desglose web/PWA/TWA, registra `modo_acceso` como dimensión personalizada de evento en GA4; mientras tanto, el panel lo indica como no disponible, no como cero.
+La web ya no escribe documentos por visita en `visitasAnonimas` ni crea `usuariosRepetidos`. Los eventos de uso se envían a GA4 sin email, UID, identificador de instalación ni otros identificadores personales, y solo después de que la persona acepte la analítica opcional. Para ver el desglose web/PWA/TWA, registra `modo_acceso` como dimensión personalizada de evento en GA4; mientras tanto, el panel lo indica como no disponible, no como cero.
 
 El panel distingue una respuesta vacía real de GA4 de errores de permisos y configuración. Tras desplegar, abre el panel como administrador: el bloque **Estado de medición** permite comprobar el último evento y los eventos de las últimas 24 horas. Si no llegan eventos, verifica en DevTools que cargan `firebase-analytics-compat.js` y `src/js/analytics.js`, y que el consentimiento de analítica no los esté bloqueando.

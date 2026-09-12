@@ -27,3 +27,5 @@ balance-laboral-release
 ```
 
 Consulta `docs/twa-android.md` para crear la keystore, obtener el SHA-256, publicar `assetlinks.json` y generar APK/AAB.
+
+Google Play Billing está habilitado con Android Browser Helper Billing 1.2.0. Consulta `docs/google-play-billing.md` para configurar Play Developer API, RTDN y las pruebas de suscripciones.

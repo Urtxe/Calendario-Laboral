@@ -10,7 +10,7 @@
     "test:ai-consultation": "node functions/ai-consultation.test.js",
     "test:ai-ui": "node scripts/ai-ui-checks.js",
     "test:service-worker": "node scripts/service-worker-checks.js",
-    "test:play-twa": "node scripts/play-twa-context-checks.js",
+    "test:play-twa": "node scripts/play-twa-context-checks.js && node scripts/play-billing-checks.js && node functions/play-billing.test.js",
     "test:account-deletion": "node functions/account-deletion.test.js && node scripts/account-deletion-ui-checks.js",
     "test:conversion": "node scripts/conversion-funnel-checks.js",
     "verify:metricas-ga4-secret": "node scripts/verify-metricas-ga4-secret.js"

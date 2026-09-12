@@ -15,6 +15,7 @@
  */
 
 import groovy.xml.MarkupBuilder
+import java.util.Properties
 
 plugins {
     id 'com.android.application'
@@ -50,15 +51,33 @@ def twaManifest = [
     orientation: 'portrait',
 ]
 
+// Release credentials must stay outside Git. They may be supplied through the
+// ignored keystore.properties file or a secure CI environment. Do not fall back
+// to the unrelated local keystore when an upload key has been configured.
+def releaseSigningProperties = new Properties()
+def releaseSigningPropertiesFile = rootProject.file("keystore.properties")
+if (releaseSigningPropertiesFile.exists()) {
+    releaseSigningPropertiesFile.withInputStream { releaseSigningProperties.load(it) }
+}
+def releaseSigningValue = { String propertyName, String environmentName ->
+    def environmentValue = System.getenv(environmentName)
+    return environmentValue ? environmentValue : releaseSigningProperties.getProperty(propertyName)
+}
+def releaseStoreFile = releaseSigningValue("storeFile", "BALANCE_RELEASE_STORE_FILE")
+def releaseStorePassword = releaseSigningValue("storePassword", "BALANCE_RELEASE_STORE_PASSWORD")
+def releaseKeyAlias = releaseSigningValue("keyAlias", "BALANCE_RELEASE_KEY_ALIAS")
+def releaseKeyPassword = releaseSigningValue("keyPassword", "BALANCE_RELEASE_KEY_PASSWORD")
+def releaseSigningReady = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { it }
+
 android {
     compileSdkVersion 36
     namespace "es.balancelaboral.app"
     defaultConfig {
         applicationId "es.balancelaboral.app"
-        minSdkVersion 21
+        minSdkVersion 23
         targetSdkVersion 36
-        versionCode 5
-        versionName "1.0.4"
+        versionCode 6
+        versionName "1.0.5"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -150,8 +169,22 @@ android {
 
         
     }
+    signingConfigs {
+        release {
+            if (releaseSigningReady) {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
+            if (!releaseSigningReady) {
+                throw new GradleException("Release signing is not configured. Supply the existing upload key through ignored keystore.properties or secure environment variables.")
+            }
+            signingConfig signingConfigs.release
             minifyEnabled true
         }
     }
@@ -208,6 +241,7 @@ repositories {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     
-        implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
+        implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.3'
+        implementation 'com.google.androidbrowserhelper:billing:1.2.0'
     
 }

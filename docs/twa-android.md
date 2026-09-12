@@ -58,7 +58,7 @@ La TWA se compila con esta configuracion, preparada para Android 16 / API 36:
 ```text
 compileSdk: 36
 targetSdk: 36
-minSdk: 21
+minSdk: 23
 Android Gradle Plugin: 8.10.1
 Gradle wrapper: 8.11.1
 JDK: 17
@@ -66,15 +66,27 @@ JDK: 17
 
 No cambiar el Gradle wrapper ni el JDK para esta actualizacion: AGP 8.10.1 es compatible con Gradle 8.11.1 y JDK 17.
 
+`minSdk` se elevó de 21 a 23 porque Android Browser Helper Billing 1.2.0 lo exige. No se usa `overrideLibrary`, ya que forzarlo podría provocar fallos en Android 5.x.
+
 ## Contexto de Google Play y comercio Premium
 
-La version Android distribuida por Google Play no inicia ni gestiona compras Premium mediante Stripe. El navegador, escritorio, iPhone y la PWA web normal conservan el flujo Stripe sin cambios.
+La versión Android distribuida por Google Play no inicia ni gestiona compras Premium mediante Stripe. El navegador, escritorio, iPhone y la PWA web normal conservan el flujo Stripe sin cambios. La TWA inicia Google Play Billing mediante Digital Goods API y Payment Request API; la implementación y configuración segura están en [google-play-billing.md](google-play-billing.md).
 
 `LauncherActivity` anade `play_twa=1` solo a URL HTTPS internas de `balancelaboral.es`. El mismo metodo recibe tanto el arranque desde el icono como los deep links verificados, por lo que ambos llegan a la web con el marcador.
 
 `src/js/app/play-twa-context.js` detecta ese marcador, lo conserva unicamente en `sessionStorage` durante la navegacion de esa sesion y lo elimina de la barra de direcciones con `history.replaceState`. No usa user-agent, no usa `localStorage` y no se utiliza para autenticar usuarios ni conceder Premium.
 
-Dentro de ese contexto, la interfaz oculta los CTA y enlaces de Stripe, y las acciones directas de abrir precios, seleccionar plan y abrir el portal de facturacion quedan bloqueadas. Los usuarios que ya tengan `tipoCuenta: "premium"` mantienen el acceso a sus funciones Premium.
+Dentro de ese contexto, la interfaz oculta los enlaces de Stripe y ofrece el selector de Google Play solo cuando sus APIs están disponibles. Si no lo están, informa de indisponibilidad temporal y no abre Stripe. Los usuarios que ya tengan `tipoCuenta: "premium"` mantienen el acceso a sus funciones Premium.
+
+## Billing y versión de publicación
+
+La versión preparada para pista interna es `versionCode 6` / `versionName 1.0.5`.
+
+- Android Browser Helper: `2.7.3`.
+- Android Browser Helper Billing: `1.2.0` (Play Billing Library 8.3.0).
+- Bubblewrap: actualizar a `@bubblewrap/cli@1.25.0` antes de regenerar el proyecto en el futuro; esa versión habilita Billing 1.2.0 y target SDK 36.
+
+No ejecutar `bubblewrap update` sin revisar su diff: Bubblewrap puede regenerar archivos Android que contienen personalizaciones locales como el launcher.
 
 La keystore no existe todavia y no se ha generado dentro del repositorio. La ruta anterior es externa al repo y debe crearse manualmente solo en la maquina segura de release.
 

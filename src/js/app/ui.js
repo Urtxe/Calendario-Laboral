@@ -50,7 +50,7 @@ function comercioPremiumBloqueadoEnTwa() {
 
 function mostrarAvisoComercioPremiumNoDisponible() {
   alert(
-    "La contratación y gestión de Premium no están disponibles en esta versión de Android. Si ya tienes Premium, puedes seguir utilizando sus funciones.",
+    "Las compras con Google Play no están disponibles temporalmente. Inténtalo de nuevo más tarde.",
   );
 }
 
@@ -60,7 +60,7 @@ function aplicarRestriccionComercioPremiumTwa() {
   document.body.classList.add("is-play-twa");
   document
     .querySelectorAll(
-      '[onclick*="abrirModalPremium"], [onclick*="seleccionarPlan"], [onclick*="redirigirPortalStripe"]',
+      '[onclick*="seleccionarPlan"], [onclick*="redirigirPortalStripe"], .link-cancelar-sub',
     )
     .forEach((element) => {
       element.style.display = "none";
@@ -72,6 +72,12 @@ function aplicarRestriccionComercioPremiumTwa() {
   if (pricingModal) {
     pricingModal.style.display = "none";
     pricingModal.setAttribute("aria-hidden", "true");
+  }
+
+  const btnUpgrade = document.getElementById("btn-upgrade");
+  if (btnUpgrade) {
+    btnUpgrade.style.display = "inline-flex";
+    btnUpgrade.textContent = "Hazte Premium con Google Play";
   }
 
   const headerCopy = document.getElementById("legal-ai-header-copy");
@@ -290,7 +296,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
 window.abrirModalPremium = function (trigger) {
   if (comercioPremiumBloqueadoEnTwa()) {
-    mostrarAvisoComercioPremiumNoDisponible();
+    if (window.PlayBillingService) {
+      window.PlayBillingService.openPremiumModal();
+    } else {
+      mostrarAvisoComercioPremiumNoDisponible();
+    }
     return;
   }
 
@@ -367,7 +377,7 @@ function actualizarInterfazPremium(activar) {
   } else {
     document.body.classList.remove("is-premium");
     if (btnUpgrade) {
-      btnUpgrade.style.display = comercioPremiumBloqueadoEnTwa() ? "none" : "block";
+      btnUpgrade.style.display = comercioPremiumBloqueadoEnTwa() ? "inline-flex" : "block";
     }
     linksCancel.forEach((link) => {
       link.style.display = "none";
@@ -1162,7 +1172,14 @@ window.seleccionarPlan = function (tipo) {
   if (typeof trackPremiumCheckoutStarted === "function") trackPremiumCheckoutStarted();
   if (comercioPremiumBloqueadoEnTwa()) {
     if (typeof cerrarModalPricing === "function") cerrarModalPricing();
-    mostrarAvisoComercioPremiumNoDisponible();
+    const productId = tipo === "mensual" ? "premium_monthly" : tipo === "anual" ? "premium_yearly" : null;
+    if (!productId || !window.PlayBillingService) {
+      mostrarAvisoComercioPremiumNoDisponible();
+      return;
+    }
+    window.PlayBillingService.purchase(productId)
+      .then(() => window.verificarNivelPremium && window.verificarNivelPremium(window.usuarioActual.uid))
+      .catch(() => mostrarAvisoComercioPremiumNoDisponible());
     return;
   }
 

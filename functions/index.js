@@ -46,6 +46,17 @@ const {
     verifyRecentAuthenticatedUser,
 } = require("./account-deletion");
 const { createGa4MetricsHandler } = require("./metrics-ga4");
+const {
+    PLAY_PACKAGE_NAME,
+    PREMIUM_PRODUCT_IDS,
+    hashPurchaseToken,
+    validatePurchaseInput,
+    normalizeSubscriptionPurchase,
+    userHasPremiumEntitlement,
+    buildGooglePlayEntitlement,
+    createPlayDeveloperClient,
+} = require("./play-billing");
+const { OAuth2Client } = require("google-auth-library");
 require("dotenv").config({ path: __dirname + "/.env" });
 
 function obtenerProjectIdDesdeFirebaseConfig() {
@@ -87,6 +98,8 @@ if (admin.apps.length === 0) {
 }
 
 const db = admin.firestore();
+const playDeveloperClient = createPlayDeveloperClient();
+const rtdnOidcClient = new OAuth2Client();
 const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 const embeddingModel = genAI ? genAI.getGenerativeModel({ model: "gemini-embedding-001" }) : null;
 const chatModel = genAI ? genAI.getGenerativeModel({ model: "gemini-2.5-flash" }) : null;
@@ -122,6 +135,14 @@ const CONSULTAR_CONVENIO_ALLOWED_ORIGINS = new Set([
     "https://calendario-laboral-252b1.firebaseapp.com",
 ]);
 const CONSULTAR_CONVENIO_DEV_ORIGIN_PATTERN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const PLAY_BILLING_RTDN_AUDIENCE = String(process.env.GOOGLE_PLAY_RTDN_AUDIENCE || "").trim();
+const PLAY_BILLING_RTDN_PUSH_SERVICE_ACCOUNT = String(process.env.GOOGLE_PLAY_RTDN_PUSH_SERVICE_ACCOUNT || "").trim();
+const PLAY_BILLING_RUNTIME_SERVICE_ACCOUNT = `google-play-billing-runtime@${projectId}.iam.gserviceaccount.com`;
+const PLAY_BILLING_FUNCTION_OPTIONS = {
+    timeoutSeconds: 60,
+    memory: "256MiB",
+    serviceAccount: PLAY_BILLING_RUNTIME_SERVICE_ACCOUNT,
+};
 const CONSULTAR_CONVENIO_ALLOWED_FIELDS = [
     "pregunta",
     "ciudad",
@@ -1403,6 +1424,25 @@ async function findUserRefForStripe({ uid, customerId, subscriptionId }) {
     return null;
 }
 
+async function updatePremiumEntitlements(userRef, provider, entitlement, legacyFields = {}) {
+    return db.runTransaction(async (transaction) => {
+        const userSnap = await transaction.get(userRef);
+        const userData = userSnap.exists ? userSnap.data() : {};
+        const billing = { ...(userData.billing || {}) };
+        billing[provider] = entitlement;
+        const premiumActive = userHasPremiumEntitlement(userData, billing);
+
+        transaction.set(userRef, {
+            ...legacyFields,
+            billing,
+            tipoCuenta: premiumActive ? "premium" : "free",
+            updatedBillingAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+
+        return premiumActive;
+    });
+}
+
 async function activatePremiumFromStripe({ uid, customerId, subscriptionId, priceId, productId, subscriptionStatus, currentPeriodEnd, cancelAtPeriodEnd }) {
     const userMatch = await findUserRefForStripe({ uid, customerId, subscriptionId });
 
@@ -1415,17 +1455,21 @@ async function activatePremiumFromStripe({ uid, customerId, subscriptionId, pric
         return false;
     }
 
-    await userMatch.userRef.set({
-        tipoCuenta: "premium",
+    await updatePremiumEntitlements(userMatch.userRef, "stripe", {
+        active: true,
+        source: "stripe",
+        status: subscriptionStatus || "active",
+        expiresAt: currentPeriodEnd || null,
+        cancelAtPeriodEnd: Boolean(cancelAtPeriodEnd),
+    }, {
         stripeCustomerId: customerId || null,
         stripeSubscriptionId: subscriptionId || null,
         stripePriceId: priceId || null,
         stripeProductId: productId || null,
         subscriptionStatus: subscriptionStatus || "active",
-        updatedBillingAt: FieldValue.serverTimestamp(),
         stripeCurrentPeriodEnd: currentPeriodEnd || null,
         stripeCancelAtPeriodEnd: Boolean(cancelAtPeriodEnd),
-    }, { merge: true });
+    });
 
     stripeLog("stripe_premium_activated", {
         uid: userMatch.uid,
@@ -1452,12 +1496,16 @@ async function deactivatePremiumFromStripe({ uid, customerId, subscriptionId, su
         return false;
     }
 
-    await userMatch.userRef.set({
-        tipoCuenta: "free",
+    await updatePremiumEntitlements(userMatch.userRef, "stripe", {
+        active: false,
+        source: "stripe",
+        status: subscriptionStatus || reason || "inactive",
+        expiresAt: null,
+        cancelAtPeriodEnd: false,
+    }, {
         subscriptionStatus: subscriptionStatus || reason || "inactive",
-        updatedBillingAt: FieldValue.serverTimestamp(),
         stripeCancelAtPeriodEnd: null,
-    }, { merge: true });
+    });
 
     stripeLog("stripe_premium_deactivated", {
         uid: userMatch.uid,
@@ -1689,6 +1737,194 @@ exports.stripeWebhook = onRequest({ cors: true }, async (req, res) => {
     }
 
     res.json({ received: true });
+});
+
+function playBillingError(code, message, status) {
+    const error = new Error(message);
+    error.code = code;
+    error.status = status;
+    return error;
+}
+
+async function persistVerifiedGooglePlayPurchase({ uid, purchaseToken, normalizedPurchase, source }) {
+    const purchaseReference = hashPurchaseToken(purchaseToken);
+    const purchaseRef = db.collection("playBillingPurchases").doc(purchaseReference);
+    const userRef = db.collection("usuarios").doc(uid);
+    const entitlement = buildGooglePlayEntitlement({
+        normalizedPurchase,
+        purchaseToken,
+        source,
+    });
+
+    return db.runTransaction(async (transaction) => {
+        const [purchaseSnap, userSnap] = await Promise.all([
+            transaction.get(purchaseRef),
+            transaction.get(userRef),
+        ]);
+        const purchaseData = purchaseSnap.exists ? purchaseSnap.data() : null;
+        if (purchaseData && purchaseData.uid && purchaseData.uid !== uid) {
+            throw playBillingError(
+                "purchase_already_linked",
+                "Esta compra ya está vinculada a otra cuenta de Balance Laboral.",
+                409,
+            );
+        }
+
+        const userData = userSnap.exists ? userSnap.data() : {};
+        const billing = { ...(userData.billing || {}), googlePlay: entitlement };
+        const premiumActive = userHasPremiumEntitlement(userData, billing);
+        transaction.set(userRef, {
+            billing,
+            tipoCuenta: premiumActive ? "premium" : "free",
+            updatedBillingAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        transaction.set(purchaseRef, {
+            uid,
+            source: "google_play",
+            productId: normalizedPurchase.productId,
+            status: normalizedPurchase.subscriptionState,
+            expiresAt: normalizedPurchase.expiryTime,
+            autoRenewEnabled: normalizedPurchase.autoRenewEnabled,
+            purchaseReference,
+            updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        return premiumActive;
+    });
+}
+
+async function verifyAndPersistGooglePlayPurchase({ uid, purchaseToken, requestedProductId, source }) {
+    const input = validatePurchaseInput({ purchaseToken, productId: requestedProductId });
+    if (!input.ok) throw playBillingError(input.code, "El identificador de compra o producto no es válido.", 400);
+
+    let purchase;
+    try {
+        purchase = await playDeveloperClient.getSubscription(purchaseToken);
+    } catch (error) {
+        console.error("google_play_subscription_lookup_failed", {
+            errorName: error && error.name ? error.name : "Error",
+            status: error && error.response && error.response.status || null,
+        });
+        throw playBillingError("google_play_verification_failed", "No se pudo verificar la compra con Google Play.", 502);
+    }
+
+    const normalizedPurchase = normalizeSubscriptionPurchase(purchase);
+    if (normalizedPurchase.productId !== requestedProductId || !PREMIUM_PRODUCT_IDS.has(normalizedPurchase.productId)) {
+        throw playBillingError("product_mismatch", "La compra no corresponde a un producto Premium permitido.", 400);
+    }
+
+    const premiumActive = await persistVerifiedGooglePlayPurchase({
+        uid,
+        purchaseToken,
+        normalizedPurchase,
+        source,
+    });
+
+    if (normalizedPurchase.acknowledgementPending && normalizedPurchase.entitled) {
+        try {
+            await playDeveloperClient.acknowledgeSubscription(normalizedPurchase.productId, purchaseToken);
+        } catch (error) {
+            // The verified entitlement is persisted. A later restore/RTDN can safely retry acknowledgement.
+            console.error("google_play_acknowledgement_failed", {
+                errorName: error && error.name ? error.name : "Error",
+                status: error && error.response && error.response.status || null,
+            });
+        }
+    }
+
+    return { premiumActive, normalizedPurchase };
+}
+
+// Authenticated endpoint used exclusively by the Play TWA. It never trusts browser product data.
+exports.verifyGooglePlayPurchase = onRequest(PLAY_BILLING_FUNCTION_OPTIONS, async (req, res) => {
+    const corsResult = setCorsHeaders(req, res);
+    if (!corsResult.ok) return res.status(403).json({ error: "Origen no permitido", code: "origin_not_allowed" });
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST" || !tieneContentTypeJson(req)) {
+        return res.status(405).json({ error: "Método o contenido no permitido", code: "invalid_request" });
+    }
+
+    const authResult = await verificarUsuarioConsulta(req);
+    if (!authResult.ok) return res.status(401).json({ error: "Debes iniciar sesión.", code: authResult.reason });
+    if (APP_CHECK_ENFORCEMENT) {
+        const appCheckResult = await verificarAppCheckConsulta(req);
+        if (!appCheckResult.ok) return res.status(401).json({ error: "App Check no válido.", code: appCheckResult.reason });
+    }
+
+    try {
+        const result = await verifyAndPersistGooglePlayPurchase({
+            uid: authResult.uid,
+            purchaseToken: req.body && req.body.purchaseToken,
+            requestedProductId: req.body && req.body.productId,
+            source: req.body && req.body.source === "restore" ? "restore" : "purchase",
+        });
+        return res.status(200).json({
+            premiumActive: result.premiumActive,
+            status: result.normalizedPurchase.subscriptionState,
+            expiresAt: result.normalizedPurchase.expiryTime,
+        });
+    } catch (error) {
+        const status = Number.isInteger(error && error.status) ? error.status : 500;
+        return res.status(status).json({
+            error: error && error.message ? error.message : "No se pudo procesar la compra.",
+            code: error && error.code ? error.code : "play_billing_processing_failed",
+        });
+    }
+});
+
+async function verifyRtdnOidcToken(req) {
+    if (!PLAY_BILLING_RTDN_AUDIENCE) {
+        throw playBillingError("rtdn_not_configured", "RTDN no está configurado.", 503);
+    }
+    if (!PLAY_BILLING_RTDN_PUSH_SERVICE_ACCOUNT) {
+        throw playBillingError("rtdn_not_configured", "RTDN no tiene una identidad de push configurada.", 503);
+    }
+    const token = extraerBearerToken(req);
+    if (!token) throw playBillingError("invalid_rtdn_auth", "RTDN sin token OIDC.", 401);
+    try {
+        const ticket = await rtdnOidcClient.verifyIdToken({
+            idToken: token,
+            audience: PLAY_BILLING_RTDN_AUDIENCE,
+        });
+        const payload = ticket.getPayload();
+        if (!payload || payload.email !== PLAY_BILLING_RTDN_PUSH_SERVICE_ACCOUNT || payload.email_verified !== true) {
+            throw new Error("unexpected_rtdn_sender");
+        }
+    } catch (_) {
+        throw playBillingError("invalid_rtdn_auth", "Token OIDC de RTDN no válido.", 401);
+    }
+}
+
+// Google Cloud Pub/Sub push endpoint. Each notification is re-verified against Play before state changes.
+exports.googlePlayRtdn = onRequest(PLAY_BILLING_FUNCTION_OPTIONS, async (req, res) => {
+    if (req.method !== "POST") return res.status(405).send("Method not allowed");
+    try {
+        await verifyRtdnOidcToken(req);
+        const encodedData = req.body && req.body.message && req.body.message.data;
+        const notification = JSON.parse(Buffer.from(String(encodedData || ""), "base64").toString("utf8"));
+        const subscription = notification.subscriptionNotification;
+        if (notification.packageName !== PLAY_PACKAGE_NAME || !subscription || !subscription.purchaseToken) {
+            return res.status(204).send("");
+        }
+        const purchaseReference = hashPurchaseToken(subscription.purchaseToken);
+        const purchaseSnap = await db.collection("playBillingPurchases").doc(purchaseReference).get();
+        if (!purchaseSnap.exists || !purchaseSnap.data().uid) {
+            console.warn("google_play_rtdn_unlinked_purchase", { purchaseReference });
+            return res.status(204).send("");
+        }
+        await verifyAndPersistGooglePlayPurchase({
+            uid: purchaseSnap.data().uid,
+            purchaseToken: subscription.purchaseToken,
+            requestedProductId: purchaseSnap.data().productId,
+            source: "rtdn",
+        });
+        return res.status(204).send("");
+    } catch (error) {
+        console.error("google_play_rtdn_processing_failed", {
+            code: error && error.code ? error.code : "unknown",
+            errorName: error && error.name ? error.name : "Error",
+        });
+        return res.status(Number.isInteger(error && error.status) ? error.status : 500).send("RTDN processing failed");
+    }
 });
 
 // BORRADO DE CUENTA: requiere una sesión reciente y solo opera sobre el UID del token.

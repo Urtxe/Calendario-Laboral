@@ -45,6 +45,14 @@
         "function": "deleteAccount"
       },
       {
+        "source": "/playBilling/verify",
+        "function": "verifyGooglePlayPurchase"
+      },
+      {
+        "source": "/playBilling/rtdn",
+        "function": "googlePlayRtdn"
+      },
+      {
         "source": "/admin/metricas/datos",
         "function": "metricasGa4"
       },

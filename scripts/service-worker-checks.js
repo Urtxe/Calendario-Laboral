@@ -8,7 +8,13 @@ const path = require("path");
 const repoRoot = path.resolve(__dirname, "..");
 const serviceWorker = fs.readFileSync(path.join(repoRoot, "service-worker.js"), "utf8");
 const firebaseConfig = JSON.parse(fs.readFileSync(path.join(repoRoot, "firebase.json"), "utf8"));
-const criticalAssets = ["index.html", "src/js/app/ui.js", "src/js/firebase-config.js"];
+const criticalAssets = [
+  "index.html",
+  "src/js/app/ui.js",
+  "src/js/app/play-twa-context.js",
+  "src/js/app/play-billing-service.js",
+  "src/js/firebase-config.js",
+];
 
 function fingerprintAssets(files) {
   const content = files.map((file) => {

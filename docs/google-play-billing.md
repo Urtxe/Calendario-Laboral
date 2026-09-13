@@ -6,12 +6,19 @@ La app Android `es.balancelaboral.app` vende `premium_monthly` y `premium_yearly
 
 - `android/twa` declara `androidbrowserhelper:billing:1.2.0`, que incorpora Play Billing Library 8.3.0, activa `features.playBilling` en `twa-manifest.json`, registra el manejador Digital Goods y los componentes de pago de ABH, y usa `minSdkVersion 23`, mínimo exigido por ese módulo.
 - `src/js/app/play-billing-service.js` comprueba la TWA, `getDigitalGoodsService('https://play.google.com/billing')` y `PaymentRequest`; obtiene los precios desde `getDetails`, cobra con Payment Request y envía únicamente el `purchaseToken` y el SKU al servidor.
+- El selector de planes usa el mismo overlay fijo que el resto de modales de la aplicación. Se crea antes de consultar `getDetails`, con estado de carga visible, para que un fallo o una respuesta lenta de Play nunca parezca un toque sin efecto. Los errores mostrados y el diagnóstico de consola contienen únicamente un código permitido; no incluyen tokens ni respuestas de pago.
 - `POST /playBilling/verify` exige Firebase ID token, consulta `purchases.subscriptionsv2.get` en Google Play Developer API, valida que el SKU sea uno de los dos permitidos y reconoce la compra si procede.
 - El token nunca se guarda. Se guarda únicamente SHA-256 del token como `purchaseReference`, producto, estado, vencimiento y fuente en `playBillingPurchases/{hash}` y en `usuarios/{uid}.billing.googlePlay`.
 - `tipoCuenta` se deriva de `billing.stripe` y `billing.googlePlay`; una baja o expiración de un proveedor no elimina el entitlement activo del otro. No hay custom claims de Premium: Firestore sigue siendo la fuente de la interfaz y el servidor es la fuente de verificación de pagos.
 - `POST /playBilling/rtdn` es un push de Pub/Sub protegido con OIDC. Reconsulta Play antes de cambiar Firestore y usa la referencia hash para localizar el UID; una notificación no puede conceder acceso por sus propios datos.
 
 No usar `listPurchaseHistory()`: con Android Browser Helper Billing 1.2.0 / PBL 8 devuelve una lista vacía. La restauración usa `listPurchases()` y vuelve a verificar cada token en el servidor.
+
+## Diagnóstico del selector de compra
+
+Si al tocar **Hazte Premium con Google Play** no aparece el selector, comprueba que el código servido contiene `modal-overlay play-billing-modal`. Una integración anterior creaba el selector con la clase `modal`, que no tiene reglas CSS en esta aplicación: el contenido se insertaba al final del documento, fuera de la vista. No afectaba a Play Billing ni al backend, pero visualmente parecía que el botón no hacía nada.
+
+El service worker incluye `play-billing-service.js` y el contexto TWA entre sus assets críticos; al modificar cualquiera de ellos debe cambiar la revisión de caché. No hace falta actualizar el AAB para esta corrección web.
 
 ## Configuración manual antes de desplegar funciones
 

@@ -145,15 +145,26 @@
     // the page instead of being visible. Reuse the established fixed overlay.
     modal.className = "modal-overlay play-billing-modal";
     modal.style.display = "flex";
-    modal.innerHTML = `<div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="play-billing-title">
-      <button type="button" class="close-btn" aria-label="Cerrar">×</button>
-      <h2 id="play-billing-title">Hazte Premium</h2>
-      <p>Elige tu suscripción. El precio mostrado lo proporciona Google Play.</p>
+    modal.innerHTML = `<div class="modal-content play-billing-content" role="dialog" aria-modal="true" aria-labelledby="play-billing-title">
+      <button type="button" class="close-btn play-billing-close" aria-label="Cerrar">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
+      <header class="play-billing-header">
+        <span class="play-billing-icon" aria-hidden="true"><i data-lucide="crown"></i></span>
+        <h2 id="play-billing-title">Hazte Premium</h2>
+        <p class="play-billing-subtitle">Elige tu suscripción</p>
+        <p class="play-billing-price-note">Precios gestionados por Google Play</p>
+      </header>
       <div class="pricing-plans"></div>
-      <button type="button" class="btn-secondary play-restore">Restaurar compras</button>
+      <button type="button" class="btn-secondary play-restore">
+        <i data-lucide="rotate-ccw" aria-hidden="true"></i><span>Restaurar compras</span>
+      </button>
       <p class="play-billing-status" role="status" aria-live="polite">Cargando planes de Google Play…</p>
     </div>`;
     document.body.appendChild(modal);
+    if (window.lucide && typeof window.lucide.createIcons === "function") {
+      window.lucide.createIcons();
+    }
     return modal;
   }
 
@@ -172,9 +183,12 @@
       status.textContent = "Elige un plan para continuar con Google Play.";
       products.forEach((product) => {
         const button = document.createElement("button");
+        const isYearly = product.itemId === "premium_yearly";
+        const planName = isYearly ? "Premium anual" : "Premium mensual";
         button.type = "button";
-        button.className = "plan-card";
-        button.innerHTML = `<strong>${product.title}</strong><span>${displayPrice(product.price)}</span>`;
+        button.className = `plan-card play-billing-plan${isYearly ? " play-billing-plan-recommended" : ""}`;
+        button.setAttribute("aria-label", `Elegir ${planName}, ${displayPrice(product.price)}`);
+        button.innerHTML = `${isYearly ? '<span class="play-billing-plan-badge">Recomendado</span>' : ""}<strong>${planName}</strong><span class="play-billing-plan-price">${displayPrice(product.price)}</span>`;
         button.addEventListener("click", async () => {
           button.disabled = true;
           status.textContent = "Abriendo Google Play…";
@@ -192,7 +206,10 @@
         content.appendChild(button);
       });
       modal.querySelector(".play-restore").addEventListener("click", async () => {
-        status.textContent = "Comprobando compras…";
+        const restoreButton = modal.querySelector(".play-restore");
+        restoreButton.disabled = true;
+        restoreButton.querySelector("span").textContent = "Restaurando…";
+        status.textContent = "Restaurando compras…";
         try {
           const result = await restore();
           status.textContent = result.premiumActive ? "Compra restaurada y Premium activado." : "No hay compras activas para restaurar.";
@@ -200,6 +217,9 @@
         } catch (error) {
           traceFailure("restore", error);
           status.textContent = userMessage(error);
+        } finally {
+          restoreButton.disabled = false;
+          restoreButton.querySelector("span").textContent = "Restaurar compras";
         }
       });
     } catch (error) {

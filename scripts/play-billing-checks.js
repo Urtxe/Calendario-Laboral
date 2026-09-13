@@ -13,8 +13,12 @@ function button() {
   return {
     disabled: false,
     listeners: {},
+    attributes: {},
     addEventListener(event, handler) {
       this.listeners[event] = handler;
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = value;
     },
   };
 }
@@ -24,6 +28,8 @@ function billingWindow({ inTwa = true, service, paymentResponse, fetchResponse }
   const status = { textContent: "" };
   const close = button();
   const restore = button();
+  const restoreLabel = { textContent: "Restaurar compras" };
+  restore.querySelector = (selector) => selector === "span" ? restoreLabel : null;
   let modal = null;
   const alerts = [];
   const warnings = [];
@@ -70,7 +76,7 @@ function billingWindow({ inTwa = true, service, paymentResponse, fetchResponse }
     Intl,
     navigator: { language: "es-ES" },
   });
-  return { window, plans, status, alerts, warnings, requests, completions, get modal() { return modal; } };
+  return { window, plans, status, alerts, warnings, requests, completions, restore, restoreLabel, get modal() { return modal; } };
 }
 
 async function availability({ inTwa, paymentRequest, digitalGoods }) {
@@ -111,6 +117,11 @@ async function availability({ inTwa, paymentRequest, digitalGoods }) {
   assert.strictEqual(loaded.requests[0].details.total.amount.currency, "EUR");
   assert.strictEqual(loaded.requests[0].details.total.amount.value, "0");
   assert.deepStrictEqual(loaded.completions, ["success"]);
+
+  await loaded.restore.listeners.click();
+  assert.strictEqual(loaded.restore.disabled, false);
+  assert.strictEqual(loaded.restoreLabel.textContent, "Restaurar compras");
+  assert.strictEqual(loaded.status.textContent, "No hay compras activas para restaurar.");
 
   const unavailable = billingWindow({ service: { getDetails: async () => { throw new Error("products_unavailable"); } } });
   await unavailable.window.PlayBillingService.openPremiumModal();

@@ -82,17 +82,11 @@ const projectId =
 process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || projectId;
 process.env.GCP_PROJECT = process.env.GCP_PROJECT || projectId;
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
+const stripeSecret = defineSecret("STRIPE_SECRET_KEY");
+const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
+const geminiSecret = defineSecret("GEMINI_API_KEY");
 const premiumStripePriceIds = parseEnvList(process.env.STRIPE_PREMIUM_PRICE_IDS || process.env.STRIPE_PREMIUM_PRICE_ID || "");
 const premiumStripeProductIds = parseEnvList(process.env.STRIPE_PREMIUM_PRODUCT_IDS || process.env.STRIPE_PREMIUM_PRODUCT_ID || "");
-const geminiApiKey =
-    process.env.GEMINI_API_KEY ||
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
-    process.env.GOOGLE_AI_STUDIO_API_KEY ||
-    process.env.API_KEY ||
-    "";
-const stripe = require("stripe")(stripeSecretKey);
 const ga4PropertyId = defineSecret("GA4_PROPERTY_ID");
 
 if (admin.apps.length === 0) {
@@ -103,15 +97,25 @@ const db = admin.firestore();
 exports.syncOfficialHolidays = onSchedule({ schedule: "0 4 * * 0", timeZone: "Europe/Madrid", region: "europe-west1", maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "1GiB" }, async () => runScheduledHolidaySync(db));
 const playDeveloperClient = createPlayDeveloperClient();
 const rtdnOidcClient = new OAuth2Client();
-const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
-const embeddingModel = genAI ? genAI.getGenerativeModel({ model: "gemini-embedding-001" }) : null;
-const chatModel = genAI ? genAI.getGenerativeModel({ model: "gemini-2.5-flash" }) : null;
+let stripeClient;
+let stripeConfigWarningLogged = false;
+function getStripeClient() {
+    if (!stripeClient) stripeClient = require("stripe")(process.env.STRIPE_SECRET_KEY);
+    return stripeClient;
+}
 
-if (stripeSecretKey && webhookSecret && !hasPremiumStripeConfig()) {
-    console.warn(JSON.stringify({
-        event: "stripe_premium_config_missing_at_startup",
-        message: "Define STRIPE_PREMIUM_PRICE_IDS or STRIPE_PREMIUM_PRODUCT_IDS before deploying the hardened Stripe webhook.",
-    }));
+let geminiApiKey = "";
+let embeddingModel = null;
+let chatModel = null;
+let geminiInitialized = false;
+function initializeGemini() {
+    if (geminiInitialized) return;
+    geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
+        process.env.GOOGLE_AI_STUDIO_API_KEY || process.env.API_KEY || "";
+    const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
+    embeddingModel = genAI ? genAI.getGenerativeModel({ model: "gemini-embedding-001" }) : null;
+    chatModel = genAI ? genAI.getGenerativeModel({ model: "gemini-2.5-flash" }) : null;
+    geminiInitialized = true;
 }
 
 const COLLECTION_VECTORES = "vectores_convenios";
@@ -1524,7 +1528,7 @@ async function deactivatePremiumFromStripe({ uid, customerId, subscriptionId, su
 async function getExpandedSubscription(subscriptionId) {
     if (!subscriptionId) return null;
 
-    return stripe.subscriptions.retrieve(subscriptionId, {
+    return getStripeClient().subscriptions.retrieve(subscriptionId, {
         expand: ["items.data.price.product"],
     });
 }
@@ -1603,7 +1607,7 @@ async function handleCheckoutSessionCompleted(session) {
             return;
         }
 
-        const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+        const lineItems = await getStripeClient().checkout.sessions.listLineItems(session.id, {
             limit: 100,
             expand: ["data.price.product"],
         });
@@ -1696,16 +1700,25 @@ async function handleInvoicePaymentFailed(invoice) {
 }
 
 // 1. WEBHOOK DE STRIPE (V2)
-exports.stripeWebhook = onRequest({ cors: true }, async (req, res) => {
+exports.stripeWebhook = onRequest({ cors: true, secrets: [stripeSecret, stripeWebhookSecret] }, async (req, res) => {
     const sig = req.headers["stripe-signature"];
     let event;
 
     try {
+        const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
         if (!stripeSecretKey || !webhookSecret) {
             console.error("Stripe no está configurado: faltan STRIPE_SECRET_KEY o STRIPE_WEBHOOK_SECRET");
             return res.status(500).send("Stripe not configured");
         }
-        event = stripe.webhooks.constructEvent(req.rawBody, sig, webhookSecret);
+        if (!stripeConfigWarningLogged && !hasPremiumStripeConfig()) {
+            stripeConfigWarningLogged = true;
+            console.warn(JSON.stringify({
+                event: "stripe_premium_config_missing_at_startup",
+                message: "Define STRIPE_PREMIUM_PRICE_IDS or STRIPE_PREMIUM_PRODUCT_IDS before deploying the hardened Stripe webhook.",
+            }));
+        }
+        event = getStripeClient().webhooks.constructEvent(req.rawBody, sig, webhookSecret);
     } catch (err) {
         console.error("❌ Error de firma:", err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -1932,7 +1945,7 @@ exports.googlePlayRtdn = onRequest(PLAY_BILLING_FUNCTION_OPTIONS, async (req, re
 
 // BORRADO DE CUENTA: requiere una sesión reciente y solo opera sobre el UID del token.
 // La suscripción activa se cancela antes de borrar datos; las facturas no se alteran.
-exports.deleteAccount = onRequest({ timeoutSeconds: 120, memory: "512MiB" }, async (req, res) => {
+exports.deleteAccount = onRequest({ timeoutSeconds: 120, memory: "512MiB", secrets: [stripeSecret] }, async (req, res) => {
     const corsResult = setCorsHeaders(req, res);
 
     if (!corsResult.ok) {
@@ -1970,8 +1983,8 @@ exports.deleteAccount = onRequest({ timeoutSeconds: 120, memory: "512MiB" }, asy
         const billing = await deleteAccountSafely({
             db,
             auth: admin.auth(),
-            stripe,
-            stripeConfigured: Boolean(stripeSecretKey),
+            stripe: getStripeClient(),
+            stripeConfigured: Boolean(process.env.STRIPE_SECRET_KEY),
             uid: authResult.uid,
         });
 
@@ -2057,7 +2070,7 @@ function construirOrientacionClarificacion(message, reason, options = []) {
 }
 
 // 1.1 CONSULTA LEGAL SOBRE CONVENIOS (V2)
-exports.consultarConvenio = onRequest(CONSULTAR_CONVENIO_FUNCTION_OPTIONS, async (req, res) => {
+exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, secrets: [geminiSecret] }, async (req, res) => {
     const startedAt = Date.now();
     let pregunta = "";
     let uid = null;
@@ -2191,6 +2204,7 @@ exports.consultarConvenio = onRequest(CONSULTAR_CONVENIO_FUNCTION_OPTIONS, async
     pregunta = preguntaValidation.pregunta;
 
     try {
+        initializeGemini();
         const idiomaRespuesta = detectarIdiomaPregunta(pregunta);
         const intentClassification = classifyLaborIntent({
             pregunta,

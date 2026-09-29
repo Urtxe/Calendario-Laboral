@@ -1,4 +1,5 @@
 const { onRequest } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { defineSecret } = require("firebase-functions/params");
 const { randomUUID } = require("crypto");
 // Forzamos la carga de la versión 1 específicamente para el disparador de usuario
@@ -46,6 +47,7 @@ const {
     verifyRecentAuthenticatedUser,
 } = require("./account-deletion");
 const { createGa4MetricsHandler } = require("./metrics-ga4");
+const { runScheduledHolidaySync } = require("./holidays-scheduler");
 const {
     PLAY_PACKAGE_NAME,
     PREMIUM_PRODUCT_IDS,
@@ -98,6 +100,7 @@ if (admin.apps.length === 0) {
 }
 
 const db = admin.firestore();
+exports.syncOfficialHolidays = onSchedule({ schedule: "0 4 * * 0", timeZone: "Europe/Madrid", region: "europe-west1", maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "1GiB" }, async () => runScheduledHolidaySync(db));
 const playDeveloperClient = createPlayDeveloperClient();
 const rtdnOidcClient = new OAuth2Client();
 const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;

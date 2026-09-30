@@ -10,6 +10,9 @@ const { classifyLaborIntent } = require(path.join(
 const { MAX_PREVIOUS_QUESTION_LENGTH, prepararContextoConversacional, validarPreguntaAnterior } = require(path.join(
   __dirname, "..", "functions", "conversation-context",
 ));
+const { construirConsultaRag, MAX_CONSULTA_RAG_LENGTH } = require(path.join(
+  __dirname, "..", "functions", "rag-query",
+));
 
 const cases = [
   {
@@ -144,5 +147,27 @@ assert.strictEqual(validarPreguntaAnterior("x".repeat(MAX_PREVIOUS_QUESTION_LENG
 assert.strictEqual(validarPreguntaAnterior("x".repeat(MAX_PREVIOUS_QUESTION_LENGTH + 1)), false);
 assert.strictEqual(validarPreguntaAnterior(["pregunta"]), false);
 console.log("OK  Contexto de 7 repreguntas, pregunta independiente, historial irrelevante y límites.");
+
+function consultaRag(pregunta, anterior = "", datos = {}) {
+  const contexto = prepararContextoConversacional(pregunta, anterior);
+  const intent = classifyLaborIntent({ pregunta: contexto.preguntaParaBusqueda }).intent;
+  return construirConsultaRag({ preguntaParaBusqueda: contexto.preguntaParaBusqueda, intent, ...datos });
+}
+
+assert.match(consultaRag("¿Cuántas horas me tocan?"), /jornada anual duracion laboral/);
+assert.match(consultaRag("¿Cuántos días de vacaciones tengo?"), /naturales laborables/);
+assert.match(consultaRag("¿Cómo funcionan las horas extra?"), /compensacion descanso/);
+assert.match(consultaRag("¿Y si hago 50 más?", "¿Cuántas horas tengo que hacer?"), /extra compensacion descanso/);
+assert.match(consultaRag("¿Son naturales?", "¿Cuántos días de vacaciones tengo?"), /vacaciones/);
+const conDatos = consultaRag("¿Cuántas horas me tocan?", "", {
+  sector: "Hostelería", ciudad: "Donostia", territorio: "Gipuzkoa", convenio: "Convenio Hostelería Gipuzkoa",
+});
+for (const termino of ["hosteleria", "donostia", "gipuzkoa", "convenio"]) {
+  assert.strictEqual(conDatos.match(new RegExp(termino, "g"))?.length, 1, termino);
+}
+assert.strictEqual(consultaRag("¿Quién ganó el Mundial?", "¿Cuántas horas tengo que hacer?"), "¿Quién ganó el Mundial?");
+assert.strictEqual(consultaRag("¿Cómo estás?"), "¿Cómo estás?");
+assert.ok(consultaRag("¿Cuántas horas me tocan?", "", { convenio: "x".repeat(600) }).length <= MAX_CONSULTA_RAG_LENGTH);
+console.log("OK  Consulta RAG: jornada, vacaciones, horas extra, repregunta, metadatos y límites.");
 
 console.log(`\n${cases.length} comprobaciones de intención pasaron.`);

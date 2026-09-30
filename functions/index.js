@@ -25,6 +25,7 @@ const {
     classifyLaborIntent,
 } = require("./intent-classifier");
 const { MAX_PREVIOUS_QUESTION_LENGTH, prepararContextoConversacional, validarPreguntaAnterior } = require("./conversation-context");
+const { construirConsultaRag } = require("./rag-query");
 const {
     GENERAL_LABOR_WARNING,
     construirRespuestaConsulta,
@@ -2212,6 +2213,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
         return res.status(preguntaValidation.status).json({ error: preguntaValidation.error });
     }
     pregunta = preguntaValidation.pregunta;
+    const preguntaOriginal = pregunta;
 
     try {
         initializeGemini();
@@ -2280,7 +2282,15 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
         let evidencia = { suficiente: false, reason: "no_convenio" };
         if (convenioFileName) {
             try {
-                const vectorPregunta = await generarEmbeddingPregunta(preguntaParaBusqueda);
+                const consultaRag = construirConsultaRag({
+                    preguntaParaBusqueda,
+                    intent: intentClassification.intent,
+                    sector: req.body.sector || req.body.sectorUsuario || req.body.profesion || convenioResuelto?.sectorKeys?.[0] || "",
+                    ciudad: req.body.ciudad || req.body.ciudadActual || req.body.location || "",
+                    territorio: convenioResuelto?.province || "",
+                    convenio: convenioResuelto?.title || convenioFileName.replace(/\.pdf$/i, "").split(/[\\/]/).pop(),
+                });
+                const vectorPregunta = await generarEmbeddingPregunta(consultaRag);
                 const [keywordPermisos, keywordDisciplinario, vectoriales] = await Promise.all([
                     buscarChunksKeywordPermisos(preguntaParaBusqueda, conveniosFileName),
                     buscarChunksKeywordDisciplinario(preguntaParaBusqueda, conveniosFileName),
@@ -2309,7 +2319,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             try {
                 const generacion = await generarRespuestaConvenio({
                     idiomaRespuesta,
-                    pregunta,
+                    pregunta: preguntaOriginal,
                     preguntaAnterior: contextoConversacional.preguntaAnterior,
                     contexto,
                     promptSistema: [

@@ -24,6 +24,7 @@ const {
 const {
     classifyLaborIntent,
 } = require("./intent-classifier");
+const { MAX_PREVIOUS_QUESTION_LENGTH, prepararContextoConversacional, validarPreguntaAnterior } = require("./conversation-context");
 const {
     GENERAL_LABOR_WARNING,
     construirRespuestaConsulta,
@@ -152,6 +153,7 @@ const PLAY_BILLING_FUNCTION_OPTIONS = {
 };
 const CONSULTAR_CONVENIO_ALLOWED_FIELDS = [
     "pregunta",
+    "preguntaAnterior",
     "ciudad",
     "ciudadActual",
     "location",
@@ -254,6 +256,14 @@ function validarPayloadBasicoConsulta(req) {
             ok: false,
             status: 400,
             error: "Los datos de contexto deben ser texto.",
+        };
+    }
+
+    if (!validarPreguntaAnterior(body.preguntaAnterior)) {
+        return {
+            ok: false,
+            status: 400,
+            error: `La pregunta anterior no puede superar ${MAX_PREVIOUS_QUESTION_LENGTH} caracteres.`,
         };
     }
 
@@ -1081,7 +1091,7 @@ async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
     return [];
 }
 
-async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregunta, contexto }) {
+async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregunta, preguntaAnterior = "", contexto }) {
     const buildRequest = (systemInstruction, maxOutputTokens) => ({
         systemInstruction,
         contents: [
@@ -1089,7 +1099,7 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
                 role: "user",
                 parts: [
                     {
-                        text: `Idioma de respuesta: ${idiomaRespuesta}\nPregunta: ${pregunta}\n\nContexto para comparar:\n${contexto}`,
+                        text: `Idioma de respuesta: ${idiomaRespuesta}\n${preguntaAnterior ? `Pregunta anterior del usuario: ${preguntaAnterior}\n` : ""}Pregunta: ${pregunta}\n\nContexto para comparar:\n${contexto}`,
                     },
                 ],
             },
@@ -1152,7 +1162,7 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
     };
 }
 
-async function generarRespuestaGeneral({ pregunta, idiomaRespuesta, esLaboral }) {
+async function generarRespuestaGeneral({ pregunta, preguntaAnterior = "", idiomaRespuesta, esLaboral }) {
     if (!chatModel) {
         return {
             respuesta: "",
@@ -1183,7 +1193,7 @@ async function generarRespuestaGeneral({ pregunta, idiomaRespuesta, esLaboral })
         contents: [
             {
                 role: "user",
-                parts: [{ text: pregunta }],
+                parts: [{ text: preguntaAnterior ? `Pregunta anterior del usuario: ${preguntaAnterior}\nPregunta actual: ${pregunta}` : pregunta }],
             },
         ],
         generationConfig: {
@@ -2206,8 +2216,12 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
     try {
         initializeGemini();
         const idiomaRespuesta = detectarIdiomaPregunta(pregunta);
+        const contextoConversacional = prepararContextoConversacional(
+            pregunta, payloadValidation.body.preguntaAnterior || "",
+        );
+        const preguntaParaBusqueda = contextoConversacional.preguntaParaBusqueda;
         const intentClassification = classifyLaborIntent({
-            pregunta,
+            pregunta: preguntaParaBusqueda,
             ciudad: req.body && (req.body.ciudad || req.body.ciudadActual || req.body.location || ""),
             sector: req.body && (req.body.sector || req.body.sectorUsuario || req.body.profesion || ""),
         });
@@ -2238,7 +2252,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             .includes(intentClassification.intent);
 
         if (!convenioFileName) {
-            const resolucionCatalogo = await resolverConvenioDesdeEntrada(req.body, pregunta);
+            const resolucionCatalogo = await resolverConvenioDesdeEntrada(req.body, preguntaParaBusqueda);
             if (CLARIFICATION_STATUSES.has(resolucionCatalogo.status) && requiereContextoConvenio) {
                 const reason = resolucionCatalogo.status === "ambiguous"
                     ? "ambiguous_context"
@@ -2266,10 +2280,10 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
         let evidencia = { suficiente: false, reason: "no_convenio" };
         if (convenioFileName) {
             try {
-                const vectorPregunta = await generarEmbeddingPregunta(pregunta);
+                const vectorPregunta = await generarEmbeddingPregunta(preguntaParaBusqueda);
                 const [keywordPermisos, keywordDisciplinario, vectoriales] = await Promise.all([
-                    buscarChunksKeywordPermisos(pregunta, conveniosFileName),
-                    buscarChunksKeywordDisciplinario(pregunta, conveniosFileName),
+                    buscarChunksKeywordPermisos(preguntaParaBusqueda, conveniosFileName),
+                    buscarChunksKeywordDisciplinario(preguntaParaBusqueda, conveniosFileName),
                     buscarChunksEspecificos(vectorPregunta, conveniosFileName),
                 ]);
                 chunksEspecificos = combinarChunksEspecificos(
@@ -2296,6 +2310,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                 const generacion = await generarRespuestaConvenio({
                     idiomaRespuesta,
                     pregunta,
+                    preguntaAnterior: contextoConversacional.preguntaAnterior,
                     contexto,
                     promptSistema: [
                         "Responde exclusivamente con los fragmentos del convenio facilitados.",
@@ -2361,7 +2376,9 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             }), { sourceType: "web_official", modelRoute: "official_web", fallbackReason, chunksUsed: chunksEspecificos.length });
         }
 
-        const general = await generarRespuestaGeneral({ pregunta, idiomaRespuesta, esLaboral: true });
+        const general = await generarRespuestaGeneral({
+            pregunta, preguntaAnterior: contextoConversacional.preguntaAnterior, idiomaRespuesta, esLaboral: true,
+        });
         if (!esRespuestaGeneradaUtil(general)) return responderFalloTecnico(null, "general_ai");
         return responderUtil(construirRespuestaConsulta({
             respuesta: general.respuesta,

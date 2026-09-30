@@ -1,10 +1,14 @@
 const path = require("path");
+const assert = require("assert");
 
 const { classifyLaborIntent } = require(path.join(
   __dirname,
   "..",
   "functions",
   "intent-classifier",
+));
+const { MAX_PREVIOUS_QUESTION_LENGTH, prepararContextoConversacional, validarPreguntaAnterior } = require(path.join(
+  __dirname, "..", "functions", "conversation-context",
 ));
 
 const cases = [
@@ -63,5 +67,38 @@ if (failures > 0) {
   console.error(`\n${failures} comprobacion(es) de intención fallaron.`);
   process.exit(1);
 }
+
+const followUps = [
+  ["¿Cuántas horas tengo que hacer?", "¿Y si hago 50 más?", "collective_agreement"],
+  ["¿Cuántos días de vacaciones tengo?", "¿Son naturales?", "collective_agreement"],
+  ["¿Qué pasa si trabajo un festivo?", "¿Me lo tienen que pagar?", "current_labor"],
+];
+for (const [anterior, actual, intent] of followUps) {
+  const contexto = prepararContextoConversacional(actual, anterior);
+  assert.strictEqual(contexto.preguntaAnterior, anterior);
+  assert.strictEqual(contexto.preguntaParaBusqueda, `${anterior} ${actual}`);
+  assert.strictEqual(classifyLaborIntent({ pregunta: contexto.preguntaParaBusqueda }).intent, intent);
+}
+assert.deepStrictEqual(
+  prepararContextoConversacional("¿Cuántas horas tengo que hacer?"),
+  { preguntaParaBusqueda: "¿Cuántas horas tengo que hacer?", preguntaAnterior: "" },
+);
+assert.strictEqual(
+  prepararContextoConversacional("¿Cuántos días de vacaciones tengo?", "¿Qué pasa si trabajo un festivo?").preguntaAnterior,
+  "",
+);
+assert.strictEqual(
+  prepararContextoConversacional("¿Y quién ganó el Mundial?", "¿Cuántas horas tengo que hacer?").preguntaAnterior,
+  "",
+);
+assert.strictEqual(
+  prepararContextoConversacional("¿Y si hago 50 más?", "¿Quién ganó el Mundial?").preguntaAnterior,
+  "",
+);
+assert.strictEqual(validarPreguntaAnterior(undefined), true);
+assert.strictEqual(validarPreguntaAnterior("x".repeat(MAX_PREVIOUS_QUESTION_LENGTH)), true);
+assert.strictEqual(validarPreguntaAnterior("x".repeat(MAX_PREVIOUS_QUESTION_LENGTH + 1)), false);
+assert.strictEqual(validarPreguntaAnterior(["pregunta"]), false);
+console.log("OK  Contexto de 3 repreguntas, pregunta independiente, historial irrelevante y límites.");
 
 console.log(`\n${cases.length} comprobaciones de intención pasaron.`);

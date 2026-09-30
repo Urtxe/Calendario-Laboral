@@ -20,5 +20,8 @@ assert(source.includes("data.warning"), "La interfaz debe mostrar warning cuando
 assert(source.includes("const LIMITE_CONSULTAS_GRATIS = 50;"), "La UI debe usar 50 consultas gratuitas diarias");
 assert(source.includes("200 consultas IA al día"), "La UI debe reflejar el límite Premium diario");
 assert(source.includes("anadirProcedenciaRespuestaLegal(mensajeRespuesta, data);"), "La respuesta debe recibir procedencia y aviso");
+assert(source.includes("preguntaAnterior: ultimaPreguntaLegal"), "La UI debe enviar solo la pregunta anterior");
+assert(source.includes("pregunta.length <= LIMITE_PREGUNTA_ANTERIOR_IA"), "La UI debe limitar el historial");
+assert(source.includes("ultimaPreguntaLegal = \"\";\n  limpiarMensajesLegales();"), "La UI debe olvidar el contexto al abrir una sesión");
 
 console.log("OK  La UI muestra las cuatro procedencias, el aviso y las cuotas diarias.");

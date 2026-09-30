@@ -160,7 +160,7 @@ addCheck("/consultarConvenio exige Firebase Auth antes de cuota o IA", () => {
     [
       "const authResult = await verificarUsuarioConsulta(req);",
       "if (!await reservarCuota()) return;",
-      "const vectorPregunta = await generarEmbeddingPregunta(pregunta);",
+      "const vectorPregunta = await generarEmbeddingPregunta(preguntaParaBusqueda);",
     ],
     "Auth debe ocurrir antes de cuota y embeddings",
   );
@@ -197,7 +197,7 @@ addCheck("Cuota IA se reserva antes de embeddings/Gemini y se liquida después",
     handler,
     [
       "if (!await reservarCuota()) return;",
-      "const vectorPregunta = await generarEmbeddingPregunta(pregunta);",
+      "const vectorPregunta = await generarEmbeddingPregunta(preguntaParaBusqueda);",
     ],
     "La cuota debe reservarse antes de iniciar RAG/embeddings",
   );
@@ -223,7 +223,7 @@ addCheck("Las aclaraciones no reservan cuota y toda respuesta útil declara proc
   assertIncludes(handler, "if (!esLaboral)");
   assertOrder(
     handler,
-    ["if (!esLaboral)", "generarRespuestaGeneral({ pregunta, idiomaRespuesta, esLaboral: false })", "const vectorPregunta = await generarEmbeddingPregunta(pregunta);"],
+    ["if (!esLaboral)", "generarRespuestaGeneral({ pregunta, idiomaRespuesta, esLaboral: false })", "const vectorPregunta = await generarEmbeddingPregunta(preguntaParaBusqueda);"],
     "Las preguntas no laborales deben ir a IA general sin RAG",
   );
 });
@@ -235,7 +235,7 @@ addCheck("La ruta laboral prioriza convenio, fuente oficial y después IA genera
     [
       "if (evidencia.suficiente)",
       "webFallbackResponse = await intentarFallbackWebOficial({",
-      "generarRespuestaGeneral({ pregunta, idiomaRespuesta, esLaboral: true })",
+      "pregunta, preguntaAnterior: contextoConversacional.preguntaAnterior, idiomaRespuesta, esLaboral: true,",
     ],
     "La jerarquia debe ser convenio -> web oficial -> IA general",
   );

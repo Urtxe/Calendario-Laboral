@@ -466,6 +466,8 @@ function actualizarTarjetaAsesorLegal(activar) {
 const LIMITE_CONSULTAS_GRATIS = 50;
 const LIMITE_CARACTERES_PREGUNTA_IA = 1200;
 const ASESOR_LEGAL_STORAGE_PREFIX = "balance_laboral_asesor_legal_";
+const LIMITE_PREGUNTA_ANTERIOR_IA = 300;
+let ultimaPreguntaLegal = "";
 
 function getModoAsesorLegal() {
   if (window.esPremium) return "premium";
@@ -940,6 +942,7 @@ async function enviarConsultaLegal() {
       headers,
       body: JSON.stringify({
         pregunta,
+        ...(ultimaPreguntaLegal ? { preguntaAnterior: ultimaPreguntaLegal } : {}),
         ciudad: ciudadActual || "",
         sector: sectorUsuario || "",
         convenioFileName:
@@ -1009,6 +1012,7 @@ async function enviarConsultaLegal() {
 
     const mensajeRespuesta = crearMensajeLegal(respuesta, "assistant");
     anadirProcedenciaRespuestaLegal(mensajeRespuesta, data);
+    ultimaPreguntaLegal = pregunta.length <= LIMITE_PREGUNTA_ANTERIOR_IA ? pregunta : "";
 
     const searchEntryPoint =
       data.searchSuggestions &&
@@ -1121,6 +1125,7 @@ window.abrirAsesorLegal = function () {
   if (!shell) return;
 
   shell.classList.add("is-open");
+  ultimaPreguntaLegal = "";
   limpiarMensajesLegales();
   actualizarTextoEstadoLegal();
   crearMensajeBienvenidaLegal();

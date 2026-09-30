@@ -1,7 +1,7 @@
 // Si cambia un asset crítico, scripts/service-worker-checks.js obliga a
 // actualizar esta huella y, con ella, el nombre de las cachés cache-first.
-const CRITICAL_ASSET_REVISION = '7a8bf2fe0773c2f7e30e7b33594e86bef2f0433dff96df02c6ca1fbcb4fdb8de';
-const CACHE_VERSION = 'v2.0.17-ai-labor-context-7a8bf2fe0773';
+const CRITICAL_ASSET_REVISION = '2269f61d980d6e2518b385e06017c8acd25fcf057e395373bb20ad2334269ff0';
+const CACHE_VERSION = 'v2.0.16-ai-context-2269f61d980d';
 const SHELL_CACHE = `balance-laboral-shell-${CACHE_VERSION}`;
 const STATIC_CACHE = `balance-laboral-static-${CACHE_VERSION}`;
 const APP_BASE = new URL('./', self.location);

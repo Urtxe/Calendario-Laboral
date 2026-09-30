@@ -1963,7 +1963,6 @@ function getGa4PropertyId() {
 }
 
 exports.metricasGa4 = onRequest({ timeoutSeconds: 60, memory: "256MiB", secrets: [ga4PropertyId] }, createGa4MetricsHandler({
-    verifyIdToken: (token) => admin.auth().verifyIdToken(token),
     // Secret Manager injects this value in the runtime environment. Reading the
     // environment variable keeps the value server-side and avoids an unavailable
     // Params accessor being mistaken for an invalid GA4 query.

@@ -19,7 +19,7 @@ const criticalAssets = [
 function fingerprintAssets(files) {
   const content = files.map((file) => {
     const hash = crypto.createHash("sha256")
-      .update(fs.readFileSync(path.join(repoRoot, file)))
+      .update(fs.readFileSync(path.join(repoRoot, file), "utf8").replace(/\r\n/g, "\n"))
       .digest("hex");
     return `${file}\n${hash}`;
   }).join("\n");

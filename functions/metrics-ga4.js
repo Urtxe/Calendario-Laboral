@@ -65,7 +65,8 @@ function gaErrorDetails(error) {
 }
 
 function createGa4Client({ propertyId, auth = new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/analytics.readonly"] }) }) {
-    if (!/^\d+$/.test(String(propertyId || ""))) {
+    propertyId = String(propertyId || "").trim();
+    if (!/^\d+$/.test(propertyId)) {
         const error = new Error("GA4_PROPERTY_ID no está configurado con un ID numérico de propiedad.");
         error.status = 503;
         error.code = "missing_configuration";
@@ -125,16 +126,19 @@ async function queryMetrics(client, dateRange) {
     const last24Hours = { startDate: "yesterday", endDate: "today" };
 
     const [overview, daily, product, funnelReport] = await Promise.all([
-        client.runReport({ dateRanges: [dateRange], metrics: [{ name: "activeUsers" }, { name: "sessions" }, { name: "newUsers" }, { name: "returningUsers" }] }),
+        client.runReport({ dateRanges: [dateRange], metrics: [{ name: "activeUsers" }, { name: "sessions" }, { name: "newUsers" }, { name: "engagedSessions" }, { name: "engagementRate" }, { name: "averageSessionDuration" }] }),
         client.runReport({ dateRanges: [dateRange], dimensions: [{ name: "date" }], metrics: [{ name: "activeUsers" }, { name: "sessions" }], orderBys: [{ dimension: { dimensionName: "date" } }], limit: 100 }),
         client.runReport(eventReport(dateRange, productEvents)),
         client.runReport(eventReport(dateRange, funnelEvents)),
     ]);
 
-    const [devices, browsers, languages, events24h, lastEvent] = await Promise.all([
+    const [devices, browsers, languages, locations, acquisition, pages, events24h, lastEvent] = await Promise.all([
         optionalReport(client, { dateRanges: [dateRange], dimensions: [{ name: "deviceCategory" }], metrics: [{ name: "activeUsers" }], limit: 20 }),
         optionalReport(client, { dateRanges: [dateRange], dimensions: [{ name: "browser" }], metrics: [{ name: "activeUsers" }], limit: 20 }),
         optionalReport(client, { dateRanges: [dateRange], dimensions: [{ name: "language" }], metrics: [{ name: "activeUsers" }], limit: 20 }),
+        optionalReport(client, { dateRanges: [dateRange], dimensions: [{ name: "country" }, { name: "region" }, { name: "city" }], metrics: [{ name: "activeUsers" }], orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }], limit: 30 }),
+        optionalReport(client, { dateRanges: [dateRange], dimensions: [{ name: "sessionDefaultChannelGroup" }], metrics: [{ name: "sessions" }], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 20 }),
+        optionalReport(client, { dateRanges: [dateRange], dimensions: [{ name: "pagePath" }], metrics: [{ name: "screenPageViews" }], orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }], limit: 20 }),
         optionalReport(client, { dateRanges: [last24Hours], dimensions: [{ name: "eventName" }], metrics: [{ name: "eventCount" }], limit: 100 }),
         optionalReport(client, { dateRanges: [last24Hours], dimensions: [{ name: "date" }, { name: "eventName" }], metrics: [{ name: "eventCount" }], orderBys: [{ dimension: { dimensionName: "date" }, desc: true }], limit: 1 }),
     ]);
@@ -153,7 +157,8 @@ async function queryMetrics(client, dateRange) {
         accessMode.reason = "La dimensión personalizada modo_acceso no está disponible todavía en GA4.";
     }
 
-    const overviewRow = parseMetricRows(overview)[0] || { metrics: [0, 0, 0, 0] };
+    const overviewRow = parseMetricRows(overview)[0] || { metrics: [0, 0, 0, 0, 0, 0] };
+    const returningUsers = Math.max(0, (overviewRow.metrics[0] || 0) - (overviewRow.metrics[2] || 0));
     const dailyRows = parseMetricRows(daily);
     const productByEvent = metricByEvent(product);
     const funnelByEvent = metricByEvent(funnelReport);
@@ -175,8 +180,11 @@ async function queryMetrics(client, dateRange) {
             activeUsers: overviewRow.metrics[0] || 0,
             sessions: overviewRow.metrics[1] || 0,
             newUsers: overviewRow.metrics[2] || 0,
-            returningUsers: overviewRow.metrics[3] || 0,
-            returningRate: overviewRow.metrics[0] ? Number(((overviewRow.metrics[3] / overviewRow.metrics[0]) * 100).toFixed(1)) : 0,
+            returningUsers,
+            returningRate: overviewRow.metrics[0] ? Number(((returningUsers / overviewRow.metrics[0]) * 100).toFixed(1)) : 0,
+            engagedSessions: overviewRow.metrics[3] || 0,
+            engagementRate: Number(((overviewRow.metrics[4] || 0) * 100).toFixed(1)),
+            averageSessionDuration: Number((overviewRow.metrics[5] || 0).toFixed(1)),
         },
         daily: dailyRows.map((row) => ({ date: row.dimensions[0], activeUsers: row.metrics[0], sessions: row.metrics[1] })),
         product: {
@@ -187,6 +195,9 @@ async function queryMetrics(client, dateRange) {
             devices: parseMetricRows(devices).map((row) => ({ label: row.dimensions[0], value: row.metrics[0] })),
             browsers: parseMetricRows(browsers).map((row) => ({ label: row.dimensions[0], value: row.metrics[0] })),
             languages: parseMetricRows(languages).map((row) => ({ label: row.dimensions[0], value: row.metrics[0] })),
+            locations: parseMetricRows(locations).map((row) => ({ label: row.dimensions.filter((value) => value && value !== "(not set)").reverse().join(" · "), value: row.metrics[0] })).filter((row) => row.label),
+            acquisition: parseMetricRows(acquisition).map((row) => ({ label: row.dimensions[0], value: row.metrics[0] })),
+            pages: parseMetricRows(pages).map((row) => ({ label: row.dimensions[0], value: row.metrics[0] })),
         },
         funnel,
         measurement: {
@@ -198,19 +209,9 @@ async function queryMetrics(client, dateRange) {
     };
 }
 
-function createGa4MetricsHandler({ verifyIdToken, getPropertyId, createClient = createGa4Client, now = () => new Date() }) {
+function createGa4MetricsHandler({ getPropertyId, createClient = createGa4Client, now = () => new Date() }) {
     return async (req, res) => {
         if (req.method !== "POST") return res.status(405).json({ error: "Método no permitido.", code: "method_not_allowed" });
-        const token = String(req.get("authorization") || "").match(/^Bearer\s+(.+)$/i);
-        if (!token) return res.status(401).json({ error: "Autenticación requerida.", code: "unauthenticated" });
-
-        let decoded;
-        try {
-            decoded = await verifyIdToken(token[1]);
-        } catch {
-            return res.status(401).json({ error: "Sesión no válida.", code: "unauthenticated" });
-        }
-        if (decoded.admin !== true) return res.status(403).json({ error: "No tienes permiso para ver métricas.", code: "permission_denied" });
 
         let range;
         try {
@@ -219,14 +220,15 @@ function createGa4MetricsHandler({ verifyIdToken, getPropertyId, createClient = 
             return res.status(error.status || 400).json({ error: error.message, code: error.code || "invalid_request" });
         }
 
-        const cacheKey = range.period;
+        const { period, ...dateRange } = range;
+        const cacheKey = period;
         const cached = cache.get(cacheKey);
         if (cached && now().getTime() - cached.createdAt < MAX_CACHE_AGE_MS) {
             return res.json({ ...cached.value, cached: true, updatedAt: new Date(cached.createdAt).toISOString() });
         }
 
         try {
-            const value = await queryMetrics(createClient({ propertyId: getPropertyId() }), range);
+            const value = await queryMetrics(createClient({ propertyId: getPropertyId() }), dateRange);
             cache.set(cacheKey, { createdAt: now().getTime(), value });
             return res.json({ ...value, cached: false, updatedAt: now().toISOString(), range });
         } catch (error) {

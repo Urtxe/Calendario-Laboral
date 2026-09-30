@@ -1179,10 +1179,11 @@ async function generarRespuestaGeneral({ pregunta, preguntaAnterior = "", idioma
         esLaboral
             ? "Da orientación laboral clara y breve. No afirmes haber consultado un convenio, fuente oficial o dato actualizado."
             : "Responde de forma directa, clara y breve a la pregunta general.",
-        "Máximo 6 líneas. Evita listas largas.",
+        "Responde primero a lo preguntado, con lenguaje natural y sencillo. Evita introducciones, cierres y advertencias genéricas.",
+        "Ajusta la extensión a la pregunta: una duda sencilla puede resolverse en una o dos frases; desarrolla solo lo necesario. Usa listas solo si aportan claridad.",
         "No inventes datos vigentes, importes, fechas o porcentajes actualizados.",
         esLaboral
-            ? "Si puede variar por convenio colectivo, contrato o caso concreto, indícalo brevemente."
+            ? "Indica la incertidumbre concreta cuando falten datos o la respuesta dependa del convenio colectivo, contrato o caso particular. Distingue una regla conocida de tu interpretación."
             : "Si no tienes información fiable, dilo con claridad.",
         idiomaRespuesta === "euskera"
             ? "Responde siempre en euskera."
@@ -2324,7 +2325,9 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                     contexto,
                     promptSistema: [
                         "Responde exclusivamente con los fragmentos del convenio facilitados.",
+                        "Responde primero a lo preguntado, con lenguaje natural y sencillo. Una duda sencilla puede resolverse en una o dos frases; desarrolla solo lo necesario. Evita introducciones, cierres y advertencias genéricas. Usa listas solo si aportan claridad.",
                         "No completes con conocimiento externo ni afirmes datos no incluidos.",
+                        "Distingue el dato del convenio de tu interpretación y señala la incertidumbre cuando los fragmentos no permitan afirmarlo.",
                         "Si los fragmentos no bastan, responde exactamente: No he encontrado el dato exacto en los fragmentos disponibles.",
                         "Cita la fuente disponible al final cuando aparezca.",
                         idiomaRespuesta === "euskera" ? "Responde en euskera." : "Responde en castellano.",

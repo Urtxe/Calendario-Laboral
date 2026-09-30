@@ -1,6 +1,8 @@
 "use strict";
 
 const assert = require("assert");
+const { readFileSync } = require("fs");
+const path = require("path");
 const { construirRespuestaConsulta, GENERAL_LABOR_WARNING } = require("./consultation-contract");
 const { CONVENIO_RAG_MAX_DISTANCE, evaluarEvidenciaConvenio } = require("./rag-evidence");
 const { FREE_AI_DAILY_LIMIT, PREMIUM_AI_DAILY_LIMIT, limiteDiarioIA } = require("./quota-policy");
@@ -14,6 +16,28 @@ const { isEnabled: isOfficialWebFallbackEnabled } = require("./official-web-fall
 
 const tests = [];
 function test(name, fn) { tests.push({ name, fn }); }
+
+test("los prompts activos piden respuestas directas y de longitud adaptable", () => {
+  const source = readFileSync(path.join(__dirname, "index.js"), "utf8");
+  const general = source.split("async function generarRespuestaGeneral")[1].split("async function intentarFallbackWebOficial")[0];
+  const convenio = source.split("exports.consultarConvenio =")[1].split("async function consultarConvenioLegacy")[0];
+
+  for (const prompt of [general, convenio]) {
+    assert.match(prompt, /Responde primero a lo preguntado, con lenguaje natural y sencillo/);
+    assert.match(prompt, /una o dos frases; desarrolla solo lo necesario/);
+    assert.match(prompt, /Evita introducciones, cierres y advertencias genéricas/);
+    assert.match(prompt, /Usa listas solo si aportan claridad/);
+    assert.doesNotMatch(prompt, /Máximo 6 líneas|Formato preferente:/);
+  }
+  assert.match(general, /Indica la incertidumbre concreta cuando falten datos/);
+  assert.match(general, /Distingue una regla conocida de tu interpretación/);
+  assert.match(general, /No inventes datos vigentes/);
+  assert.match(convenio, /Distingue el dato del convenio de tu interpretación/);
+  assert.match(convenio, /No completes con conocimiento externo ni afirmes datos no incluidos/);
+  assert.match(convenio, /Si los fragmentos no bastan, responde exactamente/);
+  assert.match(convenio, /Cita la fuente disponible al final cuando aparezca/);
+  assert.match(convenio, /fuentes: construirFuentesChunks\(chunksEspecificos\)/);
+});
 
 test("evidencia semántica suficiente permite respuesta de convenio", () => {
   const result = evaluarEvidenciaConvenio([{

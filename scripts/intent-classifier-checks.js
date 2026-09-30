@@ -44,6 +44,34 @@ const cases = [
     question: "mi empresa no me paga las horas extra",
     expected: "collective_agreement",
   },
+  {
+    question: "Estoy currando de más",
+    expected: "collective_agreement",
+  },
+  {
+    question: "¿Puedo compensarlas con días libres?",
+    expected: "collective_agreement",
+  },
+  {
+    question: "Me hacen currar de más",
+    expected: "collective_agreement",
+  },
+  {
+    question: "¿Tengo 30 días?",
+    expected: "out_of_scope",
+  },
+  {
+    question: "¿Son naturales o laborables?",
+    expected: "out_of_scope",
+  },
+  {
+    question: "¿Quién ganó el Mundial?",
+    expected: "out_of_scope",
+  },
+  {
+    question: "Quiero una receta de pasta",
+    expected: "out_of_scope",
+  },
 ];
 
 let failures = 0;
@@ -72,6 +100,10 @@ const followUps = [
   ["¿Cuántas horas tengo que hacer?", "¿Y si hago 50 más?", "collective_agreement"],
   ["¿Cuántos días de vacaciones tengo?", "¿Son naturales?", "collective_agreement"],
   ["¿Qué pasa si trabajo un festivo?", "¿Me lo tienen que pagar?", "current_labor"],
+  ["¿Cuántas horas extra hago?", "¿Puedo compensarlas con días libres?", "collective_agreement"],
+  ["¿Cuántos días de vacaciones tengo?", "¿Cuántos días puedo coger?", "collective_agreement"],
+  ["¿Cuántos días de vacaciones tengo?", "¿Tengo 30 días?", "collective_agreement"],
+  ["¿Cuántos días de vacaciones tengo?", "¿Son naturales o laborables?", "collective_agreement"],
 ];
 for (const [anterior, actual, intent] of followUps) {
   const contexto = prepararContextoConversacional(actual, anterior);
@@ -96,6 +128,14 @@ assert.strictEqual(
   "",
 );
 assert.strictEqual(
+  prepararContextoConversacional("¿Tengo 30 días?", "¿Cuántas horas tengo que hacer?").preguntaAnterior,
+  "",
+);
+assert.strictEqual(
+  prepararContextoConversacional("¿Son naturales o laborables?", "¿Cuántas horas tengo que hacer?").preguntaAnterior,
+  "",
+);
+assert.strictEqual(
   prepararContextoConversacional("¿Y si hago 50 más?", "¿Quién ganó el Mundial?").preguntaAnterior,
   "",
 );
@@ -103,6 +143,6 @@ assert.strictEqual(validarPreguntaAnterior(undefined), true);
 assert.strictEqual(validarPreguntaAnterior("x".repeat(MAX_PREVIOUS_QUESTION_LENGTH)), true);
 assert.strictEqual(validarPreguntaAnterior("x".repeat(MAX_PREVIOUS_QUESTION_LENGTH + 1)), false);
 assert.strictEqual(validarPreguntaAnterior(["pregunta"]), false);
-console.log("OK  Contexto de 3 repreguntas, pregunta independiente, historial irrelevante y límites.");
+console.log("OK  Contexto de 7 repreguntas, pregunta independiente, historial irrelevante y límites.");
 
 console.log(`\n${cases.length} comprobaciones de intención pasaron.`);

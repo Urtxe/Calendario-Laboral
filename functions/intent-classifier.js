@@ -1,4 +1,4 @@
-const { detectConvenioCriteria, normalizeText } = require("./convenio-metadata");
+const { detectConvenioCriteria, isSupportedLaborLocation, isSupportedLaborSector, normalizeText } = require("./convenio-metadata");
 
 const LABOR_TERMS = [
   "vacaciones",
@@ -209,6 +209,11 @@ function classifyLaborIntent({ pregunta, ciudad = "", sector = "" }) {
   }
 
   if (!hasLabor) {
+    const explicit = detectConvenioCriteria({ pregunta });
+    if ((explicit.provinces.length && explicit.sectorKeys.length) ||
+        isSupportedLaborLocation(pregunta) || isSupportedLaborSector(pregunta)) {
+      return { intent: "collective_agreement", reason: "labor_context_signal" };
+    }
     return {
       intent: "out_of_scope",
       reason: "no_labor_signal",

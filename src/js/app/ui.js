@@ -227,6 +227,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   setupListener("ciudadUsuario", "change", function () {
     ciudadActual = this.value;
+    contextoLaboralSesion = null;
     cargarFestivosOficiales(ciudadActual, anioActual);
     guardarTodoEnFirebase();
     if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackCalendarConfigured();
@@ -253,6 +254,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   setupListener("sectorUsuario", "change", function () {
     sectorUsuario = this.value;
+    contextoLaboralSesion = null;
     renderTodo();
     guardarTodoEnFirebase();
     if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackCalendarConfigured();
@@ -468,6 +470,7 @@ const LIMITE_CARACTERES_PREGUNTA_IA = 1200;
 const ASESOR_LEGAL_STORAGE_PREFIX = "balance_laboral_asesor_legal_";
 const LIMITE_PREGUNTA_ANTERIOR_IA = 300;
 let ultimaPreguntaLegal = "";
+let contextoLaboralSesion = null;
 
 function getModoAsesorLegal() {
   if (window.esPremium) return "premium";
@@ -509,6 +512,11 @@ function crearMensajeBienvenidaLegal() {
   if (!messages || messages.childElementCount > 0) return;
 
   const modo = getModoAsesorLegal();
+  const mensajeContexto = sectorUsuario && sectorUsuario !== "general"
+    ? "Pregúntame por tu convenio."
+    : ciudadActual
+      ? "Indícame tu trabajo o sector y tu duda para localizar tu convenio."
+      : "Indícame tu trabajo, tu ciudad y tu duda para localizar tu convenio.";
 
   if (modo === "anonimo") {
     crearMensajeLegal(
@@ -522,7 +530,7 @@ function crearMensajeBienvenidaLegal() {
     const restantes = getConsultasRestantes();
     if (restantes > 0) {
       crearMensajeLegal(
-        `Indícame tu trabajo, tu ciudad y tu duda para revisar el convenio que te corresponde.`,
+        mensajeContexto,
         "assistant",
       );
     } else {
@@ -537,7 +545,7 @@ function crearMensajeBienvenidaLegal() {
   }
 
   crearMensajeLegal(
-    "Dime tu trabajo, tu ciudad y tu duda para revisar el convenio que te corresponde.",
+    mensajeContexto,
     "assistant",
   );
 }
@@ -937,19 +945,19 @@ async function enviarConsultaLegal() {
       localStorage.getItem("consultarConvenioUrl") ||
       "/consultarConvenio";
 
+    const contextoLaboral = contextoLaboralSesion || {
+      sector: sectorUsuario === "general" ? "" : sectorUsuario || "",
+      ciudad: ciudadActual || "",
+    };
     const response = await fetch(consultarConvenioUrl, {
       method: "POST",
       headers,
       body: JSON.stringify({
         pregunta,
         ...(ultimaPreguntaLegal ? { preguntaAnterior: ultimaPreguntaLegal } : {}),
-        ciudad: ciudadActual || "",
-        sector: sectorUsuario || "",
-        convenioFileName:
-          window.convenioFileName ||
-          localStorage.getItem("convenioFileName") ||
-          localStorage.getItem("file_name") ||
-          "",
+        ciudad: contextoLaboral.ciudad,
+        sector: contextoLaboral.sector,
+        ...(contextoLaboral.convenioFileName ? { convenioFileName: contextoLaboral.convenioFileName } : {}),
       }),
     });
 
@@ -1013,6 +1021,13 @@ async function enviarConsultaLegal() {
     const mensajeRespuesta = crearMensajeLegal(respuesta, "assistant");
     anadirProcedenciaRespuestaLegal(mensajeRespuesta, data);
     ultimaPreguntaLegal = pregunta.length <= LIMITE_PREGUNTA_ANTERIOR_IA ? pregunta : "";
+    if (data.convenioUsado && data.convenioDetectado?.province && data.convenioDetectado.sectorKeys?.length) {
+      contextoLaboralSesion = {
+        sector: data.convenioDetectado.sectorKeys[0],
+        ciudad: data.convenioDetectado.province,
+        convenioFileName: data.convenioUsado,
+      };
+    }
 
     const searchEntryPoint =
       data.searchSuggestions &&
@@ -1126,6 +1141,7 @@ window.abrirAsesorLegal = function () {
 
   shell.classList.add("is-open");
   ultimaPreguntaLegal = "";
+  contextoLaboralSesion = null;
   limpiarMensajesLegales();
   actualizarTextoEstadoLegal();
   crearMensajeBienvenidaLegal();
@@ -1143,6 +1159,8 @@ window.abrirAsesorLegal = function () {
 window.cerrarAsesorLegal = function () {
   const shell = document.getElementById("legal-ai-shell");
   if (shell) shell.classList.remove("is-open");
+  ultimaPreguntaLegal = "";
+  contextoLaboralSesion = null;
 };
 
 window.actualizarAsesorLegalUI = function () {

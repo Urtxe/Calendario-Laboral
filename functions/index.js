@@ -12,6 +12,7 @@ const {
     detectConvenioCriteria,
     normalizeText,
     resolveCatalogEntry,
+    resolveCatalogReference,
 } = require("./convenio-metadata");
 const {
     buildWorkersStatuteFallbackResponse,
@@ -24,7 +25,8 @@ const {
 const {
     classifyLaborIntent,
 } = require("./intent-classifier");
-const { MAX_PREVIOUS_QUESTION_LENGTH, prepararContextoConversacional, validarPreguntaAnterior } = require("./conversation-context");
+const { prepararContextoConversacional } = require("./conversation-context");
+const { tieneContentTypeJson, validarPayloadBasicoConsulta } = require("./consultation-payload");
 const { construirConsultaRag } = require("./rag-query");
 const {
     GENERAL_LABOR_WARNING,
@@ -152,24 +154,6 @@ const PLAY_BILLING_FUNCTION_OPTIONS = {
     memory: "256MiB",
     serviceAccount: PLAY_BILLING_RUNTIME_SERVICE_ACCOUNT,
 };
-const CONSULTAR_CONVENIO_ALLOWED_FIELDS = [
-    "pregunta",
-    "preguntaAnterior",
-    "ciudad",
-    "ciudadActual",
-    "location",
-    "sector",
-    "sectorUsuario",
-    "profesion",
-    "convenioFileName",
-    "file_name",
-    "fileName",
-    "convenioNombre",
-    "convenioId",
-];
-const CONSULTAR_CONVENIO_OPTIONAL_STRING_FIELDS = CONSULTAR_CONVENIO_ALLOWED_FIELDS
-    .filter((field) => field !== "pregunta");
-
 function esOrigenPermitidoConsulta(origin) {
     return CONSULTAR_CONVENIO_ALLOWED_ORIGINS.has(origin) ||
         CONSULTAR_CONVENIO_DEV_ORIGIN_PATTERN.test(origin);
@@ -212,66 +196,6 @@ function extraerTextoRespuesta(result) {
     if (typeof result.text === "function") return result.text();
     if (result.response && typeof result.response.text === "function") return result.response.text();
     return "";
-}
-
-function tieneContentTypeJson(req) {
-    const contentType = req.get("content-type") || "";
-    return contentType.toLowerCase().includes("application/json");
-}
-
-function validarPayloadBasicoConsulta(req) {
-    if (!tieneContentTypeJson(req)) {
-        return {
-            ok: false,
-            status: 400,
-            error: "La solicitud debe enviarse como application/json.",
-        };
-    }
-
-    const body = req.body;
-
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
-        return {
-            ok: false,
-            status: 400,
-            error: "El cuerpo de la solicitud debe ser un objeto JSON.",
-        };
-    }
-
-    const keys = Object.keys(body);
-    const unexpectedFields = keys.filter((key) => !CONSULTAR_CONVENIO_ALLOWED_FIELDS.includes(key));
-
-    if (unexpectedFields.length) {
-        return {
-            ok: false,
-            status: 400,
-            error: "La solicitud contiene campos no permitidos.",
-        };
-    }
-
-    const invalidOptionalField = CONSULTAR_CONVENIO_OPTIONAL_STRING_FIELDS
-        .find((field) => body[field] !== undefined && typeof body[field] !== "string");
-
-    if (invalidOptionalField) {
-        return {
-            ok: false,
-            status: 400,
-            error: "Los datos de contexto deben ser texto.",
-        };
-    }
-
-    if (!validarPreguntaAnterior(body.preguntaAnterior)) {
-        return {
-            ok: false,
-            status: 400,
-            error: `La pregunta anterior no puede superar ${MAX_PREVIOUS_QUESTION_LENGTH} caracteres.`,
-        };
-    }
-
-    return {
-        ok: true,
-        body,
-    };
 }
 
 function validarPreguntaConsulta(body) {
@@ -2067,7 +1991,7 @@ function construirFuentesChunks(chunks) {
 
 function construirOrientacionClarificacion(message, reason, options = []) {
     return construirRespuestaConsulta({
-        respuesta: `${message}\n\nComo orientación general, los derechos sobre jornada, vacaciones, permisos o salario pueden variar por convenio y contrato. Indícame esos datos para poder comprobar la regla específica.`,
+        respuesta: message,
         sourceType: "clarification",
         grounded: false,
         warning: GENERAL_LABOR_WARNING,
@@ -2223,6 +2147,20 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             pregunta, payloadValidation.body.preguntaAnterior || "",
         );
         const preguntaParaBusqueda = contextoConversacional.preguntaParaBusqueda;
+        const referenciaConvenio = obtenerReferenciaConvenio(req.body);
+        let convenioValidado = null;
+        if (referenciaConvenio) {
+            const criteriosContexto = detectConvenioCriteria({
+                pregunta: "",
+                ciudad: req.body.ciudad || req.body.ciudadActual || req.body.location || "",
+                sector: req.body.sector || req.body.sectorUsuario || req.body.profesion || "",
+            });
+            convenioValidado = resolveCatalogReference(await cargarCatalogoConvenios(), referenciaConvenio, criteriosContexto);
+            if (!convenioValidado) {
+                registrarResultado({ sourceType: "error", status: 400, useful: false, quotaConsumed: false });
+                return res.status(400).json({ error: "El convenio indicado no corresponde a un contexto soportado." });
+            }
+        }
         const intentClassification = classifyLaborIntent({
             pregunta: preguntaParaBusqueda,
             ciudad: req.body && (req.body.ciudad || req.body.ciudadActual || req.body.location || ""),
@@ -2247,14 +2185,16 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             }), { sourceType: "general_labor", modelRoute: "general_ai" });
         }
 
-        let convenioFileName = obtenerReferenciaConvenio(req.body);
-        let conveniosFileName = convenioFileName ? [convenioFileName] : [];
-        let convenioResuelto = null;
+        let convenioFileName = "";
+        let conveniosFileName = [];
+        let convenioResuelto = convenioValidado;
         let fallbackReason = null;
         const requiereContextoConvenio = ["collective_agreement", "needs_clarification", "mixed_labor"]
             .includes(intentClassification.intent);
 
-        if (!convenioFileName) {
+        const criterioExplicito = detectConvenioCriteria({ pregunta, ciudad: "", sector: "" });
+        if (!convenioResuelto || criterioExplicito.provinces.length || criterioExplicito.sectorKeys.length) {
+            convenioResuelto = null;
             const resolucionCatalogo = await resolverConvenioDesdeEntrada(req.body, preguntaParaBusqueda);
             if (CLARIFICATION_STATUSES.has(resolucionCatalogo.status) && requiereContextoConvenio) {
                 const reason = resolucionCatalogo.status === "ambiguous"
@@ -2275,6 +2215,9 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             } else {
                 fallbackReason = "no_convenio";
             }
+        } else {
+            conveniosFileName = convenioResuelto.fileNames || [];
+            convenioFileName = conveniosFileName[0] || "";
         }
 
         if (!await reservarCuota()) return;

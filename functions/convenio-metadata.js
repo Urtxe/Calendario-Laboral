@@ -81,6 +81,20 @@ function normalizeText(value) {
     .trim();
 }
 
+function isSupportedLaborLocation(value) {
+  const normalized = normalizeText(value);
+  return Object.entries(LOCATION_ALIASES).some(([province, aliases]) =>
+    normalizeText(province) === normalized || aliases.some((alias) => normalizeText(alias) === normalized)) ||
+    Object.entries(COMMUNITY_ALIASES).some(([community, aliases]) =>
+      normalizeText(community) === normalized || aliases.some((alias) => normalizeText(alias) === normalized));
+}
+
+function isSupportedLaborSector(value) {
+  const normalized = normalizeText(value);
+  return SECTOR_DEFINITIONS.some((definition) =>
+    definition.key === normalized || definition.labels.some((label) => normalizeText(label) === normalized));
+}
+
 function includesWholeAlias(texto, alias) {
   const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(^|\\s)${escaped}(\\s|$)`, "i").test(texto);
@@ -312,12 +326,25 @@ function resolveCatalogEntry(catalogEntries, criteria) {
   };
 }
 
+function resolveCatalogReference(catalogEntries, reference, criteria) {
+  const entry = catalogEntries.find((candidate) =>
+    candidate.id === reference || candidate.title === reference || candidate.fileNames?.includes(reference));
+  if (!entry || (criteria.provinces.length && !criteria.provinces.includes(entry.province)) ||
+      (criteria.sectorKeys.length && !criteria.sectorKeys.some((key) => entry.sectorKeys?.includes(key)))) {
+    return null;
+  }
+  return entry;
+}
+
 module.exports = {
   CATALOGO_CONVENIOS,
   buildCatalogEntriesFromFileNames,
   detectConvenioCriteria,
+  isSupportedLaborLocation,
+  isSupportedLaborSector,
   normalizeText,
   parseConvenioFileName,
   resolveCatalogEntry,
+  resolveCatalogReference,
   sanitizeId,
 };

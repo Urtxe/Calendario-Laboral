@@ -13,7 +13,8 @@ function validarPreguntaAnterior(value) {
 function prepararContextoConversacional(pregunta, preguntaAnterior = "") {
   const anterior = preguntaAnterior.trim();
   const actual = normalizeText(pregunta);
-  const esRepregunta = /^(?:y si (?:hago|trabajo|curro)\b|(?:y )?(?:eso\b|(?:me )?(?:lo|la|los|las)\b)|son (?:naturales|laborables)\b)/.test(actual);
+  // ponytail: cubrimos elipsis frecuentes de un turno; ampliar solo con casos evaluados.
+  const esRepregunta = /^(?:y si (?:hago|trabajo|curro) (?:\d+|mas\b|menos\b)|(?:y )?(?:eso\b|(?:me )?(?:lo|la|los|las)\b)|son (?:naturales|laborables)\b)/.test(actual);
   const intencionActual = classifyLaborIntent({ pregunta });
   const intencionAnterior = anterior && classifyLaborIntent({ pregunta: anterior });
 

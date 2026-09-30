@@ -92,6 +92,10 @@ assert.strictEqual(
   "",
 );
 assert.strictEqual(
+  prepararContextoConversacional("¿Y si hago deporte?", "¿Cuántas horas tengo que hacer?").preguntaAnterior,
+  "",
+);
+assert.strictEqual(
   prepararContextoConversacional("¿Y si hago 50 más?", "¿Quién ganó el Mundial?").preguntaAnterior,
   "",
 );

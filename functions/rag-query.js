@@ -10,7 +10,8 @@ function construirConsultaRag({ preguntaParaBusqueda, intent, sector = "", ciuda
   }
 
   const preguntaNormalizada = normalizeText(preguntaParaBusqueda);
-  const tema = /\bhoras?\s+(?:extra\w*|extraordinari\w*|de mas)\b/.test(preguntaNormalizada) ||
+  const tema = /\b(?:currando|currar) de mas\b/.test(preguntaNormalizada) ||
+      /\bhoras?\s+(?:extra\w*|extraordinari\w*|de mas)\b/.test(preguntaNormalizada) ||
       (/\bhoras?\b/.test(preguntaNormalizada) && /\b(?:mas|compensar\w*)\b/.test(preguntaNormalizada))
     ? "horas extra compensacion descanso"
     : /\bvacaciones\b/.test(preguntaNormalizada)

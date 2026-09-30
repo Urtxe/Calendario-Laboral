@@ -157,6 +157,7 @@ function consultaRag(pregunta, anterior = "", datos = {}) {
 assert.match(consultaRag("¿Cuántas horas me tocan?"), /jornada anual duracion laboral/);
 assert.match(consultaRag("¿Cuántos días de vacaciones tengo?"), /naturales laborables/);
 assert.match(consultaRag("¿Cómo funcionan las horas extra?"), /compensacion descanso/);
+assert.match(consultaRag("Estoy currando de más, ¿qué puedo hacer?"), /horas extra compensacion descanso/);
 assert.match(consultaRag("¿Y si hago 50 más?", "¿Cuántas horas tengo que hacer?"), /extra compensacion descanso/);
 assert.match(consultaRag("¿Son naturales?", "¿Cuántos días de vacaciones tengo?"), /vacaciones/);
 const conDatos = consultaRag("¿Cuántas horas me tocan?", "", {

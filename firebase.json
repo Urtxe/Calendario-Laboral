@@ -185,7 +185,7 @@
         "destination": "/seo/transporte-zaragoza.html"
       },
       {
-        "source": "**",
+        "source": "!/@(convenios)/**",
         "destination": "/index.html"
       }
     ],

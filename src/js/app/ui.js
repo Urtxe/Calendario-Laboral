@@ -217,6 +217,15 @@ function inicializarNavegacionDashboard() {
   sincronizarModo();
 }
 
+let horasCalendarioSaveTimer = null;
+let ultimaPromesaGuardadoCalendario = Promise.resolve(false);
+
+function trackCalendarConfigurationAfterSave(savePromise) {
+  Promise.resolve(savePromise).then(function (saved) {
+    if (saved && window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackCalendarConfigured();
+  });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   inicializarViewportIOS();
 
@@ -229,8 +238,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ciudadActual = this.value;
     contextoLaboralSesion = null;
     cargarFestivosOficiales(ciudadActual, anioActual);
-    guardarTodoEnFirebase();
-    if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackCalendarConfigured();
+    trackCalendarConfigurationAfterSave(guardarTodoEnFirebase());
   });
 
   setupListener("inputAnio", "input", function () {
@@ -241,23 +249,24 @@ document.addEventListener("DOMContentLoaded", function () {
   setupListener("horasAnuales", "input", function () {
     objetivosAnuales[anioActual] = parseInt(this.value) || 0;
     renderTodo();
-    guardarTodoEnFirebase();
-    if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackCalendarConfigured();
+    ultimaPromesaGuardadoCalendario = guardarTodoEnFirebase();
+    window.clearTimeout(horasCalendarioSaveTimer);
+    horasCalendarioSaveTimer = window.setTimeout(function () {
+      trackCalendarConfigurationAfterSave(ultimaPromesaGuardadoCalendario);
+    }, 750);
   });
 
   setupListener("tipoJornada", "change", function () {
     tipoJornadaPorAnio[anioActual] = parseFloat(this.value);
     renderTodo();
-    guardarTodoEnFirebase();
-    if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackCalendarConfigured();
+    trackCalendarConfigurationAfterSave(guardarTodoEnFirebase());
   });
 
   setupListener("sectorUsuario", "change", function () {
     sectorUsuario = this.value;
     contextoLaboralSesion = null;
     renderTodo();
-    guardarTodoEnFirebase();
-    if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackCalendarConfigured();
+    trackCalendarConfigurationAfterSave(guardarTodoEnFirebase());
   });
 
   const datosUsuarioCard = document.getElementById("cargar-datos");
@@ -300,13 +309,12 @@ window.abrirModalPremium = function (trigger) {
   if (comercioPremiumBloqueadoEnTwa()) {
     if (window.PlayBillingService) {
       window.PlayBillingService.openPremiumModal();
+      if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumPrompt(trigger || "other");
     } else {
       mostrarAvisoComercioPremiumNoDisponible();
     }
     return;
   }
-
-  if (typeof trackAperturaPremium === "function") trackAperturaPremium();
 
   if (!usuarioTieneSesion()) {
     alert("Necesitas registrarte o iniciar sesión para activar Premium.");
@@ -1019,6 +1027,7 @@ async function enviarConsultaLegal() {
     }
 
     const mensajeRespuesta = crearMensajeLegal(respuesta, "assistant");
+    if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackAIConsultationSucceeded();
     anadirProcedenciaRespuestaLegal(mensajeRespuesta, data);
     ultimaPreguntaLegal = pregunta.length <= LIMITE_PREGUNTA_ANTERIOR_IA ? pregunta : "";
     if (data.convenioUsado && data.convenioDetectado?.province && data.convenioDetectado.sectorKeys?.length) {
@@ -1192,7 +1201,6 @@ window.actualizarAsesorLegalUI = function () {
 };
 
 window.seleccionarPlan = function (tipo) {
-  if (typeof trackPremiumCheckoutStarted === "function") trackPremiumCheckoutStarted();
   if (comercioPremiumBloqueadoEnTwa()) {
     if (typeof cerrarModalPricing === "function") cerrarModalPricing();
     const productId = tipo === "mensual" ? "premium_monthly" : tipo === "anual" ? "premium_yearly" : null;
@@ -1200,6 +1208,7 @@ window.seleccionarPlan = function (tipo) {
       mostrarAvisoComercioPremiumNoDisponible();
       return;
     }
+    if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumCheckoutStarted();
     window.PlayBillingService.purchase(productId)
       .then(() => window.verificarNivelPremium && window.verificarNivelPremium(window.usuarioActual.uid))
       .catch(() => mostrarAvisoComercioPremiumNoDisponible());
@@ -1223,8 +1232,8 @@ window.seleccionarPlan = function (tipo) {
   const urlBase = links[tipo];
   if (!urlBase) return;
 
-  if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumCheckoutStarted();
   const urlFinal = `${urlBase}?prefilled_email=${encodeURIComponent(usuarioActual.email)}&client_reference_id=${usuarioActual.uid}`;
+  if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumCheckoutStarted();
   window.location.href = urlFinal;
 };
 

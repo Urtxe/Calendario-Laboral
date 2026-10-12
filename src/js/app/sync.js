@@ -90,8 +90,7 @@ window.cargarDatosDesdeFirebase = function() {
 
 function guardarTodoEnFirebase() {
     if (!usuarioActual) {
-        guardarDatosAnonimosLocales();
-        return;
+        return Promise.resolve(guardarDatosAnonimosLocales());
     }
     mostrarSync(true);
 
@@ -103,7 +102,7 @@ function guardarTodoEnFirebase() {
     tipoJornadaPorAnio[anioActual] = jornadaActual;
     objetivosAnuales[anioActual] = horasAnualesActuales;
 
-    Promise.all([
+    return Promise.all([
         userRef.set({
             ciudadActual: ciudadActual,
             sectorUsuario: sectorUsuario,
@@ -129,9 +128,11 @@ function guardarTodoEnFirebase() {
         }
         console.log("☁️ Datos sincronizados. Jornada guardada: " + tipoJornadaPorAnio[anioActual]);
         actualizarTablaResumen();
+        return true;
     }).catch(function(e) {
         console.error("Error al guardar:", e);
         mostrarSync(false);
+        return false;
     });
 }
 

@@ -1,19 +1,11 @@
-const analyticsMeasurementId = "G-TMJ9H1T8QG";
+const analyticsMeasurementId = window.BALANCE_LABORAL_FIREBASE_CONFIG.measurementId;
 
 // Analytics is opt-in. Set the Google Analytics disable flag before its SDK is
 // ever loaded; src/js/analytics.js removes it only after explicit consent.
 window.BALANCE_LABORAL_ANALYTICS_MEASUREMENT_ID = analyticsMeasurementId;
 window[`ga-disable-${analyticsMeasurementId}`] = true;
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBmQuRp81uG8XktUCyEo-XdIJ4RTta_YK4",
-    authDomain: "calendario-laboral-252b1.firebaseapp.com",
-    projectId: "calendario-laboral-252b1",
-    storageBucket: "calendario-laboral-252b1.firebasestorage.app",
-    messagingSenderId: "130172535764",
-    appId: "1:130172535764:web:fc0119ba1d36b0718acc41",
-    measurementId: analyticsMeasurementId
-};
+const firebaseConfig = window.BALANCE_LABORAL_FIREBASE_CONFIG;
 
 firebase.initializeApp(firebaseConfig);
 
@@ -82,6 +74,7 @@ logAppCheckDebug({
 });
 
 const auth = firebase.auth();
+window.BALANCE_LABORAL_AUTH_STATE = "unknown";
 const db = firebase.firestore();
 
 db.enablePersistence().catch(err => console.log("Persistencia no disponible"));
@@ -305,6 +298,7 @@ window.autenticarConGoogle = () => {
 window.cerrarSesion = () => { if(confirm('¿Cerrar sesión?')) auth.signOut(); };
 
 auth.onAuthStateChanged(user => {
+    window.BALANCE_LABORAL_AUTH_STATE = user ? "authenticated" : "anonymous";
     window.usuarioActual = user;
     const authButtons = document.getElementById('auth-buttons');
     const userInfo = document.getElementById('user-info');

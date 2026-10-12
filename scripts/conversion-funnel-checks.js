@@ -26,11 +26,11 @@ function createWindow(options = {}) {
     window: null,
     localStorage: options.localStorage || memoryStorage(),
     sessionStorage: options.sessionStorage || memoryStorage(),
-    crypto: { getRandomValues(bytes) { for (let i = 0; i < bytes.length; i += 1) bytes[i] = i + 1; } },
     analytics: { events: [], logEvent(name, params) { this.events.push({ name, params }); } },
     document: { readyState: "loading", addEventListener() {}, getElementById(id) { return nodes[id] || null; } },
     setTimeout() {},
     APP_CONFIG: {},
+    tieneConsentimientoAnalitica() { return options.analyticsConsent !== false; },
     usuarioActual: options.user || null,
     diasMarcados: options.diasMarcados || {},
     sectorUsuario: "general",
@@ -43,29 +43,18 @@ function createWindow(options = {}) {
   return { window, nodes };
 }
 
-const localStorage = memoryStorage();
-const first = createWindow({ localStorage });
-const id = first.window.BalanceLaboralConversion.getInstallationId();
-assert.match(id, /^[0-9a-f]{32}$/);
-assert.strictEqual(first.window.BalanceLaboralConversion.getInstallationId(), id, "installation id must persist");
-first.window.BalanceLaboralConversion.recordAppOpen(null);
-assert.strictEqual(first.window.analytics.events[0].name, "app_open");
-assert.strictEqual(first.window.analytics.events[0].params.access_mode, "anonymous");
-assert.strictEqual(first.window.analytics.events[0].params.is_returning, false);
-first.window.BalanceLaboralConversion.recordAppOpen(null);
-assert.strictEqual(first.window.analytics.events.length, 1, "app_open is emitted once per session");
-
-const returning = createWindow({ localStorage });
-returning.window.BalanceLaboralConversion.recordAppOpen(null);
-assert.strictEqual(returning.window.analytics.events[0].params.is_returning, true, "second installation visit is returning");
-assert.strictEqual(returning.window.analytics.events[1].name, "anonymous_return_visit");
+const first = createWindow();
+assert.strictEqual(first.window.localStorage.getItem("bl_anonymous_installation_id"), null, "analytics setup must not create an installation identifier");
+assert.strictEqual(first.window.BalanceLaboralConversion.recordAppOpen, undefined, "app_open has one emitter in consented Analytics");
+assert(!source.includes("bl_anonymous_installation_id"), "conversion funnel must not persist an analytics installation identifier");
+assert(!source.includes("anonymous_return_visit"), "returning users are reported by GA4's standard dimension");
 
 const prompt = createWindow({ diasMarcados: {
   "2026-08-01": { tipo: "trabajado" }, "2026-08-02": { tipo: "trabajado" }, "2026-08-03": { tipo: "trabajado" },
 } });
 prompt.window.BalanceLaboralConversion.trackShiftAdded();
 assert.strictEqual(prompt.window.analytics.events[0].name, "shift_added");
-assert.strictEqual(prompt.window.analytics.events[0].params.shift_count_bucket, "2_3");
+assert.deepStrictEqual(JSON.parse(JSON.stringify(prompt.window.analytics.events[0].params)), {}, "shift events must not include calendar or account details");
 assert.strictEqual(prompt.nodes["registration-prompt-modal"].style.display, "flex", "three shifts shows a prompt");
 prompt.window.BalanceLaboralConversion.closeRegistrationPrompt("dismiss");
 assert.strictEqual(prompt.window.BalanceLaboralConversion.canShowRegistrationPrompt(), false, "a dismissal blocks prompts for the session");
@@ -79,16 +68,22 @@ activity.window.BalanceLaboralConversion.trackSignupCompleted();
 assert.deepStrictEqual(Array.from(activity.window.analytics.events, (event) => event.name), [
   "calendar_configured", "balance_viewed", "signup_started", "signup_completed",
 ]);
-assert.strictEqual(activity.window.analytics.events[0].params.province_or_city, "Donostia");
+assert.deepStrictEqual(JSON.parse(JSON.stringify(activity.window.analytics.events[0].params)), {}, "calendar events must not include workplace details");
 
 const authenticated = createWindow({ user: { uid: "not-sent-to-analytics" } });
 assert.strictEqual(authenticated.window.BalanceLaboralConversion.showRegistrationPrompt("shifts_3"), false, "authenticated users never see anonymous prompts");
 authenticated.window.BalanceLaboralConversion.trackPremiumPrompt("pdf_export");
 authenticated.window.BalanceLaboralConversion.trackPremiumCheckoutStarted();
 authenticated.window.BalanceLaboralConversion.trackPremiumActivationConfirmed(true);
+authenticated.window.BalanceLaboralConversion.trackAIConsultationSucceeded();
 assert.deepStrictEqual(Array.from(authenticated.window.analytics.events, (event) => event.name), [
-  "premium_prompt_shown", "premium_checkout_started", "premium_activated",
+  "premium_prompt_shown", "premium_checkout_started", "premium_activation_confirmed", "ai_consultation_succeeded",
 ]);
+assert(!JSON.stringify(authenticated.window.analytics.events).includes("not-sent-to-analytics"), "Analytics events must not contain user IDs");
+
+const withoutConsent = createWindow({ user: { uid: "private-user" }, analyticsConsent: false });
+withoutConsent.window.BalanceLaboralConversion.trackPremiumCheckoutStarted();
+assert.strictEqual(withoutConsent.window.sessionStorage.getItem("bl_conversion_session_v1"), null, "checkout attribution is not stored before consent");
 
 const premium = createWindow({ user: { uid: "premium-user" } });
 premium.window.esPremium = true;

@@ -92,10 +92,10 @@ function eventReport(dateRange, events) {
         dimensions: [{ name: "eventName" }],
         metrics: [{ name: "eventCount" }],
         dimensionFilter: {
-            filter: {
-                fieldName: "eventName",
-                inListFilter: { values: events },
-            },
+            andGroup: { expressions: [
+                { filter: { fieldName: "eventName", inListFilter: { values: events } } },
+                { filter: { fieldName: "customEvent:event_revision", stringFilter: { value: "v2" } } },
+            ] },
         },
         limit: 100,
     };
@@ -111,8 +111,16 @@ async function optionalReport(client, request) {
     }
 }
 
+async function optionalReportWithAvailability(client, request) {
+    try {
+        return { report: await client.runReport(request), available: true };
+    } catch {
+        return { report: { rows: [] }, available: false };
+    }
+}
+
 async function queryMetrics(client, dateRange) {
-    const productEvents = ["calendar_configured", "shift_added", "balance_viewed"];
+    const productEvents = ["calendar_configured", "shift_added", "balance_viewed", "ai_consultation_succeeded", "premium_checkout_started", "premium_activation_confirmed"];
     const funnelEvents = [
         "app_open",
         "calendar_configured",
@@ -121,16 +129,20 @@ async function queryMetrics(client, dateRange) {
         "registration_prompt_shown",
         "signup_started",
         "signup_completed",
-        "premium_activated",
+        "premium_checkout_started",
+        "premium_activation_confirmed",
+        "ai_consultation_succeeded",
     ];
     const last24Hours = { startDate: "yesterday", endDate: "today" };
 
-    const [overview, daily, product, funnelReport] = await Promise.all([
+    const [overview, daily, productResult, funnelResult] = await Promise.all([
         client.runReport({ dateRanges: [dateRange], metrics: [{ name: "activeUsers" }, { name: "sessions" }, { name: "newUsers" }, { name: "engagedSessions" }, { name: "engagementRate" }, { name: "averageSessionDuration" }] }),
         client.runReport({ dateRanges: [dateRange], dimensions: [{ name: "date" }], metrics: [{ name: "activeUsers" }, { name: "sessions" }], orderBys: [{ dimension: { dimensionName: "date" } }], limit: 100 }),
-        client.runReport(eventReport(dateRange, productEvents)),
-        client.runReport(eventReport(dateRange, funnelEvents)),
+        optionalReportWithAvailability(client, eventReport(dateRange, productEvents)),
+        optionalReportWithAvailability(client, eventReport(dateRange, funnelEvents)),
     ]);
+    const product = productResult.report;
+    const funnelReport = funnelResult.report;
 
     const [devices, browsers, languages, locations, acquisition, pages, events24h, lastEvent] = await Promise.all([
         optionalReport(client, { dateRanges: [dateRange], dimensions: [{ name: "deviceCategory" }], metrics: [{ name: "activeUsers" }], limit: 20 }),
@@ -143,22 +155,56 @@ async function queryMetrics(client, dateRange) {
         optionalReport(client, { dateRanges: [last24Hours], dimensions: [{ name: "date" }, { name: "eventName" }], metrics: [{ name: "eventCount" }], orderBys: [{ dimension: { dimensionName: "date" }, desc: true }], limit: 1 }),
     ]);
 
-    let accessMode = { available: false, values: [], reason: "La dimensión personalizada modo_acceso no está registrada en GA4." };
+    let newReturning = null;
+    try {
+        newReturning = await client.runReport({ dateRanges: [dateRange], dimensions: [{ name: "newVsReturning" }], metrics: [{ name: "activeUsers" }], limit: 2 });
+    } catch (error) { /* Returning-user data stays unavailable instead of being estimated. */ }
+
+    let accessMode = { available: false, values: [], reason: "Registra modo_acceso, auth_state y event_revision como dimensiones de evento en GA4." };
+    let authState = { available: false, values: [], reason: accessMode.reason };
+    let platformEvents = [];
     try {
         const report = await client.runReport({
             dateRanges: [dateRange],
-            dimensions: [{ name: "customEvent:modo_acceso" }],
+            dimensions: [{ name: "customEvent:modo_acceso" }, { name: "eventName" }, { name: "customEvent:auth_state" }],
             metrics: [{ name: "eventCount" }],
-            dimensionFilter: { filter: { fieldName: "eventName", stringFilter: { value: "app_open" } } },
-            limit: 20,
+            dimensionFilter: { andGroup: { expressions: [
+                { filter: { fieldName: "eventName", inListFilter: { values: ["app_open", ...productEvents] } } },
+                { filter: { fieldName: "customEvent:event_revision", stringFilter: { value: "v2" } } },
+            ] } },
+            limit: 50,
         });
-        accessMode = { available: true, values: parseMetricRows(report).map((row) => ({ label: row.dimensions[0], value: row.metrics[0] })) };
+        const rows = parseMetricRows(report);
+        const aggregateByDimension = (index, filter) => {
+            const totals = new Map();
+            rows.filter(filter).forEach((row) => totals.set(row.dimensions[index], (totals.get(row.dimensions[index]) || 0) + row.metrics[0]));
+            return Array.from(totals, ([label, value]) => ({ label, value }));
+        };
+        const appOpenRows = (row) => row.dimensions[1] === "app_open";
+        accessMode = { available: true, values: aggregateByDimension(0, appOpenRows) };
+        authState = { available: true, values: aggregateByDimension(2, appOpenRows) };
+        const platformLabels = {
+            calendar_configured: "calendario",
+            shift_added: "jornada guardada",
+            balance_viewed: "balance consultado",
+            ai_consultation_succeeded: "consulta IA satisfactoria",
+            premium_checkout_started: "checkout Premium iniciado",
+            premium_activation_confirmed: "Premium activado",
+        };
+        const byPlatformAndEvent = new Map();
+        rows.filter((row) => platformLabels[row.dimensions[1]]).forEach((row) => {
+            const label = `${row.dimensions[0]} · ${platformLabels[row.dimensions[1]]}`;
+            byPlatformAndEvent.set(label, (byPlatformAndEvent.get(label) || 0) + row.metrics[0]);
+        });
+        platformEvents = Array.from(byPlatformAndEvent, ([label, value]) => ({ label, value }));
     } catch (error) {
-        accessMode.reason = "La dimensión personalizada modo_acceso no está disponible todavía en GA4.";
+        accessMode.reason = "Registra modo_acceso, auth_state y event_revision como dimensiones personalizadas de evento en GA4; los datos nuevos aparecerán tras configurarlas.";
+        authState.reason = accessMode.reason;
     }
 
     const overviewRow = parseMetricRows(overview)[0] || { metrics: [0, 0, 0, 0, 0, 0] };
-    const returningUsers = Math.max(0, (overviewRow.metrics[0] || 0) - (overviewRow.metrics[2] || 0));
+    const returningRows = parseMetricRows(newReturning || {});
+    const returningUsers = newReturning ? (returningRows.find((row) => row.dimensions[0] === "returning") || { metrics: [0] }).metrics[0] : null;
     const dailyRows = parseMetricRows(daily);
     const productByEvent = metricByEvent(product);
     const funnelByEvent = metricByEvent(funnelReport);
@@ -168,11 +214,9 @@ async function queryMetrics(client, dateRange) {
         { id: "registration_prompt_shown", label: "Aviso de registro mostrado", value: funnelByEvent.registration_prompt_shown || 0 },
         { id: "signup_started", label: "Registro iniciado", value: funnelByEvent.signup_started || 0 },
         { id: "signup_completed", label: "Registro completado", value: funnelByEvent.signup_completed || 0 },
-        { id: "premium_activated", label: "Premium activado", value: funnelByEvent.premium_activated || 0 },
-    ].map((step, index, all) => ({
-        ...step,
-        conversionFromPrevious: index === 0 || all[index - 1].value === 0 ? null : Number(((step.value / all[index - 1].value) * 100).toFixed(1)),
-    }));
+        { id: "premium_checkout_started", label: "Checkout Premium iniciado", value: funnelByEvent.premium_checkout_started || 0 },
+        { id: "premium_activation_confirmed", label: "Premium activado confirmado", value: funnelByEvent.premium_activation_confirmed || 0 },
+    ];
 
     const lastEventRow = parseMetricRows(lastEvent)[0];
     return {
@@ -181,17 +225,24 @@ async function queryMetrics(client, dateRange) {
             sessions: overviewRow.metrics[1] || 0,
             newUsers: overviewRow.metrics[2] || 0,
             returningUsers,
-            returningRate: overviewRow.metrics[0] ? Number(((returningUsers / overviewRow.metrics[0]) * 100).toFixed(1)) : 0,
+            returningRate: returningUsers !== null && overviewRow.metrics[0] ? Number(((returningUsers / overviewRow.metrics[0]) * 100).toFixed(1)) : null,
             engagedSessions: overviewRow.metrics[3] || 0,
             engagementRate: Number(((overviewRow.metrics[4] || 0) * 100).toFixed(1)),
             averageSessionDuration: Number((overviewRow.metrics[5] || 0).toFixed(1)),
         },
         daily: dailyRows.map((row) => ({ date: row.dimensions[0], activeUsers: row.metrics[0], sessions: row.metrics[1] })),
         product: {
+            available: productResult.available,
+            unavailableReason: productResult.available ? "" : "Registra event_revision como dimensión de evento en GA4 para separar los eventos corregidos del histórico anterior.",
             calendarConfigured: productByEvent.calendar_configured || 0,
             shiftsAdded: productByEvent.shift_added || 0,
             balancesViewed: productByEvent.balance_viewed || 0,
+            aiConsultations: productByEvent.ai_consultation_succeeded || 0,
+            premiumCheckoutStarted: productByEvent.premium_checkout_started || 0,
+            premiumActivationConfirmed: productByEvent.premium_activation_confirmed || 0,
             accessMode,
+            authState,
+            platformEvents,
             devices: parseMetricRows(devices).map((row) => ({ label: row.dimensions[0], value: row.metrics[0] })),
             browsers: parseMetricRows(browsers).map((row) => ({ label: row.dimensions[0], value: row.metrics[0] })),
             languages: parseMetricRows(languages).map((row) => ({ label: row.dimensions[0], value: row.metrics[0] })),
@@ -200,6 +251,8 @@ async function queryMetrics(client, dateRange) {
             pages: parseMetricRows(pages).map((row) => ({ label: row.dimensions[0], value: row.metrics[0] })),
         },
         funnel,
+        funnelAvailable: funnelResult.available,
+        funnelUnavailableReason: funnelResult.available ? "" : "Registra event_revision como dimensión de evento en GA4 para separar los eventos corregidos del histórico anterior.",
         measurement: {
             status: "ok",
             eventsLast24h: metricByEvent(events24h),

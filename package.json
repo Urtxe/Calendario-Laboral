@@ -4,7 +4,7 @@
   "scripts": {
     "generate:seo": "node scripts/generate-seo-convenios.js",
     "plan:seo-derived": "node scripts/plan-derived-seo-pages.js",
-    "test": "npm run test:security && npm run test:intent && npm run test:ai-consultation && npm run test:ai-ui && npm run test:service-worker && npm run test:play-twa && npm run test:account-deletion && npm run test:conversion",
+    "test": "npm run test:security && npm run test:intent && npm run test:ai-consultation && npm run test:ai-ui && npm run test:service-worker && npm run test:play-twa && npm run test:account-deletion && npm run test:conversion && npm run test:analytics",
     "test:security": "node scripts/security-checks.js && node functions/function-secrets.test.js",
     "test:intent": "node scripts/intent-classifier-checks.js",
     "test:ai-consultation": "node functions/ai-consultation.test.js",
@@ -13,6 +13,7 @@
     "test:play-twa": "node scripts/play-twa-context-checks.js && node scripts/play-billing-checks.js && node functions/play-billing.test.js",
     "test:account-deletion": "node functions/account-deletion.test.js && node scripts/account-deletion-ui-checks.js",
     "test:conversion": "node scripts/conversion-funnel-checks.js",
+    "test:analytics": "node scripts/analytics-consent-checks.js && node scripts/calendar-analytics-checks.js && node functions/metrics-ga4.test.js",
     "verify:metricas-ga4-secret": "node scripts/verify-metricas-ga4-secret.js"
   }
 }

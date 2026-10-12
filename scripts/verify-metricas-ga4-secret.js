@@ -40,7 +40,7 @@ const runtimeSecret = (revision.spec.containers[0].env || []).find((item) => ite
 assert(runtimeSecret && runtimeSecret.valueFrom && runtimeSecret.valueFrom.secretKeyRef, "La revisión activa no inyecta GA4_PROPERTY_ID como secretKeyRef");
 assert.equal(runtimeSecret.value, undefined, "GA4_PROPERTY_ID no debe tener un valor literal en Cloud Run");
 const secretAliases = revision.metadata.annotations && revision.metadata.annotations["run.googleapis.com/secrets"] || "";
-const expectedSecretPath = `projects/${functionConfig.environment === "GEN_2" ? "130172535764" : project}/secrets/${secretName}`;
+const expectedSecretPath = `projects/${project}/secrets/${secretName}`;
 assert(secretAliases.includes(`${runtimeSecret.valueFrom.secretKeyRef.name}:${expectedSecretPath}`), "El secretKeyRef de Cloud Run no se resuelve al secreto GA4_PROPERTY_ID");
 assert.equal(revision.spec.serviceAccountName, runtimeServiceAccount, "La revisión activa usa una cuenta de ejecución inesperada");
 

@@ -314,8 +314,16 @@ addCheck("/admin/metricas es público y no consulta Firestore", () => {
   assertIncludes(analyticsSource, "ANALYTICS_CONSENT_STORAGE_KEY", "Debe persistirse la elección de consentimiento en el dispositivo");
   assertIncludes(analyticsSource, "ANALYTICS_SDK_URL", "El SDK debe cargarse dinámicamente tras aceptar");
   assertIncludes(analyticsSource, "if (!hasAnalyticsConsent() || !analytics) return;", "No deben enviarse eventos sin consentimiento");
-  assertIncludes(analyticsSource, "localStorage.removeItem(ANALYTICS_RETURN_VISIT_KEY)", "Retirar el consentimiento debe eliminar la marca local de retorno");
-  assertOrder(analyticsSource, ["if (!hasAnalyticsConsent() || analyticsInitialized) return;", "await loadAnalyticsSdk();", "analytics = firebase.analytics();"], "Analytics debe inicializarse solo después de comprobar el consentimiento");
+  assertIncludes(analyticsSource, 'localStorage.removeItem("bl_anonymous_installation_id")', "El identificador anónimo legado debe eliminarse del dispositivo");
+  assert(!analyticsSource.includes('localStorage.setItem("bl_anonymous_installation_id"') && !analyticsSource.includes('safeEvent("anonymous_return_visit"'), "No deben persistirse identificadores propios ni emitirse eventos de retorno duplicados");
+  assertIncludes(analyticsSource, "if (analyticsInitialized && analytics)", "Aceptar tras revocar debe volver a habilitar la colección ya inicializada");
+  assertOrder(analyticsSource, ["if (!hasAnalyticsConsent()) return;", "await loadAnalyticsSdk();", "analytics = firebase.analytics();"], "Analytics debe inicializarse solo después de comprobar el consentimiento");
+  assertIncludes(analyticsSource, 'return "android_twa"', "El contexto TWA debe usar una dimensión estable y no afirmar instalación Play");
+  assertIncludes(analyticsSource, "auth_state: authState()", "La autenticación debe quedar separada de la plataforma");
+  assertIncludes(analyticsSource, 'event_revision: "v2"', "Los eventos nuevos deben poder separarse del histórico defectuoso");
+  assertIncludes(metricsSource, "customEvent:event_revision", "El panel no debe mezclar métricas históricas no fiables");
+  assertIncludes(normalize(read("scripts/generate-seo-convenios.js")), "/src/js/analytics.js", "Las páginas SEO incluyen Analytics consentido desde su generador");
+  assert(!normalize(read("scripts/generate-seo-convenios.js")).includes("firebase-analytics-compat.js"), "Las páginas SEO no deben cargar el SDK de Analytics sin aceptación");
   assertIncludes(privacySource, "Google Analytics y Firebase Analytics", "La política de privacidad debe declarar Analytics");
   assertIncludes(indexSource, "Preferencias de analítica", "La retirada del consentimiento debe ser accesible desde el footer");
   assertIncludes(panelStyles, "@media(max-width:540px)", "El panel de métricas debe conservar su diseño móvil");

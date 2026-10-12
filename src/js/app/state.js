@@ -46,7 +46,7 @@ function cargarDatosAnonimosLocales() {
 }
 
 function guardarDatosAnonimosLocales() {
-    if (usuarioTieneSesion()) return;
+    if (usuarioTieneSesion()) return false;
     try {
         localStorage.setItem(ANON_CALENDAR_STORAGE_KEY, JSON.stringify({
             ciudadActual: ciudadActual,
@@ -57,8 +57,10 @@ function guardarDatosAnonimosLocales() {
             horasExtraPorDia: horasExtraPorDia,
             horasExtraCompensadas: horasExtraCompensadas
         }));
+        return true;
     } catch (error) {
         console.warn('No se pudieron guardar los datos locales del calendario:', error);
+        return false;
     }
 }
 

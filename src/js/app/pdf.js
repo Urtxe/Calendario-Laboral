@@ -1,5 +1,4 @@
 async function generarInformePDF() {
-    if (typeof trackExportacionPDF === 'function') trackExportacionPDF('intento');
     if (!usuarioPuedeUsarPremium()) {
         if (typeof abrirModalPremium === 'function') abrirModalPremium('pdf_export');
         return;

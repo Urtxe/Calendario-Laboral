@@ -44,10 +44,10 @@ function renderCalendario() {
 function procesarClickDia(dia) {
     var fecha = new Date(anioActual, mesActual, dia);
     var key = getFechaKey(fecha);
-    if (typeof trackClickCalendario === 'function') trackClickCalendario();
     if (modoSeleccionado === 'horasExtra') { abrirModalHorasExtra(key); return; }
 
     var tipo = modoSeleccionado || 'trabajado';
+    const isNewRecord = !diasMarcados[key];
     const wasAdded = !(diasMarcados[key] && diasMarcados[key].tipo === tipo);
     if (!wasAdded) {
         delete diasMarcados[key];
@@ -55,10 +55,11 @@ function procesarClickDia(dia) {
         diasMarcados[key] = { tipo: tipo, esFestivo: esFestivo(fecha) };
     }
     renderTodo();
-    guardarTodoEnFirebase();
-    if (wasAdded && window.BalanceLaboralConversion) {
-        window.BalanceLaboralConversion.trackShiftAdded();
-    }
+    guardarTodoEnFirebase().then(function(guardado) {
+        if (guardado && wasAdded && isNewRecord && window.BalanceLaboralConversion) {
+            window.BalanceLaboralConversion.trackShiftAdded();
+        }
+    });
 }
 
 window.seleccionarModo = function(tipo) {
@@ -66,8 +67,6 @@ window.seleccionarModo = function(tipo) {
         abrirModalPremium('advanced_overtime');
         return;
     }
-
-    if (typeof trackUsoHerramienta === 'function') trackUsoHerramienta(tipo);
 
     modoSeleccionado = (modoSeleccionado === tipo) ? null : tipo;
     actualizarVisualBotones();

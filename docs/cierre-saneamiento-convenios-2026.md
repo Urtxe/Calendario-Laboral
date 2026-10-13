@@ -54,8 +54,9 @@ Validación de producción posterior: nueve fichas existentes, metadatos Valenci
 
 - Base comprobada: `main` en `c033304`, sincronizada con `origin/main` al inicio. Rama: `fix/convenios-rag-integrity-2026`.
 - Commit de código: `3363018` (`fix: improve convenio rag source integrity`).
+- Commit documental: `fdef17c` (`docs: record convenio rag production reconciliation`).
 - Firebase desplegado: función `consultarConvenio` (Gen 2, nodejs22, `us-central1`) y Hosting de `calendario-laboral-252b1`; no se desplegaron reglas, índices ni otras funciones. La función informa estado ACTIVE y `updateTime` 13/10/2026 09:11 UTC.
 - Verificación de Hosting: `https://calendario-laboral-252b1.web.app/` y `/service-worker.js` respondieron 200 con nueva revisión de caché.
 - No se actualizaron PDFs, páginas SEO, catálogo fuera de los nueve registros, reglas ni índices. No hubo consultas generativas de Gemini.
 - La revisión exhaustiva de los 28 convenios, el cotejo de publicaciones posteriores no descargadas y la incorporación de fuentes oficiales posteriores siguen pendientes. La corrección técnica no acredita vigencia ni aplicabilidad jurídica.
-- A la fecha de este informe, el push/PR/merge de la rama y la sincronización final con `origin/main` aún no constan; se actualizarán cuando se complete el flujo Git.
+- La rama `fix/convenios-rag-integrity-2026` está subida a `origin`; el [PR #1](https://github.com/Urtxe/Calendario-Laboral/pull/1) apunta a `main`, está limpio y mergeable. GitHub no reportó check-runs ni revisiones. El merge y la sincronización final de `main` se registrarán tras integrarlo.

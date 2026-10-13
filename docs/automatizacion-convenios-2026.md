@@ -65,7 +65,7 @@ El ingestor existente `functions/ingest-conventios.js` no publica de forma atóm
 - Una fuente fallida queda con `lastErrorCode` y sin fecha de revisión completada; el siguiente ciclo vuelve a intentar la consulta. Los aciertos de otros convenios se conservan.
 - El lock vence a las dos horas si la ejecución termina abruptamente. El estado se escribe por convenio y por mes para no duplicar hallazgos al reintentar.
 - Los cambios nuevos deben abrir una tarea de revisión documental; no existe un canal de notificación configurado reutilizable confirmado en el repositorio, por lo que no se ha añadido uno.
-- Para validar un pendiente: abrir la ficha oficial REGCON → localizar la publicación en el boletín territorial → descargar PDF desde el dominio oficial → comprobar código, ámbito, CVE/número, páginas, anexos, texto extraído y SHA-256 → verificar respaldo en bucket → ejecutar preflight del ingestor → revisar duplicados/metadatos y KNN → activar únicamente mediante un mecanismo atómico revisado. Un hash demuestra igualdad de bytes, no autenticidad ni aplicabilidad jurídica.
+- Para validar un pendiente: abrir la ficha oficial REGCON → localizar la publicación en el boletín territorial → descargar PDF desde el dominio oficial → comprobar código, ámbito, CVE/número, páginas, anexos, texto extraído y SHA-256 → verificar respaldo en bucket → ejecutar preflight del ingestor → revisar duplicados/metadatos y KNN → activar únicamente mediante un mecanismo atómico revisado. Después de reconciliar una fila, marcar su estado individual como `resolved` y actualizar la matriz canónica; así el registro sale de la cola y vuelve a su frecuencia semestral si el periodo pactado sigue vigente. Un hash demuestra igualdad de bytes, no autenticidad ni aplicabilidad jurídica.
 - Los cinco registros sin enlace por código deben resolverse desde la matriz y sus boletines antes de declararlos revisados.
 
 ## Pruebas y despliegue
@@ -76,7 +76,7 @@ El ingestor existente `functions/ingest-conventios.js` no publica de forma atóm
 - `node --check` de los archivos JavaScript modificados y `git diff --check`: aprobado.
 - La primera pasada pública no fue una integración autenticada ni una escritura real de producción. No se declara validada la persistencia Firestore, IAM, Scheduler, ingesta, KNN o recuperación RAG.
 - No se desplegó `reviewConvenioSources`, no existe tarea Cloud Scheduler creada ni próxima ejecución confirmada, y no se hicieron migraciones de Firestore.
-- Commits: `6bb1b6b` (monitor REGCON y Scheduler propuesto) y `a78509b` (informe y matriz). Rama `feat/automatic-convenio-updates` publicada en `origin`.
+- Commits de implementación/documentación publicados: `6bb1b6b` (monitor), `a78509b` (informe y matriz), `fbb7305` (PR) y `f6f6fc7` (cadencia de pendientes). Rama `feat/automatic-convenio-updates` publicada en `origin`; este mismo informe se incluye en el PR #11.
 - PR en borrador: [#11](https://github.com/Urtxe/Calendario-Laboral/pull/11). Se mantiene sin fusionar porque falta la validación de producción y el acceso de identidad de servicio. GitHub CLI no está instalado; se abrió mediante la API autenticada con credencial Git ya configurada, sin imprimir ni guardar el token.
 - `main` y `origin/main` permanecen en `9e7b00e`; `.playwright-cli/` continúa ajeno y sin modificaciones.
 

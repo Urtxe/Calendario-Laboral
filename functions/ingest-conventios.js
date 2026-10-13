@@ -1,5 +1,6 @@
 const fs = require("fs/promises");
 const path = require("path");
+const crypto = require("crypto");
 const admin = require("firebase-admin");
 const { PDFParse } = require("pdf-parse");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -34,19 +35,14 @@ const apiKey =
   process.env.GOOGLE_AI_STUDIO_API_KEY ||
   process.env.API_KEY;
 
-if (!apiKey) {
-  throw new Error(
-    "Falta la API key de Gemini. Define GEMINI_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY o GOOGLE_AI_STUDIO_API_KEY en functions/.env"
-  );
-}
-
 if (!admin.apps.length) {
   admin.initializeApp({ projectId: PROJECT_ID });
 }
 
 const db = admin.firestore();
-const genAI = new GoogleGenerativeAI(apiKey);
-const embeddingModel = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
+const embeddingModel = apiKey
+  ? new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: EMBEDDING_MODEL })
+  : null;
 
 function pause(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -100,8 +96,12 @@ async function loadPdfText(filePath) {
 
   return {
     text,
-    pageCount: parsed && parsed.numpages ? parsed.numpages : null,
+    pageCount: parsed && (parsed.total || parsed.numpages) ? (parsed.total || parsed.numpages) : null,
   };
+}
+
+async function sha256File(filePath) {
+  return crypto.createHash("sha256").update(await fs.readFile(filePath)).digest("hex");
 }
 
 async function splitText(text) {
@@ -161,31 +161,34 @@ async function embedBatch(model, batch, title) {
   }
 }
 
-async function deleteExistingChunksForFileName(fileName) {
+async function inspectExistingChunks(fileName, sourceSha256, chunks) {
   const snapshot = await db.collection(COLLECTION_NAME).where("fileName", "==", fileName).get();
-
-  if (snapshot.empty) {
-    console.log(`  - No hay chunks previos para ${fileName}`);
-    return 0;
-  }
-
-  let deleted = 0;
-  const docs = snapshot.docs;
-
-  for (let offset = 0; offset < docs.length; offset += 450) {
-    const batch = db.batch();
-    const slice = docs.slice(offset, offset + 450);
-
-    for (const doc of slice) {
-      batch.delete(doc.ref);
+  const existingByIndex = new Map();
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+    if (data.sourceSha256 !== sourceSha256) {
+      throw new Error(`Ya existen chunks de ${fileName} con checksum distinto o sin checksum; no se modifica ningún registro.`);
     }
-
-    await batch.commit();
-    deleted += slice.length;
+    const index = Number(data.chunkIndex);
+    if (!Number.isInteger(index) || index < 0 || index >= chunks.length || data.chunkTotal !== chunks.length || data.texto !== chunks[index]) {
+      throw new Error(`Los chunks existentes de ${fileName} no coinciden con la fuente actual; se requiere revisión manual.`);
+    }
+    if (!data.vector || data.embeddingModel !== EMBEDDING_MODEL || data.outputDimensionality !== EMBEDDING_DIMENSIONS) {
+      throw new Error(`El chunk ${doc.id} de ${fileName} tiene un embedding ausente o incompatible; no se sobrescribe.`);
+    }
+    if (existingByIndex.has(index)) throw new Error(`Índice de chunk duplicado para ${fileName}: ${index}`);
+    existingByIndex.set(index, doc.id);
   }
-
-  console.log(`  - Eliminados ${deleted} chunks previos de ${fileName}`);
-  return deleted;
+  const missing = Array.from({ length: chunks.length }, (_, index) => index).filter((index) => !existingByIndex.has(index));
+  if (missing.length) {
+    const convenioId = sanitizeId(path.basename(fileName, path.extname(fileName)));
+    const refs = missing.map((index) => db.collection(COLLECTION_NAME)
+      .doc(`${convenioId}_${String(index + 1).padStart(4, "0")}`));
+    const collisions = await db.getAll(...refs);
+    const collision = collisions.find((doc) => doc.exists);
+    if (collision) throw new Error(`El identificador determinista ${collision.id} ya existe fuera de la consulta por archivo; no se sobrescribe.`);
+  }
+  return missing;
 }
 
 async function writeChunkGroup({
@@ -196,8 +199,10 @@ async function writeChunkGroup({
   pageCount,
   chunks,
   embeddings,
+  sourceSha256,
   totalChunks,
   startIndex,
+  chunkIndexes,
 }) {
   const writePromises = [];
   const convenioMetadata = parseConvenioFileName(fileName);
@@ -211,11 +216,11 @@ async function writeChunkGroup({
       const now = admin.firestore.FieldValue.serverTimestamp();
 
       for (let i = writeStart; i < writeEnd; i += 1) {
-        const globalIndex = startIndex + i;
+        const globalIndex = chunkIndexes ? chunkIndexes[i] : startIndex + i;
         const docId = `${convenioId}_${String(globalIndex + 1).padStart(4, "0")}`;
         const docRef = db.collection(COLLECTION_NAME).doc(docId);
 
-        batch.set(docRef, {
+        batch.create(docRef, {
           convenioId,
           fileName,
           file_name: fileName,
@@ -234,8 +239,13 @@ async function writeChunkGroup({
           ...(convenioMetadata.sourceVerification ? { sourceVerification: convenioMetadata.sourceVerification } : {}),
           ...(convenioMetadata.sourceEdition ? { sourceEdition: convenioMetadata.sourceEdition } : {}),
           ...(convenioMetadata.sourceUpdatedThrough ? { sourceUpdatedThrough: convenioMetadata.sourceUpdatedThrough } : {}),
+          ...(convenioMetadata.sourceValidFrom ? { sourceValidFrom: convenioMetadata.sourceValidFrom } : {}),
           ...(convenioMetadata.sourceValidThrough ? { sourceValidThrough: convenioMetadata.sourceValidThrough } : {}),
           ...(convenioMetadata.officialSourceUrl ? { officialSourceUrl: convenioMetadata.officialSourceUrl } : {}),
+          sourceSha256,
+          ...(convenioMetadata.sourceStorageUri ? { sourceStorageUri: convenioMetadata.sourceStorageUri } : {}),
+          ...(convenioMetadata.sourcePageCount ? { sourcePageCount: convenioMetadata.sourcePageCount } : {}),
+          ...(convenioMetadata.sourceDocumentType ? { sourceDocumentType: convenioMetadata.sourceDocumentType } : {}),
           chunkIndex: globalIndex,
           chunkTotal: totalChunks,
           texto: chunks[i],
@@ -250,7 +260,8 @@ async function writeChunkGroup({
       }
 
       await batch.commit();
-      console.log(`    Firestore: guardados chunks ${startIndex + writeStart + 1}-${startIndex + writeEnd} de ${totalChunks}`);
+      const writtenIndexes = chunkIndexes ? chunkIndexes.slice(writeStart, writeEnd) : null;
+      console.log(`    Firestore: guardados ${writtenIndexes ? writtenIndexes.map((index) => index + 1).join(",") : `${startIndex + writeStart + 1}-${startIndex + writeEnd}`} de ${totalChunks}`);
     })());
   }
 
@@ -262,11 +273,58 @@ async function upsertCatalogForFileNames(fileNames) {
 
   for (const entry of entries) {
     const docRef = db.collection(CATALOGO_CONVENIOS).doc(entry.id || sanitizeId(entry.title));
-    await docRef.set({
+    const docData = {
       ...entry,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
+    };
+    if (entry.sourceSha256) {
+      const existing = await docRef.get();
+      if (existing.exists) {
+        const current = existing.data();
+        if (current.sourceSha256 !== entry.sourceSha256 || !current.fileNames?.includes(entry.fileNames[0])) {
+          throw new Error(`La entrada de catálogo ${docRef.id} ya existe con otra fuente; se requiere revisión manual.`);
+        }
+      } else {
+        await docRef.create(docData);
+      }
+    } else {
+      await docRef.set(docData, { merge: true });
+    }
   }
+}
+
+async function upsertNormativeBaseCatalog(fileName, metadata) {
+  const id = `normativa_base_${sanitizeId(metadata.officialCode)}_${sanitizeId(metadata.sourceEdition)}`;
+  const docRef = db.collection(CATALOGO_CONVENIOS).doc(id);
+  const docData = {
+    id,
+    title: "Estatuto de los Trabajadores — texto consolidado",
+    catalogStatus: "normative_base",
+    active: false,
+    doc_type: "base",
+    officialCode: metadata.officialCode,
+    sourceEdition: metadata.sourceEdition,
+    sourceUpdatedThrough: metadata.sourceUpdatedThrough,
+    sourceValidFrom: metadata.sourceValidFrom,
+    sourceValidThrough: metadata.sourceValidThrough || null,
+    officialSourceUrl: metadata.officialSourceUrl,
+    publication: metadata.publication,
+    sourceSha256: metadata.sourceSha256,
+    sourceStorageUri: metadata.sourceStorageUri,
+    sourcePageCount: metadata.sourcePageCount,
+    sourceVerification: metadata.sourceVerification,
+    fileNames: [fileName],
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+  const existing = await docRef.get();
+  if (existing.exists) {
+    const current = existing.data();
+    if (current.sourceSha256 !== metadata.sourceSha256 || !current.fileNames?.includes(fileName)) {
+      throw new Error(`La entrada de catálogo ${id} ya existe con otra fuente; se requiere revisión manual.`);
+    }
+    return;
+  }
+  await docRef.create(docData);
 }
 
 async function buildProcessedPath(filePath) {
@@ -288,13 +346,21 @@ async function moveToProcessed(filePath, destination) {
   await fs.rename(filePath, destination);
 }
 
-async function processFile(filePath) {
+async function processFile(filePath, { dryRun = false } = {}) {
   const fileName = path.basename(filePath);
   const docType = getDocType(fileName);
+  const metadata = parseConvenioFileName(fileName);
   console.log(`\n📄 Procesando ${fileName}`);
   console.log(`  - Tipo de documento: ${docType}`);
 
+  const sourceSha256 = await sha256File(filePath);
+  if (metadata.sourceSha256 && metadata.sourceSha256 !== sourceSha256) {
+    throw new Error(`El SHA-256 de ${fileName} no coincide con la fuente oficial verificada.`);
+  }
   const { text, pageCount } = await loadPdfText(filePath);
+  if (metadata.sourcePageCount && metadata.sourcePageCount !== pageCount) {
+    throw new Error(`El número de páginas de ${fileName} no coincide con la fuente oficial verificada.`);
+  }
   if (!text) {
     console.warn(`⚠️  El PDF ${fileName} no devolvió texto legible.`);
     return { chunks: 0 };
@@ -304,16 +370,20 @@ async function processFile(filePath) {
   console.log(`  - Texto extraído: ${text.length} caracteres`);
   console.log(`  - Chunks generados: ${chunks.length}`);
 
-  const totalBatches = Math.ceil(chunks.length / GEMINI_BATCH_SIZE);
   const convenioId = sanitizeId(path.basename(fileName, path.extname(fileName)));
-  const processedPath = await buildProcessedPath(filePath);
+  const isAlreadyProcessed = path.resolve(path.dirname(filePath)) === path.resolve(PROCESSED_DIR);
+  const processedPath = isAlreadyProcessed ? filePath : await buildProcessedPath(filePath);
+  const missingChunkIndexes = await inspectExistingChunks(fileName, sourceSha256, chunks);
+  console.log(`  - Chunks nuevos: ${missingChunkIndexes.length}; embeddings reutilizados: ${chunks.length - missingChunkIndexes.length}`);
+  if (dryRun) return { chunks: chunks.length, newChunks: missingChunkIndexes.length, dryRun: true };
+  if (missingChunkIndexes.length && !embeddingModel) {
+    throw new Error("Se requieren embeddings nuevos, pero no hay API key configurada. No se han escrito chunks.");
+  }
 
-  await deleteExistingChunksForFileName(fileName);
-
+  const totalBatches = Math.ceil(missingChunkIndexes.length / GEMINI_BATCH_SIZE);
   for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
-    const start = batchIndex * GEMINI_BATCH_SIZE;
-    const end = Math.min(start + GEMINI_BATCH_SIZE, chunks.length);
-    const batchChunks = chunks.slice(start, end);
+    const indexes = missingChunkIndexes.slice(batchIndex * GEMINI_BATCH_SIZE, (batchIndex + 1) * GEMINI_BATCH_SIZE);
+    const batchChunks = indexes.map((index) => chunks[index]);
 
     console.log(`  - Procesando lote ${batchIndex + 1} de ${totalBatches} para ${fileName}...`);
 
@@ -330,8 +400,10 @@ async function processFile(filePath) {
       pageCount,
       chunks: batchChunks,
       embeddings,
+      sourceSha256,
       totalChunks: chunks.length,
-      startIndex: start,
+      startIndex: indexes[0],
+      chunkIndexes: indexes,
     });
 
     if (batchIndex < totalBatches - 1) {
@@ -341,19 +413,30 @@ async function processFile(filePath) {
 
   if (docType === "especifico") {
     await upsertCatalogForFileNames([fileName]);
+  } else if (metadata.officialCode === "BOE-A-2015-11430") {
+    await upsertNormativeBaseCatalog(fileName, metadata);
   }
 
-  await moveToProcessed(filePath, processedPath);
-  console.log(`  - PDF movido a: ${processedPath}`);
+  if (!isAlreadyProcessed) {
+    await moveToProcessed(filePath, processedPath);
+    console.log(`  - PDF movido a: ${processedPath}`);
+  }
 
-  return { chunks: chunks.length };
+  return { chunks: chunks.length, newChunks: missingChunkIndexes.length };
 }
 
 async function main() {
   await ensureDir(INBOX_DIR);
   await ensureDir(PROCESSED_DIR);
 
-  const files = await findPdfFiles(INBOX_DIR);
+  const selectedFileIndex = process.argv.indexOf("--file");
+  const dryRun = process.argv.includes("--dry-run");
+  const files = selectedFileIndex >= 0
+    ? [path.resolve(process.argv[selectedFileIndex + 1] || "")]
+    : await findPdfFiles(INBOX_DIR);
+  if (selectedFileIndex >= 0 && (!process.argv[selectedFileIndex + 1] || !files[0].toLowerCase().endsWith(".pdf"))) {
+    throw new Error("Uso: node ingest-conventios.js --file <ruta-exacta-al-pdf>");
+  }
 
   if (!files.length) {
     console.log(`No hay PDFs en ${INBOX_DIR}. Añade convenios ahí y vuelve a ejecutar.`);
@@ -364,11 +447,16 @@ async function main() {
   let totalChunks = 0;
 
   for (const filePath of files) {
-    const result = await processFile(filePath);
+    const result = await processFile(filePath, { dryRun });
     totalFiles += 1;
     totalChunks += result.chunks;
+    console.log(`   - Chunks totales: ${result.chunks}; nuevos en Firestore: ${result.newChunks}`);
   }
 
+  if (dryRun) {
+    console.log(`\n✅ Preflight completado sin escribir datos ni generar embeddings.`);
+    return;
+  }
   console.log(`\n✅ Ingesta completada.`);
   console.log(`   - PDFs procesados: ${totalFiles}`);
   console.log(`   - Chunks almacenados: ${totalChunks}`);

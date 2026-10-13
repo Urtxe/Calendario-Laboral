@@ -61,6 +61,17 @@ test("los prompts activos piden respuestas directas y de longitud adaptable", ()
   assert.match(convenio, /unindexedPublications\?\.length/);
 });
 
+test("el Estatuto se selecciona por fecha antes de la búsqueda vectorial y falla cerrado sin edición completa", () => {
+  const source = readFileSync(path.join(__dirname, "index.js"), "utf8");
+  const active = source.split("exports.consultarConvenio =")[1].split("async function consultarConvenioLegacy")[0];
+  assert.match(active, /resolveWorkersStatuteVersion\(preguntaParaBusqueda\)/);
+  assert.match(active, /isWorkersStatuteEditionAvailable\(seleccionEstatuto\)/);
+  assert.match(source, /\.where\("file_name", "in", statuteSelection\.fileNames\)/);
+  assert.match(active, /No hay una edición completa y verificada del Estatuto disponible/);
+  assert.match(active, /No he podido recuperar una fuente oficial completa del Estatuto/);
+  assert.match(active, /El texto consolidado del BOE es informativo/);
+});
+
 test("evidencia semántica suficiente permite respuesta de convenio", () => {
   const result = evaluarEvidenciaConvenio([{
     doc_type: "especifico",

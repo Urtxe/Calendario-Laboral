@@ -19,6 +19,24 @@ const FILE_METADATA_OVERRIDES = {
     applicationWarning: "Este acuerdo se identifica oficialmente como extraestatutario y de eficacia limitada. Que el texto exista no confirma que se aplique a todas las empresas o personas del sector; para valorar su aplicación hay que comprobar la cobertura de la representación negociadora o una adhesión expresa y las circunstancias del caso.",
     sourceVerification: "verified",
   },
+  "Convenio Limpieza edificios Zaragoza 2026-2029.pdf": {
+    catalogKey: "limpieza_zaragoza_2026_2029",
+    officialCode: "50000755011981",
+    publication: {
+      bulletin: "BOPZ",
+      number: 216,
+      date: "2026-09-19",
+      identifier: "6181",
+      url: "https://bop.dpz.es/BOPZ/UploadServlet?ruta=Boletines%5C2026%5C216%5Cbop.pdf",
+    },
+    officialSourceUrl: "https://bop.dpz.es/BOPZ/UploadServlet?ruta=Boletines%5C2026%5C216%5Cbop.pdf",
+    sourceSha256: "004745dd7a5e0afd7df584a8c83a22afd1bb7d7b8a1641cd5f0cada05325a070",
+    sourceStorageUri: "gs://calendario-laboral-252b1.firebasestorage.app/official-sources/convenios/zaragoza-limpieza/2026/BOPZ-216-6181.pdf",
+    sourcePageCount: 33,
+    sourceDocumentType: "collective_agreement",
+    sourceVerification: "verified",
+    applicationWarning: "El periodo 2026–2029 identifica el texto pactado incorporado; sus fechas no confirman por sí solas su aplicabilidad jurídica a una empresa o persona concreta.",
+  },
   "Convenio Alojamientos y Hostelería Malaga parte 1.pdf": {
     yearStart: 2018,
     yearEnd: 2022,
@@ -67,6 +85,25 @@ const FILE_METADATA_OVERRIDES = {
     sourceUpdatedThrough: "2025-12-04",
     sourceValidThrough: "2026-10-22",
     officialSourceUrl: "https://www.boe.es/biblioteca_juridica/pdf/PUB-DT-2025-139.pdf",
+  },
+  "estatuto_trabajadores_2026-10-03.pdf": {
+    officialCode: "BOE-A-2015-11430",
+    publication: {
+      bulletin: "BOE",
+      number: 246,
+      date: "2026-10-03",
+      identifier: "BOE-A-2026-20528",
+      url: "https://www.boe.es/boe/dias/2026/10/03/pdfs/BOE-A-2026-20528.pdf",
+    },
+    sourceEdition: "BOE-A-2015-11430-consolidated-2026-10-03",
+    sourceUpdatedThrough: "2026-10-03",
+    sourceValidFrom: "2026-10-23",
+    officialSourceUrl: "https://www.boe.es/buscar/act.php?id=BOE-A-2015-11430&lang=es&p=20261003&tn=2",
+    sourceSha256: "459825db621a952edf65e843715c25fe586a6d1e4b3facb0bb8fdcbedf16adab",
+    sourceStorageUri: "gs://calendario-laboral-252b1.firebasestorage.app/official-sources/normativa/BOE-A-2015-11430/2026-10-03/consolidado.pdf",
+    sourcePageCount: 97,
+    sourceDocumentType: "consolidated_statute",
+    sourceVerification: "verified",
   },
   "Convenio Transporte Gipuzkoa 2010-2014.pdf": {
     sourceVerification: "unverified",
@@ -157,7 +194,7 @@ const MALAGA_UNINDEXED_PUBLICATIONS = [
 
 const MALAGA_UNINDEXED_SALARY_NOTICE = "El BOPMA publicó documentación posterior de Hostelería de Málaga, incluidos anuncios del sector en 2024 y 2025 y un anuncio de tablas salariales en 2026. El contenido íntegro de esas publicaciones no está indexado ni verificado aquí; no se deben confirmar importes salariales posteriores a 2022 con los fragmentos locales.";
 
-const WORKERS_STATUTE_FILE_PATTERN = /^estatuto_trabajadores(?:_parte\d+)?$/i;
+const WORKERS_STATUTE_FILE_PATTERN = /^estatuto_trabajadores(?:_parte\d+|_\d{4}-\d{2}-\d{2})?$/i;
 
 const COMMUNITY_BY_PROVINCE = {
   GIPUZKOA: "PAIS VASCO",
@@ -377,7 +414,12 @@ function parseConvenioFileName(fileName) {
     ...(override.documentaryWarning ? { documentaryWarning: override.documentaryWarning } : {}),
     ...(override.sourceEdition ? { sourceEdition: override.sourceEdition } : {}),
     ...(override.sourceUpdatedThrough ? { sourceUpdatedThrough: override.sourceUpdatedThrough } : {}),
+    ...(override.sourceValidFrom ? { sourceValidFrom: override.sourceValidFrom } : {}),
     ...(override.sourceValidThrough ? { sourceValidThrough: override.sourceValidThrough } : {}),
+    ...(override.sourceSha256 ? { sourceSha256: override.sourceSha256 } : {}),
+    ...(override.sourceStorageUri ? { sourceStorageUri: override.sourceStorageUri } : {}),
+    ...(override.sourcePageCount ? { sourcePageCount: override.sourcePageCount } : {}),
+    ...(override.sourceDocumentType ? { sourceDocumentType: override.sourceDocumentType } : {}),
     ...(override.officialSourceUrl ? { officialSourceUrl: override.officialSourceUrl } : {}),
   };
 }
@@ -415,7 +457,12 @@ function buildCatalogEntriesFromFileNames(fileNames) {
       ...(parsed.documentaryWarning ? { documentaryWarning: parsed.documentaryWarning } : {}),
       ...(parsed.sourceEdition ? { sourceEdition: parsed.sourceEdition } : {}),
       ...(parsed.sourceUpdatedThrough ? { sourceUpdatedThrough: parsed.sourceUpdatedThrough } : {}),
+      ...(parsed.sourceValidFrom ? { sourceValidFrom: parsed.sourceValidFrom } : {}),
       ...(parsed.sourceValidThrough ? { sourceValidThrough: parsed.sourceValidThrough } : {}),
+      ...(parsed.sourceSha256 ? { sourceSha256: parsed.sourceSha256 } : {}),
+      ...(parsed.sourceStorageUri ? { sourceStorageUri: parsed.sourceStorageUri } : {}),
+      ...(parsed.sourcePageCount ? { sourcePageCount: parsed.sourcePageCount } : {}),
+      ...(parsed.sourceDocumentType ? { sourceDocumentType: parsed.sourceDocumentType } : {}),
       ...(parsed.officialSourceUrl ? { officialSourceUrl: parsed.officialSourceUrl } : {}),
       updatedAt: new Date().toISOString(),
     });
@@ -502,16 +549,80 @@ function hasUnindexedSalaryEvidence(entry, question, currentYear = new Date().ge
   return yearsToCheck.some((year) => year > Number(entry.salaryEvidenceVerifiedThroughYear));
 }
 
-function isWorkersStatuteChunkCurrent(chunk, now = new Date()) {
-  if (!chunk || chunk.officialCode !== "BOE-A-2015-11430") return true;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(chunk.sourceValidThrough || ""))) return false;
-  const todayMadrid = new Intl.DateTimeFormat("en-CA", {
+function madridDate(value = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Madrid",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(now);
-  return todayMadrid <= chunk.sourceValidThrough;
+  }).format(value);
+}
+
+function parseWorkersStatuteAsOfDates(question) {
+  const text = String(question || "");
+  const dates = new Set();
+  for (const match of text.matchAll(/\b(\d{4})-(\d{2})-(\d{2})\b/g)) dates.add(match[0]);
+  for (const match of text.matchAll(/\b(\d{1,2})[/.](\d{1,2})[/.](\d{4})\b/g)) {
+    dates.add(`${match[3]}-${match[2].padStart(2, "0")}-${match[1].padStart(2, "0")}`);
+  }
+  const months = { enero: "01", febrero: "02", marzo: "03", abril: "04", mayo: "05", junio: "06", julio: "07", agosto: "08", septiembre: "09", octubre: "10", noviembre: "11", diciembre: "12" };
+  for (const match of text.toLocaleLowerCase("es").matchAll(/\b(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\s+de\s+(\d{4})\b/g)) {
+    dates.add(`${match[3]}-${months[match[2]]}-${match[1].padStart(2, "0")}`);
+  }
+  return [...dates].filter((date) => {
+    const parsed = new Date(`${date}T00:00:00Z`);
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
+  }).sort();
+}
+
+function workersStatuteVersionForDate(asOfDate) {
+  if (asOfDate >= "2025-12-05" && asOfDate <= "2026-10-22") {
+    return { sourceEdition: "PUB-DT-2025-139", fileNames: ["estatuto_trabajadores_parte1.pdf", "estatuto_trabajadores_parte2.pdf"], asOfDate };
+  }
+  if (asOfDate >= "2026-10-23") {
+    return { sourceEdition: "BOE-A-2015-11430-consolidated-2026-10-03", fileNames: ["estatuto_trabajadores_2026-10-03.pdf"], asOfDate };
+  }
+  return null;
+}
+
+function resolveWorkersStatuteVersion(question = "", now = new Date()) {
+  const dates = parseWorkersStatuteAsOfDates(question);
+  if (dates.length) {
+    const versions = dates.map(workersStatuteVersionForDate);
+    if (versions.some((version) => !version)) return { status: "unsupported", dates };
+    const editions = new Set(versions.map((version) => version.sourceEdition));
+    return editions.size === 1 ? { status: "resolved", ...versions[0] } : { status: "ambiguous", dates };
+  }
+
+  const yearSearchText = String(question || "").replace(/\bBOE-A-\d{4}-\d+\b/gi, " ");
+  const years = [...new Set((yearSearchText.match(/\b(?:19|20)\d{2}\b/g) || []).map(Number))];
+  if (years.length) {
+    const yearRanges = years.map((year) => {
+      const first = workersStatuteVersionForDate(`${year}-01-01`);
+      const last = workersStatuteVersionForDate(`${year}-12-31`);
+      return { first, last };
+    });
+    if (yearRanges.every(({ first, last }) => !first && !last)) return { status: "unsupported", years };
+    if (yearRanges.some(({ first, last }) => !first || !last || first.sourceEdition !== last.sourceEdition)) {
+      return { status: "ambiguous", years };
+    }
+    const versions = yearRanges.map(({ first }) => first);
+    const editions = new Set(versions.map((version) => version.sourceEdition));
+    return editions.size === 1 ? { status: "resolved", ...versions[0] } : { status: "ambiguous", years };
+  }
+
+  const asOfDate = madridDate(now);
+  const version = workersStatuteVersionForDate(asOfDate);
+  return version ? { status: "resolved", ...version } : { status: "unsupported", dates: [asOfDate] };
+}
+
+function isWorkersStatuteChunkCurrent(chunk, asOf = new Date()) {
+  if (!chunk || chunk.officialCode !== "BOE-A-2015-11430") return true;
+  const asOfDate = asOf instanceof Date ? madridDate(asOf) : String(asOf || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(asOfDate)) return false;
+  if (chunk.sourceValidFrom && asOfDate < chunk.sourceValidFrom) return false;
+  if (chunk.sourceValidThrough && asOfDate > chunk.sourceValidThrough) return false;
+  return Boolean(chunk.sourceValidFrom || chunk.sourceValidThrough);
 }
 
 function resolveCatalogEntry(catalogEntries, criteria) {
@@ -648,6 +759,8 @@ module.exports = {
   isSupportedLaborSector,
   normalizeText,
   parseConvenioFileName,
+  parseWorkersStatuteAsOfDates,
+  resolveWorkersStatuteVersion,
   resolveCatalogEntry,
   resolveCatalogReference,
   selectCatalogSourceFiles,

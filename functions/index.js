@@ -106,7 +106,7 @@ if (admin.apps.length === 0) {
 
 const db = admin.firestore();
 exports.syncOfficialHolidays = onSchedule({ schedule: "0 4 * * 0", timeZone: "Europe/Madrid", region: "europe-west1", maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "1GiB" }, async () => runScheduledHolidaySync(db));
-exports.reviewConvenioSources = onSchedule({ schedule: "0 5 1 * *", timeZone: "Europe/Madrid", region: "europe-west1", maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "512MiB" }, async () => runMonthlyConvenioReview(db));
+exports.reviewConvenioSources = onSchedule({ schedule: "0 5 1 * *", timeZone: "Europe/Madrid", region: "europe-west1", serviceAccount: "convenio-monitor@calendario-laboral-252b1.iam.gserviceaccount.com", maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "512MiB", retryCount: 0 }, async () => runMonthlyConvenioReview(db));
 const playDeveloperClient = createPlayDeveloperClient();
 const rtdnOidcClient = new OAuth2Client();
 let stripeClient;

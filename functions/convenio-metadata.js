@@ -2,6 +2,163 @@ const path = require("path");
 
 const CATALOGO_CONVENIOS = "catalogo_convenios";
 
+const FILE_METADATA_OVERRIDES = {
+  "Convenio Transporte Alava 201-2026.pdf": {
+    yearStart: 2020,
+    yearEnd: 2026,
+    catalogKey: "transporte_alava_2026_2026",
+    officialCode: "01100085162024",
+    publication: {
+      bulletin: "BOTHA",
+      number: 16,
+      date: "2024-02-07",
+      identifier: "2024-00290",
+      url: "https://www.araba.eus/botha/Boletines/2024/016/2024_016_00290_C.pdf",
+    },
+    legalEffect: "extraestatutario_eficacia_limitada",
+    applicationWarning: "Este acuerdo se identifica oficialmente como extraestatutario y de eficacia limitada. Que el texto exista no confirma que se aplique a todas las empresas o personas del sector; para valorar su aplicación hay que comprobar la cobertura de la representación negociadora o una adhesión expresa y las circunstancias del caso.",
+    sourceVerification: "verified",
+  },
+  "Convenio Alojamientos y Hostelería Malaga parte 1.pdf": {
+    yearStart: 2018,
+    yearEnd: 2022,
+    sourceVerification: "verified",
+  },
+  "Convenio Alojamientos y Hostelería Malaga parte 2 2018-2027.pdf": {
+    yearStart: 2018,
+    yearEnd: 2027,
+    officialCode: "29000945011981",
+    publication: {
+      bulletin: "BOPMA",
+      number: 24,
+      date: "2024-02-02",
+      identifier: "20240202-00115-2024",
+      url: "https://www.bopmalaga.es/sumario.php?fecha=02-02-2024",
+    },
+    sourceVerification: "verified",
+  },
+  "Convenio Alojamientos y Hostelería Valencia2022-2025.pdf": {
+    catalogKey: "alojamientos_hosteleria_sin_provincia_2025_2025",
+  },
+  "Convenio Transporte Barcelona 2011-2023.pdf": {
+    sourceVerification: "unverified",
+    documentaryWarning: "El PDF local indica 2011–2023. El BOPB publicó un convenio sectorial posterior de transporte de mercancías por carretera y logística para 2023–2025 (código 08004295011994) y tablas definitivas de 2025 en 2026. No presentar el PDF local como edición actual; el texto posterior debe descargarse, cotejarse por ámbito e incorporarse antes de responder sobre condiciones actuales.",
+  },
+  "estatuto_trabajadores.pdf": {
+    sourceVerification: "verified",
+    officialCode: "BOE-A-2015-11430",
+    sourceEdition: "PUB-DT-2025-139",
+    sourceUpdatedThrough: "2025-12-04",
+    sourceValidThrough: "2026-10-22",
+    officialSourceUrl: "https://www.boe.es/biblioteca_juridica/pdf/PUB-DT-2025-139.pdf",
+  },
+  "estatuto_trabajadores_parte1.pdf": {
+    sourceVerification: "verified",
+    officialCode: "BOE-A-2015-11430",
+    sourceEdition: "PUB-DT-2025-139",
+    sourceUpdatedThrough: "2025-12-04",
+    sourceValidThrough: "2026-10-22",
+    officialSourceUrl: "https://www.boe.es/biblioteca_juridica/pdf/PUB-DT-2025-139.pdf",
+  },
+  "estatuto_trabajadores_parte2.pdf": {
+    sourceVerification: "verified",
+    officialCode: "BOE-A-2015-11430",
+    sourceEdition: "PUB-DT-2025-139",
+    sourceUpdatedThrough: "2025-12-04",
+    sourceValidThrough: "2026-10-22",
+    officialSourceUrl: "https://www.boe.es/biblioteca_juridica/pdf/PUB-DT-2025-139.pdf",
+  },
+  "Convenio Transporte Gipuzkoa 2010-2014.pdf": {
+    sourceVerification: "unverified",
+    documentaryWarning: "El nombre local indica 2010–2014, pero el texto PDF identificado corresponde aparentemente a 2007–2009. No utilizarlo como edición confirmada.",
+  },
+  "Convenio Transporte GIPUZKOA 2007-2010.pdf": {
+    yearStart: 2007,
+    yearEnd: 2009,
+    catalogKey: "transporte_gipuzkoa_2007_2010",
+    sourceVerification: "unverified",
+    documentaryWarning: "El texto local indica 2007–2009 y la copia vectorizada está incompleta. La publicación oficial individual y la integridad requieren cotejo.",
+  },
+  "Convenio Transporte GIPUZKOA 2007-2010parte1.pdf": {
+    yearStart: 2007,
+    yearEnd: 2009,
+    catalogKey: "transporte_gipuzkoa_2007_2010",
+    sourceVerification: "unverified",
+    documentaryWarning: "Parte de una compilación del BOG; no seleccionar automáticamente sin cotejar integridad y publicación oficial.",
+  },
+  "Convenio Transporte GIPUZKOA 2007-2010parte2.pdf": {
+    yearStart: 2007,
+    yearEnd: 2009,
+    catalogKey: "transporte_gipuzkoa_2007_2010",
+    sourceVerification: "unverified",
+    documentaryWarning: "Parte de una compilación del BOG; no seleccionar automáticamente sin cotejar integridad y publicación oficial.",
+  },
+};
+
+const MALAGA_ORIGINAL_FILE = "Convenio Alojamientos y Hostelería Malaga parte 1.pdf";
+const MALAGA_REVISION_FILE = "Convenio Alojamientos y Hostelería Malaga parte 2 2018-2027.pdf";
+const MALAGA_PUBLICATIONS = [
+  {
+    fileName: MALAGA_ORIGINAL_FILE,
+    role: "original",
+    yearStart: 2018,
+    yearEnd: 2022,
+    officialCode: "29000945011981",
+    bulletin: "BOPMA 162",
+    publicationDate: "2018-08-23",
+    identifier: "20180823-05720-2018",
+    url: "https://www.bopmalaga.es/sumario.php?fecha=23-08-2018",
+  },
+  {
+    fileName: MALAGA_REVISION_FILE,
+    role: "revision",
+    yearStart: 2018,
+    yearEnd: 2027,
+    officialCode: "29000945011981",
+    bulletin: "BOPMA 24",
+    publicationDate: "2024-02-02",
+    identifier: "20240202-00115-2024",
+    url: "https://www.bopmalaga.es/sumario.php?fecha=02-02-2024",
+  },
+];
+
+const MALAGA_UNINDEXED_PUBLICATIONS = [
+  {
+    bulletin: "BOPMA 160",
+    publicationDate: "2024-08-20",
+    edict: "2957/2024",
+    cve: "20240820-02957-2024",
+    title: "Resolución de inscripción y publicación del Convenio Colectivo de Hostelería de Málaga y Provincia",
+    url: "https://www.bopmalaga.es/sumario.php?fecha=20-08-2024",
+    indexed: false,
+    contentVerified: false,
+  },
+  {
+    bulletin: "BOPMA 90",
+    publicationDate: "2025-05-14",
+    edict: "1559/2025",
+    cve: "20250514-01559-2025",
+    title: "Convenio Colectivo del Sector de la Hostelería de Málaga y provincia",
+    url: "https://www.bopmalaga.es/sumario.php?fecha=14-05-2025",
+    indexed: false,
+    contentVerified: false,
+  },
+  {
+    bulletin: "BOPMA 70",
+    publicationDate: "2026-04-14",
+    edict: "1187/2026",
+    cve: "20260414-01187-2026",
+    title: "Resolución sobre inscripción y publicación de las tablas salariales del sector de hostelería",
+    url: "https://www.bopmalaga.es/sumario.php?fecha=14-04-2026",
+    indexed: false,
+    contentVerified: false,
+  },
+];
+
+const MALAGA_UNINDEXED_SALARY_NOTICE = "El BOPMA publicó documentación posterior de Hostelería de Málaga, incluidos anuncios del sector en 2024 y 2025 y un anuncio de tablas salariales en 2026. El contenido íntegro de esas publicaciones no está indexado ni verificado aquí; no se deben confirmar importes salariales posteriores a 2022 con los fragmentos locales.";
+
+const WORKERS_STATUTE_FILE_PATTERN = /^estatuto_trabajadores(?:_parte\d+)?$/i;
+
 const COMMUNITY_BY_PROVINCE = {
   GIPUZKOA: "PAIS VASCO",
   BIZKAIA: "PAIS VASCO",
@@ -81,6 +238,15 @@ function normalizeText(value) {
     .trim();
 }
 
+function normalizeFileName(value) {
+  return normalizeText(String(value || "").replace(/([a-z])(?=\d)/gi, "$1 "));
+}
+
+function getDocumentType(fileName) {
+  const baseName = path.basename(String(fileName || ""), path.extname(String(fileName || "")));
+  return WORKERS_STATUTE_FILE_PATTERN.test(baseName) ? "base" : "especifico";
+}
+
 function isSupportedLaborLocation(value) {
   const normalized = normalizeText(value);
   return Object.entries(LOCATION_ALIASES).some(([province, aliases]) =>
@@ -148,7 +314,7 @@ function detectSectorKeysFromText(value) {
 }
 
 function detectSectorKeysFromFileName(fileName) {
-  const normalized = normalizeText(path.basename(fileName, path.extname(fileName)));
+  const normalized = normalizeFileName(path.basename(fileName, path.extname(fileName)));
   return SECTOR_DEFINITIONS
     .filter((definition) =>
       definition.fileKeywords.some((keyword) => normalized.includes(normalizeText(keyword)))
@@ -157,7 +323,7 @@ function detectSectorKeysFromFileName(fileName) {
 }
 
 function extractYears(value) {
-  const matches = String(value || "").match(/\b(19|20)\d{2}\b/g) || [];
+  const matches = String(value || "").match(/(?:19|20)\d{2}(?!\d)/g) || [];
   const years = matches.map((year) => parseInt(year, 10)).filter(Number.isFinite);
   if (!years.length) {
     return { yearStart: null, yearEnd: null };
@@ -170,7 +336,7 @@ function extractYears(value) {
 }
 
 function detectProvinceFromFileName(fileName) {
-  const normalized = normalizeText(path.basename(fileName, path.extname(fileName)));
+  const normalized = normalizeFileName(path.basename(fileName, path.extname(fileName)));
   return Object.keys(LOCATION_ALIASES).find((province) =>
     LOCATION_ALIASES[province].some((alias) => includesWholeAlias(normalized, normalizeText(alias)))
   ) || null;
@@ -181,7 +347,10 @@ function parseConvenioFileName(fileName) {
   const title = path.basename(cleanFileName, path.extname(cleanFileName));
   const province = detectProvinceFromFileName(cleanFileName);
   const sectorKeys = detectSectorKeysFromFileName(cleanFileName);
-  const { yearStart, yearEnd } = extractYears(title);
+  const detectedYears = extractYears(title);
+  const override = FILE_METADATA_OVERRIDES[cleanFileName] || {};
+  const yearStart = override.yearStart ?? detectedYears.yearStart;
+  const yearEnd = override.yearEnd ?? detectedYears.yearEnd;
   const partMatch = normalizeText(title).match(/\bparte\s*(\d+)\b/);
   const partNumber = partMatch ? parseInt(partMatch[1], 10) : null;
   const autonomousCommunity = province ? COMMUNITY_BY_PROVINCE[province] || null : null;
@@ -199,7 +368,17 @@ function parseConvenioFileName(fileName) {
     yearStart,
     yearEnd,
     partNumber,
-    catalogKey: sanitizeId(`${sectorGroup}_${provinceGroup}_${groupYearStart}_${groupYearEnd}`),
+    catalogKey: override.catalogKey || sanitizeId(`${sectorGroup}_${provinceGroup}_${groupYearStart}_${groupYearEnd}`),
+    ...(override.officialCode ? { officialCode: override.officialCode } : {}),
+    ...(override.publication ? { publication: override.publication } : {}),
+    ...(override.legalEffect ? { legalEffect: override.legalEffect } : {}),
+    ...(override.applicationWarning ? { applicationWarning: override.applicationWarning } : {}),
+    ...(override.sourceVerification ? { sourceVerification: override.sourceVerification } : {}),
+    ...(override.documentaryWarning ? { documentaryWarning: override.documentaryWarning } : {}),
+    ...(override.sourceEdition ? { sourceEdition: override.sourceEdition } : {}),
+    ...(override.sourceUpdatedThrough ? { sourceUpdatedThrough: override.sourceUpdatedThrough } : {}),
+    ...(override.sourceValidThrough ? { sourceValidThrough: override.sourceValidThrough } : {}),
+    ...(override.officialSourceUrl ? { officialSourceUrl: override.officialSourceUrl } : {}),
   };
 }
 
@@ -214,6 +393,7 @@ function buildCatalogEntriesFromFileNames(fileNames) {
       if (!existing.fileNames.includes(parsed.fileName)) {
         existing.fileNames.push(parsed.fileName);
       }
+      if (parsed.sourceVerification === "unverified") existing.sourceVerification = "unverified";
       return;
     }
 
@@ -227,9 +407,38 @@ function buildCatalogEntriesFromFileNames(fileNames) {
       yearStart: parsed.yearStart,
       yearEnd: parsed.yearEnd,
       fileNames: [parsed.fileName],
+      ...(parsed.officialCode ? { officialCode: parsed.officialCode } : {}),
+      ...(parsed.publication ? { publication: parsed.publication } : {}),
+      ...(parsed.legalEffect ? { legalEffect: parsed.legalEffect } : {}),
+      ...(parsed.applicationWarning ? { applicationWarning: parsed.applicationWarning } : {}),
+      ...(parsed.sourceVerification ? { sourceVerification: parsed.sourceVerification } : {}),
+      ...(parsed.documentaryWarning ? { documentaryWarning: parsed.documentaryWarning } : {}),
+      ...(parsed.sourceEdition ? { sourceEdition: parsed.sourceEdition } : {}),
+      ...(parsed.sourceUpdatedThrough ? { sourceUpdatedThrough: parsed.sourceUpdatedThrough } : {}),
+      ...(parsed.sourceValidThrough ? { sourceValidThrough: parsed.sourceValidThrough } : {}),
+      ...(parsed.officialSourceUrl ? { officialSourceUrl: parsed.officialSourceUrl } : {}),
       updatedAt: new Date().toISOString(),
     });
   });
+
+  const malagaOriginal = Array.from(grouped.values()).find((entry) => entry.fileNames.includes(MALAGA_ORIGINAL_FILE));
+  const malagaRevision = Array.from(grouped.values()).find((entry) => entry.fileNames.includes(MALAGA_REVISION_FILE));
+  if (malagaOriginal && malagaRevision && malagaOriginal !== malagaRevision) {
+    malagaRevision.fileNames = Array.from(new Set([...malagaOriginal.fileNames, ...malagaRevision.fileNames]));
+    malagaRevision.yearStart = 2018;
+    malagaRevision.yearEnd = 2027;
+    malagaRevision.officialCode = "29000945011981";
+    malagaRevision.publications = MALAGA_PUBLICATIONS;
+    malagaRevision.documentaryWarning = MALAGA_UNINDEXED_SALARY_NOTICE;
+    malagaRevision.unindexedPublications = MALAGA_UNINDEXED_PUBLICATIONS;
+    malagaRevision.salaryEvidenceVerifiedThroughYear = 2022;
+    malagaRevision.salaryEvidenceWarning = MALAGA_UNINDEXED_SALARY_NOTICE;
+    grouped.delete(malagaOriginal.catalogKey);
+  } else if (malagaRevision) {
+    malagaRevision.documentaryWarning = MALAGA_UNINDEXED_SALARY_NOTICE;
+    malagaRevision.salaryEvidenceVerifiedThroughYear = 2022;
+    malagaRevision.salaryEvidenceWarning = MALAGA_UNINDEXED_SALARY_NOTICE;
+  }
 
   return Array.from(grouped.values()).sort((a, b) => {
     const yearA = a.yearEnd || 0;
@@ -249,16 +458,66 @@ function detectConvenioCriteria({ pregunta, ciudad, sector }) {
   const provincesFromCity = detectProvinceFromText(ciudad);
   const sectorFromQuestion = detectSectorKeysFromText(pregunta);
   const sectorFromField = detectSectorKeysFromText(sector);
+  const requestedYears = Array.from(new Set((String(pregunta || "").match(/\b(?:19|20)\d{2}\b/g) || []).map(Number)));
 
   return {
     provinces: pickDetectedValue(provincesFromQuestion, provincesFromCity) || [],
     sectorKeys: pickDetectedValue(sectorFromQuestion, sectorFromField) || [],
+    requestedYears,
   };
+}
+
+function entryCoversRequestedYears(entry, requestedYears) {
+  if (!requestedYears.length) return true;
+  const yearStart = Number(entry.yearStart);
+  const yearEnd = Number(entry.yearEnd);
+  return Number.isFinite(yearStart) && Number.isFinite(yearEnd) &&
+    requestedYears.every((year) => year >= yearStart && year <= yearEnd);
+}
+
+function selectCatalogSourceFiles(entry, requestedYears = []) {
+  const files = Array.isArray(entry.fileNames) ? entry.fileNames : [];
+  if (!requestedYears.length || !Array.isArray(entry.publications) || !entry.publications.length) return files;
+
+  const minYear = Math.min(...requestedYears);
+  const maxYear = Math.max(...requestedYears);
+  const original = entry.publications.find((publication) => publication.role === "original");
+  const revision = entry.publications.find((publication) => publication.role === "revision");
+  if (original && revision && files.includes(original.fileName) && files.includes(revision.fileName)) {
+    if (maxYear <= original.yearEnd) return [original.fileName];
+    if (minYear >= original.yearStart && minYear <= revision.yearEnd) return [original.fileName, revision.fileName];
+  }
+  return files.filter((fileName) => entry.publications.some((publication) =>
+    publication.fileName === fileName && requestedYears.every((year) => year >= publication.yearStart && year <= publication.yearEnd)
+  ));
+}
+
+function hasUnindexedSalaryEvidence(entry, question, currentYear = new Date().getFullYear()) {
+  if (!entry || !Number.isFinite(Number(entry.salaryEvidenceVerifiedThroughYear))) return false;
+  const normalized = normalizeText(question);
+  const asksSalary = /\b(?:salario|salarios|sueldo|sueldos|retribucion|retribuciones|tabla salarial|tablas salariales|importe|bruto|cobrar|cobra|paga|plus|complemento)\b/.test(normalized);
+  if (!asksSalary) return false;
+  const years = Array.from(new Set((String(question || "").match(/\b(?:19|20)\d{2}\b/g) || []).map(Number)));
+  const yearsToCheck = years.length ? years : [currentYear];
+  return yearsToCheck.some((year) => year > Number(entry.salaryEvidenceVerifiedThroughYear));
+}
+
+function isWorkersStatuteChunkCurrent(chunk, now = new Date()) {
+  if (!chunk || chunk.officialCode !== "BOE-A-2015-11430") return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(chunk.sourceValidThrough || ""))) return false;
+  const todayMadrid = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+  return todayMadrid <= chunk.sourceValidThrough;
 }
 
 function resolveCatalogEntry(catalogEntries, criteria) {
   const provinces = criteria.provinces || [];
   const sectorKeys = criteria.sectorKeys || [];
+  const requestedYears = criteria.requestedYears || [];
 
   if (!sectorKeys.length && !provinces.length) {
     return {
@@ -282,20 +541,39 @@ function resolveCatalogEntry(catalogEntries, criteria) {
   }
 
   const candidates = catalogEntries.filter((entry) =>
+    entry.catalogStatus !== "superseded" && entry.catalogStatus !== "normative_base" && entry.active !== false &&
     entry.province &&
     provinces.includes(entry.province) &&
     Array.isArray(entry.sectorKeys) &&
     entry.sectorKeys.some((sectorKey) => sectorKeys.includes(sectorKey))
   );
 
-  if (!candidates.length) {
+  const yearCandidates = requestedYears.length
+    ? candidates.filter((entry) => entryCoversRequestedYears(entry, requestedYears))
+    : candidates;
+  const verifiedCandidates = yearCandidates.filter((entry) => entry.sourceVerification !== "unverified");
+
+  if (!verifiedCandidates.length) {
+    if (yearCandidates.some((entry) => entry.sourceVerification === "unverified") ||
+        (!requestedYears.length && candidates.some((entry) => entry.sourceVerification === "unverified"))) {
+      return {
+        status: "source_unverified",
+        message: "He encontrado documentos con fechas o contenido documental sin verificar para ese convenio. No puedo presentarlos como la edición confirmada. Indícame el año concreto o consulta el boletín oficial para verificar la fuente.",
+        options: yearCandidates.filter((entry) => entry.sourceVerification === "unverified").map((entry) => ({
+          title: entry.title,
+          province: entry.province || null,
+          sectorKeys: entry.sectorKeys || [],
+          fileNames: entry.fileNames || [],
+        })),
+      };
+    }
     return {
       status: "not_found",
       message: "No he encontrado un convenio claro con esos datos. Indícame trabajo y provincia de la forma más concreta posible.",
     };
   }
 
-  const sortedCandidates = candidates.sort((a, b) => {
+  const sortedCandidates = verifiedCandidates.sort((a, b) => {
     const yearA = a.yearEnd || 0;
     const yearB = b.yearEnd || 0;
     return yearB - yearA || a.title.localeCompare(b.title, "es");
@@ -320,15 +598,38 @@ function resolveCatalogEntry(catalogEntries, criteria) {
     };
   }
 
+  if (requestedYears.length && sortedCandidates.length > 1) {
+    return {
+      status: "ambiguous",
+      message: "Hay varias ediciones documentales que cubren el año indicado. Necesito identificar el texto concreto antes de responder.",
+      options: sortedCandidates.map((candidate) => ({
+        title: candidate.title,
+        province: candidate.province || null,
+        sectorKeys: candidate.sectorKeys || [],
+        fileNames: candidate.fileNames || [],
+      })),
+    };
+  }
+
+  const selectedEntry = { ...sortedCandidates[0] };
+  selectedEntry.fileNames = selectCatalogSourceFiles(selectedEntry, requestedYears);
+  if (!selectedEntry.fileNames.length) {
+    return {
+      status: "not_found",
+      message: "No he encontrado una fuente documental que cubra el año indicado. Esto no determina por sí mismo qué convenio resulta jurídicamente aplicable.",
+    };
+  }
+
   return {
     status: "resolved",
-    entry: sortedCandidates[0],
+    entry: selectedEntry,
   };
 }
 
 function resolveCatalogReference(catalogEntries, reference, criteria) {
   const entry = catalogEntries.find((candidate) =>
-    candidate.id === reference || candidate.title === reference || candidate.fileNames?.includes(reference));
+    candidate.catalogStatus !== "superseded" && candidate.catalogStatus !== "normative_base" && candidate.active !== false &&
+    (candidate.id === reference || candidate.title === reference || candidate.fileNames?.includes(reference)));
   if (!entry || (criteria.provinces.length && !criteria.provinces.includes(entry.province)) ||
       (criteria.sectorKeys.length && !criteria.sectorKeys.some((key) => entry.sectorKeys?.includes(key)))) {
     return null;
@@ -340,11 +641,15 @@ module.exports = {
   CATALOGO_CONVENIOS,
   buildCatalogEntriesFromFileNames,
   detectConvenioCriteria,
+  getDocumentType,
+  hasUnindexedSalaryEvidence,
+  isWorkersStatuteChunkCurrent,
   isSupportedLaborLocation,
   isSupportedLaborSector,
   normalizeText,
   parseConvenioFileName,
   resolveCatalogEntry,
   resolveCatalogReference,
+  selectCatalogSourceFiles,
   sanitizeId,
 };

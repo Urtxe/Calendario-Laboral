@@ -82,10 +82,14 @@ function isDue(agreement, state, now) {
   return !Number.isNaN(dueAt.getTime()) && dueAt <= now;
 }
 
-function reviewInterval(agreement, now) {
+function pendingEntryCount(state) {
+  return (state?.pendingEntries || []).filter((entry) => !["resolved", "rejected", "closed"].includes(entry.status)).length;
+}
+
+function reviewInterval(agreement, now, state = null) {
   const status = agreement.documentaryStatus.toLocaleLowerCase("es");
   const endedPeriod = agreement.pactEndYear != null && agreement.pactEndYear < now.getFullYear();
-  const pending = /pendiente|incompleto|actualizaci[oó]n/.test(status);
+  const pending = /pendiente|incompleto|actualizaci[oó]n/.test(status) || pendingEntryCount(state) > 0;
   return endedPeriod || pending ? TWO_MONTHS : SIX_MONTHS;
 }
 
@@ -166,7 +170,7 @@ async function runMonthlyConvenioReview(db, {
       const state = stateSnapshot.exists ? stateSnapshot.data() : null;
       counts.examined += 1;
       if (!isDue(agreement, state, now)) continue;
-      counts.pending += state?.pendingEntries?.length || 0;
+      counts.pending += pendingEntryCount(state);
       if (!agreement.sourceUrl) {
         counts.blocked += 1;
         counts.pending += 1;
@@ -183,7 +187,9 @@ async function runMonthlyConvenioReview(db, {
         counts.checked += 1;
         counts.newEntries += newEntries.length;
         counts.pending += entriesForReview.length;
-        const interval = reviewInterval(agreement, now);
+        const pendingEntries = [...(state?.pendingEntries || []), ...entriesForReview.map(({ signature, registrationDate, transactionType, summary, occurrences }) => ({ signature, registrationDate, transactionType, summary, occurrences, status: baseline ? "pending_baseline_reconciliation" : "pending_documentary_verification", detectedAt: now }))].slice(-100);
+        counts.pending += entriesForReview.length;
+        const interval = reviewInterval(agreement, now, { pendingEntries });
         await stateRef.set({
           agreementId: agreement.id,
           officialCode: agreement.officialCode,
@@ -194,7 +200,7 @@ async function runMonthlyConvenioReview(db, {
           baselineEstablished: true,
           knownSignatures: [...new Set([...(state?.knownSignatures || []), ...rows.map((row) => row.signature)])].slice(-250),
           latestRows: rows.slice(0, 20).map(({ signature, registrationDate, transactionType, summary, occurrences }) => ({ signature, registrationDate, transactionType, summary, occurrences })),
-          pendingEntries: [...(state?.pendingEntries || []), ...entriesForReview.map(({ signature, registrationDate, transactionType, summary, occurrences }) => ({ signature, registrationDate, transactionType, summary, occurrences, status: baseline ? "pending_baseline_reconciliation" : "pending_documentary_verification", detectedAt: now }))].slice(-100),
+          pendingEntries,
           lastResult: baseline ? "baseline_entries_pending_reconciliation" : newEntries.length ? "new_regcon_entries_pending_verification" : "no_new_regcon_entries",
         }, { merge: true });
         log.info("convenio_monitor_source_checked", { runId, agreementId: agreement.id, officialCode: agreement.officialCode, rows: rows.length, newEntries: newEntries.length, baseline });
@@ -219,4 +225,4 @@ async function runMonthlyConvenioReview(db, {
   }
 }
 
-module.exports = { inventory, parseRegconRows, isDue, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview };
+module.exports = { inventory, parseRegconRows, isDue, pendingEntryCount, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview };

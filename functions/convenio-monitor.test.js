@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { inventory, parseRegconRows, isDue, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview } = require("./convenio-monitor");
+const { inventory, parseRegconRows, isDue, pendingEntryCount, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview } = require("./convenio-monitor");
 
 function memoryDb() {
   const values = new Map();
@@ -41,6 +41,9 @@ test("selecciona revisión bimestral con pendientes, periodo pactado terminado o
   assert.equal(reviewInterval(ended, now), 2);
   assert.equal(reviewInterval(incomplete, now), 2);
   assert.equal(reviewInterval(current, now), 6);
+  assert.equal(reviewInterval({ documentaryStatus: "VERIFICADO", pactEndYear: 2028 }, now, { pendingEntries: [{ status: "pending_documentary_verification" }] }), 2);
+  assert.equal(reviewInterval({ documentaryStatus: "VERIFICADO", pactEndYear: 2028 }, now, { pendingEntries: [{ status: "resolved" }] }), 6);
+  assert.equal(pendingEntryCount({ pendingEntries: [{ status: "resolved" }, { status: "pending_baseline_reconciliation" }] }), 1);
   assert.equal(addCalendarMonths(new Date("2026-08-31T10:00:00Z"), 2).toISOString(), "2026-10-31T10:00:00.000Z");
   assert.equal(addCalendarMonths(new Date("2026-12-31T10:00:00Z"), 2).toISOString(), "2027-02-28T10:00:00.000Z");
 });

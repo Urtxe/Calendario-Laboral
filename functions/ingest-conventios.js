@@ -6,6 +6,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const {
   CATALOGO_CONVENIOS,
   buildCatalogEntriesFromFileNames,
+  getDocumentType,
   parseConvenioFileName,
   sanitizeId,
 } = require("./convenio-metadata");
@@ -52,8 +53,7 @@ function pause(ms) {
 }
 
 function getDocType(fileName) {
-  const baseName = path.basename(fileName, path.extname(fileName)).toLowerCase();
-  return baseName === "estatuto_trabajadores" ? "base" : "especifico";
+  return getDocumentType(fileName);
 }
 
 async function ensureDir(dir) {
@@ -228,6 +228,14 @@ async function writeChunkGroup({
           catalogKey: convenioMetadata.catalogKey,
           yearStart: convenioMetadata.yearStart,
           yearEnd: convenioMetadata.yearEnd,
+          ...(convenioMetadata.officialCode ? { officialCode: convenioMetadata.officialCode } : {}),
+          ...(convenioMetadata.publication ? { publication: convenioMetadata.publication } : {}),
+          ...(convenioMetadata.legalEffect ? { legalEffect: convenioMetadata.legalEffect } : {}),
+          ...(convenioMetadata.sourceVerification ? { sourceVerification: convenioMetadata.sourceVerification } : {}),
+          ...(convenioMetadata.sourceEdition ? { sourceEdition: convenioMetadata.sourceEdition } : {}),
+          ...(convenioMetadata.sourceUpdatedThrough ? { sourceUpdatedThrough: convenioMetadata.sourceUpdatedThrough } : {}),
+          ...(convenioMetadata.sourceValidThrough ? { sourceValidThrough: convenioMetadata.sourceValidThrough } : {}),
+          ...(convenioMetadata.officialSourceUrl ? { officialSourceUrl: convenioMetadata.officialSourceUrl } : {}),
           chunkIndex: globalIndex,
           chunkTotal: totalChunks,
           texto: chunks[i],

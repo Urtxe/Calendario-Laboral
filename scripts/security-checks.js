@@ -210,13 +210,13 @@ addCheck("Las aclaraciones no reservan cuota y toda respuesta útil declara proc
   assertOrder(
     handler,
     [
-      "if (CLARIFICATION_STATUSES.has(resolucionCatalogo.status) && requiereContextoConvenio)",
+      "if (CLARIFICATION_STATUSES.has(resolucionCatalogo.status) && requiereContextoConvenio &&",
       "return res.status(200).json(payload);",
       "if (!await reservarCuota()) return;",
     ],
     "Una aclaracion debe salir antes de reservar cuota",
   );
-  assertIncludes(handler, "sourceType: \"convenio\"");
+  assertIncludes(handler, "sourceType: hayConvenioEspecifico ? \"convenio\" : \"estatuto\"");
   assertIncludes(handler, "sourceType: \"official_web\"");
   assertIncludes(handler, "sourceType: \"general_ai\"");
   assertIncludes(handler, "sourceType: \"clarification\"");

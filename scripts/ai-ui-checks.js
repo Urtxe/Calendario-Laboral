@@ -12,6 +12,8 @@ const labels = [
   "Información oficial actualizada",
   "Orientación general de IA",
   "Necesito concretar tu convenio",
+  "Normativa laboral general consultada",
+  "Información documental incompleta",
 ];
 
 for (const label of labels) {
@@ -29,4 +31,4 @@ assert(source.includes("data.convenioDetectado.sectorKeys[0]"), "La UI debe cons
 assert(source.includes("contextoLaboralSesion = null;\n};") || normalizedSource.includes("contextoLaboralSesion = null;\n};"), "Cerrar el asesor debe limpiar el contexto de sesión");
 assert(!source.includes('localStorage.getItem("convenioFileName")'), "No debe confiar en un convenio local sin validar");
 
-console.log("OK  La UI muestra las cuatro procedencias, el aviso y las cuotas diarias.");
+console.log("OK  La UI muestra procedencia, avisos documentales y cuotas diarias.");

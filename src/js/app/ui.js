@@ -773,8 +773,10 @@ function anadirProcedenciaRespuestaLegal(mensaje, data) {
   const etiquetas = {
     convenio: "Según tu convenio",
     official_web: "Información oficial actualizada",
+    estatuto: "Normativa laboral general consultada",
     general_ai: "Orientación general de IA",
     clarification: "Necesito concretar tu convenio",
+    unconfirmed: "Información documental incompleta",
   };
   const etiqueta = etiquetas[data.sourceType];
   if (!etiqueta) return;

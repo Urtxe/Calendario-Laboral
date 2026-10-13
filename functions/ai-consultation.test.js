@@ -14,6 +14,7 @@ const {
 } = require("./quota-reservation-policy");
 const { isEnabled: isOfficialWebFallbackEnabled } = require("./official-web-fallback");
 const { validarPayloadBasicoConsulta } = require("./consultation-payload");
+const { shouldRetrieveWorkersStatute } = require("./workers-statute-fallback");
 
 const tests = [];
 function test(name, fn) { tests.push({ name, fn }); }
@@ -53,7 +54,11 @@ test("los prompts activos piden respuestas directas y de longitud adaptable", ()
   assert.match(convenio, /No completes con conocimiento externo ni afirmes datos no incluidos/);
   assert.match(convenio, /Si los fragmentos no bastan, responde exactamente/);
   assert.match(convenio, /Cita la fuente disponible al final cuando aparezca/);
-  assert.match(convenio, /fuentes: construirFuentesChunks\(chunksEspecificos\)/);
+  assert.match(convenio, /\.\.\.construirFuentesBase\(chunksBase\)/);
+  assert.match(convenio, /\.\.\.construirFuentesChunks\(chunksEspecificos, convenioResuelto\)/);
+  assert.match(source, /officialSourceUrl: chunk\.officialSourceUrl/);
+  assert.match(source, /convenioResuelto\?\.publications\?\.find/);
+  assert.match(convenio, /unindexedPublications\?\.length/);
 });
 
 test("evidencia semántica suficiente permite respuesta de convenio", () => {
@@ -114,6 +119,14 @@ test("fallback oficial está activo por defecto y admite apagado de emergencia",
   assert.strictEqual(isOfficialWebFallbackEnabled({}), true);
   assert.strictEqual(isOfficialWebFallbackEnabled({ ENABLE_WEB_FALLBACK: "false" }), false);
   assert.strictEqual(isOfficialWebFallbackEnabled({ ENABLE_WEB_FALLBACK: "true" }), true);
+});
+
+test("las consultas explícitas sobre el Estatuto solicitan RAG base", () => {
+  assert.strictEqual(shouldRetrieveWorkersStatute("¿Qué dice el Estatuto de los Trabajadores sobre permisos?"), true);
+  assert.strictEqual(shouldRetrieveWorkersStatute("¿Qué establece el artículo 37.3 ET?"), true);
+  assert.strictEqual(shouldRetrieveWorkersStatute("¿Qué establece el artículo 37.3?"), false);
+  assert.strictEqual(shouldRetrieveWorkersStatute("vacaciones anuales"), true);
+  assert.strictEqual(shouldRetrieveWorkersStatute("¿Quién ganó el Mundial?"), false);
 });
 
 test("una reserva pendiente caducada deja de contar para la cuota", () => {

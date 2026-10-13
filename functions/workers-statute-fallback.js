@@ -48,6 +48,15 @@ function findWorkersStatuteFallback(question) {
   return STATUTE_RULES.find((rule) => containsAny(normalizedQuestion, rule.queryTerms)) || null;
 }
 
+function shouldRetrieveWorkersStatute(question) {
+  const normalizedQuestion = normalizeText(question);
+  if (!normalizedQuestion) return false;
+  const explicitStatute = /\b(?:estatuto(?: de los trabajadores)?|et)\b/.test(normalizedQuestion);
+  return Boolean(findWorkersStatuteFallback(question)) ||
+    explicitStatute ||
+    /\b(?:minimo legal|derecho legal|segun la ley|que dice la ley)\b/.test(normalizedQuestion);
+}
+
 function buildWorkersStatuteFallbackResponse(rule, { convenioFileName = "" } = {}) {
   const prefix = convenioFileName
     ? "No he encontrado una mejora específica en el convenio recuperado. "
@@ -73,4 +82,5 @@ module.exports = {
   buildWorkersStatuteFallbackResponse,
   buildWorkersStatuteSource,
   findWorkersStatuteFallback,
+  shouldRetrieveWorkersStatute,
 };

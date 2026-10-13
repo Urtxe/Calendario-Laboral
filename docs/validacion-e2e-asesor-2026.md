@@ -38,7 +38,7 @@ Se verificó de forma segura el rechazo sin autenticación: el endpoint activo r
 - Tests: `node --check functions/index.js`, `node functions/ai-consultation.test.js` (14 comprobaciones), `node functions/convenio-metadata.test.js`, `npm test` y `git diff --check` pasaron. Analytics imprime el caso esperado de configuración ausente `GA4_PROPERTY_ID`; su suite finalizó correctamente.
 - Despliegue: únicamente `consultarConvenio` a `calendario-laboral-252b1`; revisión activa `consultarconvenio-00031-jus`, `Ready=True`. No se desplegaron Hosting, reglas, índices ni otras funciones. Smoke posterior: HTTP 401.
 - Coste: 0 llamadas a Gemini, 0 embeddings y 0 consultas vectoriales atribuibles a esta ejecución; coste de Gemini atribuible: USD 0. No se obtuvo una factura por Cloud Build, Cloud Run o Cloud Logging.
-- Git/PR: rama `test/asesor-rag-production-e2e-2026`; commits `fb9797d` (instrumentación y regresión) y `4c1b9ab` (informe). PR [#8](https://github.com/Urtxe/Calendario-Laboral/pull/8) integrada en `main` mediante merge `0f3a3be701447823885603d2a37895f6e5df6675`. Tras el merge, `main` y `origin/main` se comprobaron alineadas en `0f3a3be`. El cierre de los metadatos del informe se tramita en el PR docs-only #9.
+- Git/PR: rama `test/asesor-rag-production-e2e-2026`; commits `fb9797d` (instrumentación y regresión) y `4c1b9ab` (informe). PR [#8](https://github.com/Urtxe/Calendario-Laboral/pull/8) integrada en `main` mediante merge `0f3a3be701447823885603d2a37895f6e5df6675`. Tras el merge, `main` y `origin/main` se comprobaron alineadas en `0f3a3be`. La corrección del metadato de integración del informe quedó incluida después mediante el PR docs-only [#9](https://github.com/Urtxe/Calendario-Laboral/pull/9).
 
 ## Pendiente
 

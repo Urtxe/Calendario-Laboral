@@ -213,11 +213,11 @@
     "number": 20,
     "title": "Limpieza · Sevilla",
     "officialCode": "41001705011982",
-    "sourceUrl": null,
-    "source": null,
+    "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=41001705011982",
+    "source": "REGCON",
     "pactEndYear": 2027,
     "documentaryStatus": "VERIFICADO CON ACTUALIZACIONES PENDIENTES",
-    "sourceCheck": "missing_official_regcon_reference"
+    "sourceCheck": "available"
   },
   {
     "id": "convenio-21",
@@ -246,11 +246,11 @@
     "number": 23,
     "title": "Transporte de mercancías por carretera · Álava",
     "officialCode": "01100085162024",
-    "sourceUrl": null,
-    "source": null,
+    "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=01100085162024",
+    "source": "REGCON",
     "pactEndYear": 2026,
     "documentaryStatus": "VERIFICADO CON ACTUALIZACIONES PENDIENTES",
-    "sourceCheck": "missing_official_regcon_reference"
+    "sourceCheck": "available"
   },
   {
     "id": "convenio-24",

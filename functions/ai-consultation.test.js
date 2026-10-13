@@ -72,6 +72,19 @@ test("el Estatuto se selecciona por fecha antes de la búsqueda vectorial y fall
   assert.match(active, /El texto consolidado del BOE es informativo/);
 });
 
+test("la traza de recuperación registra selección documental sin contenido ni identidad", () => {
+  const source = readFileSync(path.join(__dirname, "index.js"), "utf8");
+  const active = source.split("exports.consultarConvenio =")[1].split("async function consultarConvenioLegacy")[0];
+  const trace = active.split('escribirLogConsulta("consultarConvenio_retrieval"')[1].split("});")[0];
+  assert.match(trace, /requestId/);
+  assert.match(trace, /selectedFileNames/);
+  assert.match(trace, /statuteEdition/);
+  assert.match(trace, /targetDate/);
+  assert.match(trace, /chunk\.id/);
+  assert.match(trace, /configuredModel/);
+  assert.doesNotMatch(trace, /chunk\.texto|pregunta|uid|token/i);
+});
+
 test("evidencia semántica suficiente permite respuesta de convenio", () => {
   const result = evaluarEvidenciaConvenio([{
     doc_type: "especifico",

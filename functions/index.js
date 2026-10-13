@@ -124,7 +124,7 @@ function initializeGemini() {
         process.env.GOOGLE_AI_STUDIO_API_KEY || process.env.API_KEY || "";
     const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
     embeddingModel = genAI ? genAI.getGenerativeModel({ model: "gemini-embedding-001" }) : null;
-    chatModel = genAI ? genAI.getGenerativeModel({ model: "gemini-2.5-flash" }) : null;
+    chatModel = genAI ? genAI.getGenerativeModel({ model: GEMINI_CONSULTATION_MODEL }) : null;
     geminiInitialized = true;
 }
 
@@ -144,6 +144,7 @@ const CONSULTAR_CONVENIO_FUNCTION_OPTIONS = {
 };
 const GLOBAL_CONVENIO_TOP_K = 3;
 const SPECIFIC_CHUNKS_TOP_K = 5;
+const GEMINI_CONSULTATION_MODEL = "gemini-2.5-flash";
 const CLARIFICATION_STATUSES = new Set(["missing_all", "missing_sector", "missing_location", "ambiguous", "source_unverified"]);
 const CONSULTAR_CONVENIO_ALLOWED_ORIGINS = new Set([
     "https://balancelaboral.es",
@@ -756,6 +757,7 @@ function logResultadoConsulta({
     useful = true,
     quotaConsumed = null,
     latencyMs = null,
+    requestId = null,
 }) {
     const payload = {
         response_source: responseSource,
@@ -773,6 +775,7 @@ function logResultadoConsulta({
         quotaConsumed: typeof quotaConsumed === "boolean" ? quotaConsumed : null,
         latencyMs: typeof latencyMs === "number" ? latencyMs : null,
         questionLength: String(pregunta || "").length,
+        requestId,
     };
 
     escribirLogConsulta(nombreEventoRespuesta(responseSource), payload);
@@ -2073,6 +2076,7 @@ function construirOrientacionClarificacion(message, reason, options = []) {
 // 1.1 CONSULTA LEGAL SOBRE CONVENIOS (V2)
 exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, secrets: [geminiSecret] }, async (req, res) => {
     const startedAt = Date.now();
+    const requestId = randomUUID();
     let pregunta = "";
     let uid = null;
     let quotaInfo = null;
@@ -2091,6 +2095,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             chunksUsed,
             quotaConsumed,
             latencyMs: Date.now() - startedAt,
+            requestId,
         });
     };
 
@@ -2181,6 +2186,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
 
     const appCheckResult = await verificarAppCheckConsulta(req);
     escribirLogConsulta("consultarConvenio_app_check", {
+        requestId,
         appCheckStatus: appCheckResult.status,
         appCheckEnforcement: APP_CHECK_ENFORCEMENT,
         reason: appCheckResult.reason || null,
@@ -2377,6 +2383,22 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                 );
                 evidencia = evaluarEvidenciaConvenio(chunksEspecificos);
                 fallbackReason = evidencia.reason;
+                escribirLogConsulta("consultarConvenio_retrieval", {
+                    requestId,
+                    convenioId: convenioResuelto?.id || null,
+                    officialCode: convenioResuelto?.officialCode || null,
+                    selectedFileNames: conveniosFileName,
+                    statuteEdition: seleccionEstatuto?.sourceEdition || null,
+                    targetDate: seleccionEstatuto?.asOfDate || null,
+                    configuredModel: GEMINI_CONSULTATION_MODEL,
+                    chunks: [...chunksBase, ...chunksEspecificos].map((chunk) => ({
+                        id: chunk.id || null,
+                        fileName: chunk.file_name || chunk.fileName || null,
+                        chunkIndex: Number.isInteger(chunk.chunkIndex) ? chunk.chunkIndex : null,
+                        docType: chunk.doc_type || null,
+                        retrievalMethod: chunk.retrievalMethod || "vector",
+                    })),
+                });
             } catch (error) {
                 fallbackReason = "rag_unavailable";
                 escribirLogConsulta("consultarConvenio_rag_failed", {

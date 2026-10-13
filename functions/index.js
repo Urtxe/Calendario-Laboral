@@ -13,6 +13,7 @@ const {
     hasUnindexedSalaryEvidence,
     isWorkersStatuteChunkCurrent,
     normalizeText,
+    resolveWorkersStatuteVersion,
     resolveCatalogEntry,
     resolveCatalogReference,
 } = require("./convenio-metadata");
@@ -290,7 +291,19 @@ function obtenerReferenciaConvenio(reqBody) {
 function construirBloqueContexto(chunks, etiqueta) {
     return chunks.map((chunk, index) => {
         const fuente = chunk.file_name || chunk.fileName || chunk.convenioId || `Fragmento ${index + 1}`;
-        return `[${etiqueta}]\nFuente: ${fuente}\n${chunk.texto}`;
+        const sourceDetails = chunk.doc_type === "base"
+            ? [
+                chunk.sourceDocumentType === "consolidated_statute" ? "texto consolidado informativo" : null,
+                chunk.sourceEdition,
+                chunk.publication?.identifier,
+                chunk.publication?.date ? `publicado ${chunk.publication.date}` : null,
+                chunk.sourceValidFrom ? `seleccionable desde ${chunk.sourceValidFrom}` : null,
+                chunk.sourceValidThrough ? `seleccionable hasta ${chunk.sourceValidThrough}` : null,
+                chunk.consultationDate ? `fecha consultada ${chunk.consultationDate}` : null,
+                chunk.officialSourceUrl,
+            ].filter(Boolean).join(" | ")
+            : "";
+        return `[${etiqueta}]\nFuente: ${fuente}${sourceDetails ? ` (${sourceDetails})` : ""}\n${chunk.texto}`;
     }).join("\n\n---\n\n");
 }
 
@@ -310,9 +323,26 @@ async function generarEmbeddingPregunta(pregunta) {
     return response.embedding.values;
 }
 
-async function buscarChunksBase(vectorPregunta) {
+async function isWorkersStatuteEditionAvailable(statuteSelection) {
+    if (!statuteSelection || statuteSelection.status !== "resolved") return false;
+    const catalogSnapshot = await db.collection(CATALOGO_CONVENIOS)
+        .where("sourceEdition", "==", statuteSelection.sourceEdition)
+        .get();
+    return catalogSnapshot.docs.some((doc) => {
+        const metadata = doc.data();
+        return metadata.catalogStatus === "normative_base" && metadata.sourceVerification === "verified" &&
+            Array.isArray(metadata.fileNames) &&
+            statuteSelection.fileNames.every((fileName) => metadata.fileNames.includes(fileName)) &&
+            (!metadata.sourceValidFrom || statuteSelection.asOfDate >= metadata.sourceValidFrom) &&
+            (!metadata.sourceValidThrough || statuteSelection.asOfDate <= metadata.sourceValidThrough);
+    });
+}
+
+async function buscarChunksBase(vectorPregunta, statuteSelection, editionAvailable) {
+    if (!statuteSelection || statuteSelection.status !== "resolved" || !editionAvailable) return { available: false, chunks: [] };
     const vectorQuery = db.collection(COLLECTION_VECTORES)
         .where("doc_type", "==", "base")
+        .where("file_name", "in", statuteSelection.fileNames)
         .findNearest({
         vectorField: "vector",
         queryVector: vectorPregunta,
@@ -323,10 +353,12 @@ async function buscarChunksBase(vectorPregunta) {
 
     const snapshot = await vectorQuery.get();
 
-    return snapshot.docs.map((doc) => ({
+    const chunks = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-    })).filter(isWorkersStatuteChunkCurrent);
+        consultationDate: statuteSelection.asOfDate,
+    })).filter((chunk) => isWorkersStatuteChunkCurrent(chunk, statuteSelection.asOfDate));
+    return { available: true, chunks };
 }
 
 async function buscarTopConveniosEspecificos(vectorPregunta) {
@@ -2014,6 +2046,11 @@ function construirFuentesBase(chunks) {
         officialSourceUrl: chunk.officialSourceUrl || null,
         sourceEdition: chunk.sourceEdition || null,
         sourceUpdatedThrough: chunk.sourceUpdatedThrough || null,
+        sourceValidFrom: chunk.sourceValidFrom || null,
+        sourceValidThrough: chunk.sourceValidThrough || null,
+        publication: chunk.publication || null,
+        sourceDocumentType: chunk.sourceDocumentType || null,
+        sourceSha256: chunk.sourceSha256 || null,
     }));
 }
 
@@ -2195,6 +2232,15 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             sector: req.body && (req.body.sector || req.body.sectorUsuario || req.body.profesion || ""),
         });
         const consultaNormativaBase = shouldRetrieveWorkersStatute(preguntaParaBusqueda);
+        const seleccionEstatuto = resolveWorkersStatuteVersion(preguntaParaBusqueda);
+        if (consultaNormativaBase && seleccionEstatuto.status !== "resolved") {
+            const message = seleccionEstatuto.status === "ambiguous"
+                ? "La fecha indicada puede corresponder a más de una redacción del Estatuto. Indícame el día y mes concretos para seleccionar la versión aplicable a esa fecha."
+                : "No dispongo de una edición oficial verificada del Estatuto para la fecha indicada. No puedo confirmar esa redacción con las fuentes disponibles.";
+            const payload = construirOrientacionClarificacion(message, `statute_version_${seleccionEstatuto.status}`);
+            registrarResultado({ sourceType: "clarification", fallbackReason: `statute_version_${seleccionEstatuto.status}`, useful: true, quotaConsumed: false });
+            return res.status(200).json(payload);
+        }
         const esLaboral = intentClassification.intent !== "out_of_scope" || consultaNormativaBase;
 
         if (!esLaboral) {
@@ -2268,6 +2314,33 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             return res.status(200).json(payload);
         }
 
+        let baseEditionAvailable = false;
+        if (convenioFileName || consultaNormativaBase) {
+            try {
+                baseEditionAvailable = await isWorkersStatuteEditionAvailable(seleccionEstatuto);
+            } catch (error) {
+                escribirLogConsulta("consultarConvenio_statute_edition_check_failed", {
+                    errorName: error && error.name ? error.name : "Error",
+                });
+            }
+        }
+        if (consultaNormativaBase && !baseEditionAvailable) {
+            const message = "No hay una edición completa y verificada del Estatuto disponible para la fecha consultada. Indícame otra fecha documentada o consulta la publicación oficial.";
+            const payload = construirRespuestaConsulta({
+                respuesta: message,
+                sourceType: "unconfirmed",
+                grounded: false,
+                warning: message,
+                fallbackReason: "statute_edition_unavailable",
+                convenioUsado: convenioFileName || null,
+                conveniosUsados: conveniosFileName,
+                convenioDetectado: construirConvenioDetectado(convenioResuelto),
+                fuentes: [],
+            });
+            registrarResultado({ sourceType: "unconfirmed", fallbackReason: "statute_edition_unavailable", useful: false, quotaConsumed: false });
+            return res.status(200).json(payload);
+        }
+
         if (!await reservarCuota()) return;
 
         let chunksEspecificos = [];
@@ -2288,9 +2361,10 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                     convenioFileName ? buscarChunksKeywordPermisos(preguntaParaBusqueda, conveniosFileName) : Promise.resolve([]),
                     convenioFileName ? buscarChunksKeywordDisciplinario(preguntaParaBusqueda, conveniosFileName) : Promise.resolve([]),
                     convenioFileName ? buscarChunksEspecificos(vectorPregunta, conveniosFileName) : Promise.resolve([]),
-                    buscarChunksBase(vectorPregunta),
+                    buscarChunksBase(vectorPregunta, seleccionEstatuto, baseEditionAvailable),
                 ]);
-                chunksBase = chunksBaseRecuperados.filter((chunk) =>
+                baseEditionAvailable = chunksBaseRecuperados.available;
+                chunksBase = chunksBaseRecuperados.chunks.filter((chunk) =>
                     chunk.doc_type === "base" && hasSemanticEvidence(chunk, CONVENIO_RAG_MAX_DISTANCE)
                 );
                 chunksEspecificos = combinarChunksEspecificos(
@@ -2311,6 +2385,24 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             }
         }
 
+        if (consultaNormativaBase && !chunksBase.length) {
+            const message = "No he podido recuperar una fuente oficial completa del Estatuto para la fecha consultada. No puedo confirmar la redacción con los fragmentos disponibles.";
+            const reason = baseEditionAvailable ? "statute_evidence_unavailable" : "statute_edition_unavailable";
+            const payload = construirRespuestaConsulta({
+                respuesta: message,
+                sourceType: "unconfirmed",
+                grounded: false,
+                warning: message,
+                fallbackReason: reason,
+                convenioUsado: convenioFileName || null,
+                conveniosUsados: conveniosFileName,
+                convenioDetectado: construirConvenioDetectado(convenioResuelto),
+                fuentes: [],
+            });
+            registrarResultado({ sourceType: "unconfirmed", fallbackReason: reason, useful: false, quotaConsumed: false });
+            return res.status(200).json(payload);
+        }
+
         if (evidencia.suficiente || chunksBase.length) {
             const bloquesContexto = [];
             if (chunksBase.length) bloquesContexto.push(construirBloqueContexto(chunksBase, "NORMA BASE - ESTATUTO DE LOS TRABAJADORES"));
@@ -2328,6 +2420,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                             ? "Responde con los fragmentos recuperados. Distingue el Estatuto como normativa base y el convenio como regulación específica; usa la norma base como mínimo legal y no afirmes que una condición concreta mejora o desplaza a la otra sin comparar el texto aplicable.": "Responde exclusivamente con los fragmentos de normativa base. No atribuyas sus reglas a un convenio ni afirmes que has localizado una mejora convencional.",
                         convenioResuelto?.legalEffect === "extraestatutario_eficacia_limitada"
                             ? "El convenio seleccionado es extraestatutario de eficacia limitada: describe lo que dice ese documento, pero no afirmes que se aplica a toda empresa o persona. Si preguntan si aplica al caso, explica que depende de la cobertura de la representación negociadora o de una adhesión expresa y pide esa información.": "",
+                        chunksBase.length ? "El texto consolidado del BOE es informativo: para efectos jurídicos, distingue la publicación de cada modificación y su fecha de entrada en vigor." : "",
                         "Responde primero a lo preguntado, con lenguaje natural y sencillo. Una duda sencilla puede resolverse en una o dos frases; desarrolla solo lo necesario. Evita introducciones, cierres y advertencias genéricas. Usa listas solo si aportan claridad.",
                         "No completes con conocimiento externo ni afirmes datos no incluidos.",
                         "Distingue el dato del convenio de tu interpretación y señala la incertidumbre cuando los fragmentos no permitan afirmarlo.",
@@ -2342,10 +2435,10 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                         sourceType: hayConvenioEspecifico ? "convenio" : "estatuto",
                         grounded: true,
                         warning: hayConvenioEspecifico
-                            ? convenioResuelto?.applicationWarning || (convenioResuelto?.unindexedPublications?.length
+                            ? [convenioResuelto?.applicationWarning || (convenioResuelto?.unindexedPublications?.length
                                 ? "Hay publicaciones posteriores identificadas que no están indexadas; la respuesta puede no incorporar sus cambios."
-                                : null)
-                            : "Solo se ha recuperado normativa general; no se ha confirmado una condición específica del convenio.",
+                                : null), ...(chunksBase.length ? ["El Estatuto se ha consultado en un texto consolidado informativo del BOE; sus modificaciones deben leerse junto a la publicación oficial y su fecha de efectos."] : [])].filter(Boolean).join(" ") || null
+                            : `Solo se ha recuperado normativa general; no se ha confirmado una condición específica del convenio.${chunksBase.length ? " El texto consolidado del BOE es informativo; para efectos jurídicos, consulta la publicación oficial y su fecha de entrada en vigor." : ""}`,
                         fallbackReason: null,
                         convenioUsado: convenioFileName,
                         conveniosUsados: conveniosFileName,

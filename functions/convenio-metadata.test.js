@@ -8,6 +8,7 @@ const {
   hasUnindexedSalaryEvidence,
   isWorkersStatuteChunkCurrent,
   parseConvenioFileName,
+  resolveWorkersStatuteVersion,
   resolveCatalogEntry,
 } = require("./convenio-metadata");
 
@@ -28,7 +29,44 @@ for (const fileName of ["estatuto_trabajadores.pdf", "estatuto_trabajadores_part
   assert.strictEqual(getDocumentType(fileName), "base", `${fileName} debe clasificarse como normativa base`);
 }
 assert.strictEqual(getDocumentType("estatuto_trabajadores_2026.pdf"), "especifico");
+assert.strictEqual(getDocumentType("estatuto_trabajadores_2026-10-03.pdf"), "base");
 assert.strictEqual(getDocumentType("Convenio Transporte Alava.pdf"), "especifico");
+
+const zaragoza2026 = parseConvenioFileName("Convenio Limpieza edificios Zaragoza 2026-2029.pdf");
+assert.strictEqual(zaragoza2026.province, "ZARAGOZA");
+assert.deepStrictEqual(zaragoza2026.sectorKeys, ["limpieza"]);
+assert.strictEqual(zaragoza2026.yearStart, 2026);
+assert.strictEqual(zaragoza2026.yearEnd, 2029);
+assert.strictEqual(zaragoza2026.catalogKey, "limpieza_zaragoza_2026_2029");
+assert.strictEqual(zaragoza2026.officialCode, "50000755011981");
+assert.strictEqual(zaragoza2026.sourceVerification, "verified");
+assert.strictEqual(zaragoza2026.sourcePageCount, 33);
+assert.match(zaragoza2026.applicationWarning, /no confirman por sí solas su aplicabilidad/);
+const zaragozaEntries = buildCatalogEntriesFromFileNames([
+  "Convenio Limpieza edificios Zaragoza 2022-2025.pdf",
+  "Convenio Limpieza edificios Zaragoza 2026-2029.pdf",
+]);
+assert.strictEqual(resolveCatalogEntry(zaragozaEntries, detectConvenioCriteria({ pregunta: "Limpieza Zaragoza 2024" })).entry.yearStart, 2022);
+assert.strictEqual(resolveCatalogEntry(zaragozaEntries, detectConvenioCriteria({ pregunta: "Limpieza Zaragoza 2026" })).entry.yearStart, 2026);
+assert.strictEqual(resolveCatalogEntry(zaragozaEntries, detectConvenioCriteria({ pregunta: "Limpieza Zaragoza" })).entry.yearStart, 2026);
+
+const statuteBeforeChange = resolveWorkersStatuteVersion("Estatuto a 22/10/2026");
+const statuteAfterChange = resolveWorkersStatuteVersion("Estatuto a 23 de octubre de 2026");
+assert.strictEqual(statuteBeforeChange.status, "resolved");
+assert.deepStrictEqual(statuteBeforeChange.fileNames, ["estatuto_trabajadores_parte1.pdf", "estatuto_trabajadores_parte2.pdf"]);
+assert.strictEqual(statuteAfterChange.status, "resolved");
+assert.deepStrictEqual(statuteAfterChange.fileNames, ["estatuto_trabajadores_2026-10-03.pdf"]);
+assert.strictEqual(resolveWorkersStatuteVersion("Estatuto en 2026").status, "ambiguous");
+assert.strictEqual(resolveWorkersStatuteVersion("Estatuto en 2027").sourceEdition, statuteAfterChange.sourceEdition);
+assert.strictEqual(resolveWorkersStatuteVersion("Estatuto en 2020").status, "unsupported");
+assert.strictEqual(resolveWorkersStatuteVersion("Estatuto BOE-A-2015-11430 vigente", new Date("2026-10-13T10:00:00Z")).sourceEdition, "PUB-DT-2025-139");
+assert.strictEqual(resolveWorkersStatuteVersion("Estatuto el 1/1/2020").status, "unsupported");
+assert.strictEqual(resolveWorkersStatuteVersion("Estatuto entre 22/10/2026 y 23/10/2026").status, "ambiguous");
+assert.strictEqual(resolveWorkersStatuteVersion("Estatuto vigente", new Date("2026-10-13T10:00:00Z")).sourceEdition, "PUB-DT-2025-139");
+assert.strictEqual(isWorkersStatuteChunkCurrent({ officialCode: "BOE-A-2015-11430", sourceValidThrough: "2026-10-22" }, "2026-10-22"), true);
+assert.strictEqual(isWorkersStatuteChunkCurrent({ officialCode: "BOE-A-2015-11430", sourceValidThrough: "2026-10-22" }, "2026-10-23"), false);
+assert.strictEqual(isWorkersStatuteChunkCurrent({ officialCode: "BOE-A-2015-11430", sourceValidFrom: "2026-10-23" }, "2026-10-22"), false);
+assert.strictEqual(isWorkersStatuteChunkCurrent({ officialCode: "BOE-A-2015-11430", sourceValidFrom: "2026-10-23" }, "2026-10-23"), true);
 
 const barcelona = parseConvenioFileName("Convenio Transporte Barcelona 2011-2023.pdf");
 assert.strictEqual(barcelona.sourceVerification, "unverified");

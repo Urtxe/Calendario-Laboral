@@ -93,7 +93,7 @@ El ingestor existente `functions/ingest-conventios.js` no publica de forma atóm
 - Hay exactamente un job de monitor activo: `firebase-schedule-reviewConvenioSources-europe-west1`, `0 5 1 * *`, zona `Europe/Madrid`; su próxima ejecución está confirmada para **01/11/2026 05:00 CET = 04:00 UTC**. El job usa OIDC como la cuenta de servicio dedicada, timeout de intento 540 s y no es público.
 - Firestore real fue leído después de las ejecuciones y confirmó el resumen, 28 estados y el registro único por ejecución. No hubo migración de esquema del RAG ni escrituras en catálogo/vectores.
 - Commits de implementación/documentación publicados: `6bb1b6b` (monitor), `a78509b` (informe y matriz), `fbb7305` (PR) y `f6f6fc7` (cadencia de pendientes). Rama `feat/automatic-convenio-updates` publicada en `origin`; este mismo informe se incluye en el PR #11.
-- PR [#11](https://github.com/Urtxe/Calendario-Laboral/pull/11): actualizar con los cambios y la evidencia de esta fase antes de marcarlo listo e integrar. `main` parte de `9e7b00e`; `.playwright-cli/` se conserva sin cambios.
+- La rama se actualizó en [PR #11](https://github.com/Urtxe/Calendario-Laboral/pull/11); sigue en borrador y no se integró porque 19 fuentes no entregaron el resultado completo y tres referencias siguen pendientes. `main` y `origin/main` permanecen sincronizadas en `9e7b00e`; `.playwright-cli/` se conserva sin cambios.
 
 ## Limitaciones y estado requerido para completar
 

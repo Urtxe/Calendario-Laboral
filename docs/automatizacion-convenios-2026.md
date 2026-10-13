@@ -57,7 +57,7 @@ La matriz también mantiene las novedades sobre Alojamientos Gipuzkoa, Hosteler�
 | Repetición en el mismo ciclo | 28 | 0 | 0 | 0 | 0 | `partial`, 22 diferidas |
 | Smoke tras la última actualización | 28 | 0 | 0 | 0 | 0 | `partial`, 22 diferidas |
 
-La primera llamada falló antes de entrar en la Function (403 por audiencia OIDC); tras corregir el destino, la ejecución real duró 39,0 s. Firestore confirmó 28 documentos de estado: 6 `source_checked`, 19 `source_check_failed` con `REGCON_RESULT_INCOMPLETE` y 3 `blocked_missing_official_regcon_reference`. El resumen registró `newEntries: 0`, `geminiCalls: 0` y `embeddingCalls: 0`. Una segunda llamada no volvió a consultar URLs porque no habían vencido los siguientes intentos y dejó las fuentes sin resolver como diferidas; tras la última actualización se confirmó además un nuevo documento de ejecución, separado del primero.
+La primera llamada falló antes de entrar en la Function (403 por audiencia OIDC); tras corregir el destino, la ejecución real duró 39,0 s. Firestore confirmó 28 documentos de estado: 6 `source_checked`, 19 `source_check_failed` con `REGCON_RESULT_INCOMPLETE` y 3 `blocked_missing_official_regcon_reference`. El resumen registró `newEntries: 0`, `geminiCalls: 0` y `embeddingCalls: 0`. La primera repetición, con la versión anterior, sobrescribió el documento mensual; Cloud Logging conserva el resumen inicial. Se corrigió a un documento por ejecución. La repetición con esa corrección no volvió a consultar URLs porque no habían vencido los siguientes intentos y dejó las fuentes sin resolver como diferidas; el smoke posterior confirmó otro documento de ejecución distinto.
 
 ## Descarga, clasificación e ingesta
 

@@ -62,6 +62,30 @@ const FILE_METADATA_OVERRIDES = {
     sourceVerification: "unverified",
     documentaryWarning: "El PDF local indica 2011–2023. El BOPB publicó un convenio sectorial posterior de transporte de mercancías por carretera y logística para 2023–2025 (código 08004295011994) y tablas definitivas de 2025 en 2026. No presentar el PDF local como edición actual; el texto posterior debe descargarse, cotejarse por ámbito e incorporarse antes de responder sobre condiciones actuales.",
   },
+  "BOPB-2026-03-16-08004295011994-tablas-2025.pdf": {
+    catalogKey: "transporte_barcelona_tablas_2025",
+    catalogTitle: "Tablas salariales 2025 — Transporte de mercancías Barcelona",
+    province: "BARCELONA",
+    sectorKeys: ["transporte"],
+    yearStart: 2025,
+    yearEnd: 2025,
+    officialCode: "08004295011994",
+    publication: {
+      bulletin: "BOPB",
+      date: "2026-03-16",
+      identifier: "CVE 202610047645",
+      url: "https://bop.diba.cat/anuncio/ver-pdf/3910056",
+    },
+    officialSourceUrl: "https://bop.diba.cat/anuncio/ver-pdf/3910056",
+    sourceSha256: "65ba6993bcbaa71e98ea257969f5ea0b66d401f01e33ed5811031c77d3267571",
+    sourcePageCount: 5,
+    sourceDocumentType: "salary_tables",
+    sourceVerification: "verified",
+    automaticIngestionEligible: true,
+    salaryEvidenceVerifiedThroughYear: 2025,
+    salaryEvidenceWarning: "Las tablas verificadas cubren 2025. No constan aquí tablas oficiales verificadas para 2026 ni se declara actualizado el convenio completo.",
+    applicationWarning: "Publicación complementaria de tablas salariales definitivas de 2025; no sustituye el texto completo del convenio ni determina por sí sola la aplicabilidad a una persona o empresa.",
+  },
   "estatuto_trabajadores.pdf": {
     sourceVerification: "verified",
     officialCode: "BOE-A-2015-11430",
@@ -382,10 +406,10 @@ function detectProvinceFromFileName(fileName) {
 function parseConvenioFileName(fileName) {
   const cleanFileName = path.basename(String(fileName || ""));
   const title = path.basename(cleanFileName, path.extname(cleanFileName));
-  const province = detectProvinceFromFileName(cleanFileName);
-  const sectorKeys = detectSectorKeysFromFileName(cleanFileName);
-  const detectedYears = extractYears(title);
   const override = FILE_METADATA_OVERRIDES[cleanFileName] || {};
+  const province = override.province || detectProvinceFromFileName(cleanFileName);
+  const sectorKeys = override.sectorKeys || detectSectorKeysFromFileName(cleanFileName);
+  const detectedYears = extractYears(title);
   const yearStart = override.yearStart ?? detectedYears.yearStart;
   const yearEnd = override.yearEnd ?? detectedYears.yearEnd;
   const partMatch = normalizeText(title).match(/\bparte\s*(\d+)\b/);
@@ -398,7 +422,7 @@ function parseConvenioFileName(fileName) {
 
   return {
     fileName: cleanFileName,
-    title,
+    title: override.catalogTitle || title,
     province,
     autonomousCommunity,
     sectorKeys,
@@ -411,6 +435,9 @@ function parseConvenioFileName(fileName) {
     ...(override.legalEffect ? { legalEffect: override.legalEffect } : {}),
     ...(override.applicationWarning ? { applicationWarning: override.applicationWarning } : {}),
     ...(override.sourceVerification ? { sourceVerification: override.sourceVerification } : {}),
+    ...(override.automaticIngestionEligible === true ? { automaticIngestionEligible: true } : {}),
+    ...(override.salaryEvidenceVerifiedThroughYear != null ? { salaryEvidenceVerifiedThroughYear: override.salaryEvidenceVerifiedThroughYear } : {}),
+    ...(override.salaryEvidenceWarning ? { salaryEvidenceWarning: override.salaryEvidenceWarning } : {}),
     ...(override.documentaryWarning ? { documentaryWarning: override.documentaryWarning } : {}),
     ...(override.sourceEdition ? { sourceEdition: override.sourceEdition } : {}),
     ...(override.sourceUpdatedThrough ? { sourceUpdatedThrough: override.sourceUpdatedThrough } : {}),
@@ -454,6 +481,10 @@ function buildCatalogEntriesFromFileNames(fileNames) {
       ...(parsed.legalEffect ? { legalEffect: parsed.legalEffect } : {}),
       ...(parsed.applicationWarning ? { applicationWarning: parsed.applicationWarning } : {}),
       ...(parsed.sourceVerification ? { sourceVerification: parsed.sourceVerification } : {}),
+      ...(parsed.automaticIngestionEligible === true ? { automaticIngestionEligible: true } : {}),
+      ...(parsed.sourceDocumentType ? { sourceDocumentType: parsed.sourceDocumentType } : {}),
+      ...(parsed.salaryEvidenceVerifiedThroughYear != null ? { salaryEvidenceVerifiedThroughYear: parsed.salaryEvidenceVerifiedThroughYear } : {}),
+      ...(parsed.salaryEvidenceWarning ? { salaryEvidenceWarning: parsed.salaryEvidenceWarning } : {}),
       ...(parsed.documentaryWarning ? { documentaryWarning: parsed.documentaryWarning } : {}),
       ...(parsed.sourceEdition ? { sourceEdition: parsed.sourceEdition } : {}),
       ...(parsed.sourceUpdatedThrough ? { sourceUpdatedThrough: parsed.sourceUpdatedThrough } : {}),
@@ -511,6 +542,7 @@ function detectConvenioCriteria({ pregunta, ciudad, sector }) {
     provinces: pickDetectedValue(provincesFromQuestion, provincesFromCity) || [],
     sectorKeys: pickDetectedValue(sectorFromQuestion, sectorFromField) || [],
     requestedYears,
+    isSalaryQuery: /\b(?:salario|salarios|sueldo|sueldos|retribucion|retribuciones|tabla salarial|tablas salariales|importe|bruto|cobrar|cobra|paga|plus|complemento)\b/.test(normalizeText(pregunta)),
   };
 }
 
@@ -656,7 +688,8 @@ function resolveCatalogEntry(catalogEntries, criteria) {
     entry.province &&
     provinces.includes(entry.province) &&
     Array.isArray(entry.sectorKeys) &&
-    entry.sectorKeys.some((sectorKey) => sectorKeys.includes(sectorKey))
+    entry.sectorKeys.some((sectorKey) => sectorKeys.includes(sectorKey)) &&
+    (!['salary_tables', 'salary_revision'].includes(entry.sourceDocumentType) || criteria.isSalaryQuery === true)
   );
 
   const yearCandidates = requestedYears.length
@@ -740,7 +773,8 @@ function resolveCatalogEntry(catalogEntries, criteria) {
 function resolveCatalogReference(catalogEntries, reference, criteria) {
   const entry = catalogEntries.find((candidate) =>
     candidate.catalogStatus !== "superseded" && candidate.catalogStatus !== "normative_base" && candidate.active !== false &&
-    (candidate.id === reference || candidate.title === reference || candidate.fileNames?.includes(reference)));
+    (candidate.id === reference || candidate.title === reference || candidate.fileNames?.includes(reference)) &&
+    (!['salary_tables', 'salary_revision'].includes(candidate.sourceDocumentType) || criteria.isSalaryQuery === true));
   if (!entry || (criteria.provinces.length && !criteria.provinces.includes(entry.province)) ||
       (criteria.sectorKeys.length && !criteria.sectorKeys.some((key) => entry.sectorKeys?.includes(key)))) {
     return null;

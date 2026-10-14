@@ -104,3 +104,11 @@ El ingestor existente `functions/ingest-conventios.js` no publica de forma atóm
 Esta fase solo monitoriza asientos REGCON; no descarga ni preserva PDFs, no comprueba todos los boletines, no clasifica efectos jurídicos, no ingiere ni activa documentos y no llama a KNN. La cobertura ya usa la exportación oficial íntegra en vez de depender de enlaces de paginación que no conservan la búsqueda. Quedan 19 fuentes con resultado incompleto que el próximo ciclo mensual podrá reintentar, y dos fichas sin referencia automática inequívoca (18 y 27). El asiento REGCON no equivale a validar un convenio ni a verificar su publicación íntegra.
 
 La integración de esta fase está cerrada. Permanecen 19 fuentes pendientes de reintento mensual y dos sin referencia REGCON inequívoca; esas limitaciones no bloquean el PR integrado. La futura ingesta seguirá fuera de alcance.
+
+## Actualización de ingesta (14/10/2026)
+
+Los contadores anteriores son el cierre histórico de la fase 7. En una comprobación posterior de solo lectura, las 19 exportaciones que constaban fallidas devolvieron cobertura completa; los documentos Firestore aún conservan el estado fallido porque no se ejecutó el ciclo mensual ni se adelantaron fechas. Los dos estados sin referencia siguen pendientes. Consulte el detalle y la primera ingesta en [ingesta-automatica-convenios-2026.md](ingesta-automatica-convenios-2026.md).
+
+Se incorporó en producción únicamente una publicación complementaria BOPB de tablas salariales 2025 de Transporte Barcelona: cinco páginas, CVE `202610047645`, SHA-256 `65ba6993bcbaa71e98ea257969f5ea0b66d401f01e33ed5811031c77d3267571`, 16 chunks y 16 embeddings. No es el texto 2026–2028 de REGCON ni lo activa. La nueva entrada se limita a evidencia salarial 2025; se verificó KNN real y se actualizó `consultarConvenio` para que las tablas salariales no respalden respuestas sobre otros temas. El Scheduler del monitor sigue siendo único y mensual; no se añadió un trabajo de ingesta ni se conectó el monitor a una descarga automática.
+
+El estado `REGCON_RESULT_INCOMPLETE` no se ha debilitado. Los 19 resultados ahora completos en lectura directa se reconciliarán en la siguiente revisión legítima. No se creó un run adicional ni se modificaron estados de producción para probar la descarga.

@@ -1,9 +1,10 @@
 const fs = require("fs/promises");
 const path = require("path");
-const crypto = require("crypto");
 const admin = require("firebase-admin");
 const { PDFParse } = require("pdf-parse");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { MAX_ATOMIC_CHUNKS, activateChunkSet, reserveEmbeddingBudget } = require("./convenio-ingestion");
+const { downloadOfficialPdf, storeOfficialPdf, verifyPdfBytes, classifyOfficialDocument } = require("./official-convenio-document");
 const {
   CATALOGO_CONVENIOS,
   buildCatalogEntriesFromFileNames,
@@ -28,6 +29,11 @@ const PROJECT_ID =
   process.env.FIREBASE_PROJECT_ID ||
   process.env.GCLOUD_PROJECT ||
   "calendario-laboral-252b1";
+const STORAGE_BUCKET = process.env.FIREBASE_STORAGE_BUCKET || `${PROJECT_ID}.firebasestorage.app`;
+const OFFICIAL_SOURCE_HOSTS = [
+  "boe.es", "www.boe.es", "bop.diba.cat", "bop.dpz.es", "bopmalaga.es", "www.bopmalaga.es",
+  "egoitza.gipuzkoa.eus", "boletin.gipuzkoa.eus", "bon.navarra.es", "www.araba.eus",
+];
 
 const apiKey =
   process.env.GEMINI_API_KEY ||
@@ -36,7 +42,7 @@ const apiKey =
   process.env.API_KEY;
 
 if (!admin.apps.length) {
-  admin.initializeApp({ projectId: PROJECT_ID });
+  admin.initializeApp({ projectId: PROJECT_ID, storageBucket: STORAGE_BUCKET });
 }
 
 const db = admin.firestore();
@@ -84,8 +90,8 @@ async function findPdfFiles(dir) {
   return results;
 }
 
-async function loadPdfText(filePath) {
-  const buffer = await fs.readFile(filePath);
+async function loadPdfText(buffer) {
+  verifyPdfBytes(buffer);
   const parser = new PDFParse({ data: buffer });
   const parsed = await parser.getText();
   const text = (parsed && parsed.text ? parsed.text : "")
@@ -94,14 +100,12 @@ async function loadPdfText(filePath) {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
+  const pageCount = parsed && (parsed.total || parsed.numpages) ? (parsed.total || parsed.numpages) : null;
+  if (!pageCount || pageCount < 1 || !text) throw new Error("El PDF oficial está vacío o no se pudo validar estructuralmente.");
   return {
     text,
-    pageCount: parsed && (parsed.total || parsed.numpages) ? (parsed.total || parsed.numpages) : null,
+    pageCount,
   };
-}
-
-async function sha256File(filePath) {
-  return crypto.createHash("sha256").update(await fs.readFile(filePath)).digest("hex");
 }
 
 async function splitText(text) {
@@ -197,6 +201,7 @@ async function writeChunkGroup({
   docType,
   filePath,
   pageCount,
+  sourceStorageUri,
   chunks,
   embeddings,
   sourceSha256,
@@ -224,7 +229,7 @@ async function writeChunkGroup({
           convenioId,
           fileName,
           file_name: fileName,
-          doc_type: docType,
+          doc_type: `staged_${docType}`,
           filePath,
           pageCount,
           province: convenioMetadata.province,
@@ -237,13 +242,15 @@ async function writeChunkGroup({
           ...(convenioMetadata.publication ? { publication: convenioMetadata.publication } : {}),
           ...(convenioMetadata.legalEffect ? { legalEffect: convenioMetadata.legalEffect } : {}),
           ...(convenioMetadata.sourceVerification ? { sourceVerification: convenioMetadata.sourceVerification } : {}),
+          ...(convenioMetadata.automaticIngestionEligible === true ? { automaticIngestionEligible: true } : {}),
           ...(convenioMetadata.sourceEdition ? { sourceEdition: convenioMetadata.sourceEdition } : {}),
           ...(convenioMetadata.sourceUpdatedThrough ? { sourceUpdatedThrough: convenioMetadata.sourceUpdatedThrough } : {}),
           ...(convenioMetadata.sourceValidFrom ? { sourceValidFrom: convenioMetadata.sourceValidFrom } : {}),
           ...(convenioMetadata.sourceValidThrough ? { sourceValidThrough: convenioMetadata.sourceValidThrough } : {}),
           ...(convenioMetadata.officialSourceUrl ? { officialSourceUrl: convenioMetadata.officialSourceUrl } : {}),
+          sourceDocumentType: convenioMetadata.sourceDocumentType || classifyOfficialDocument(convenioMetadata.title),
           sourceSha256,
-          ...(convenioMetadata.sourceStorageUri ? { sourceStorageUri: convenioMetadata.sourceStorageUri } : {}),
+          ...(sourceStorageUri ? { sourceStorageUri } : {}),
           ...(convenioMetadata.sourcePageCount ? { sourcePageCount: convenioMetadata.sourcePageCount } : {}),
           ...(convenioMetadata.sourceDocumentType ? { sourceDocumentType: convenioMetadata.sourceDocumentType } : {}),
           chunkIndex: globalIndex,
@@ -268,7 +275,7 @@ async function writeChunkGroup({
   await Promise.all(writePromises);
 }
 
-async function upsertCatalogForFileNames(fileNames) {
+async function upsertCatalogForFileNames(fileNames, sourceDocument = null) {
   const entries = buildCatalogEntriesFromFileNames(fileNames);
 
   for (const entry of entries) {
@@ -277,19 +284,20 @@ async function upsertCatalogForFileNames(fileNames) {
       ...entry,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
-    if (entry.sourceSha256) {
-      const existing = await docRef.get();
-      if (existing.exists) {
-        const current = existing.data();
-        if (current.sourceSha256 !== entry.sourceSha256 || !current.fileNames?.includes(entry.fileNames[0])) {
-          throw new Error(`La entrada de catálogo ${docRef.id} ya existe con otra fuente; se requiere revisión manual.`);
-        }
-      } else {
-        await docRef.create(docData);
+    const existing = await docRef.get();
+    const current = existing.exists ? existing.data() : {};
+    const documentSources = Array.isArray(current.documentSources) ? current.documentSources : [];
+    if (sourceDocument) {
+      const previous = documentSources.find((item) => item.fileName === sourceDocument.fileName);
+      if (previous && previous.sourceSha256 !== sourceDocument.sourceSha256) {
+        throw new Error(`La fuente del catálogo ${docRef.id} cambió de checksum; se requiere revisión manual.`);
       }
-    } else {
-      await docRef.set(docData, { merge: true });
+      docData.documentSources = [
+        ...documentSources.filter((item) => item.fileName !== sourceDocument.fileName),
+        sourceDocument,
+      ];
     }
+    await docRef.set(docData, { merge: true });
   }
 }
 
@@ -346,6 +354,17 @@ async function moveToProcessed(filePath, destination) {
   await fs.rename(filePath, destination);
 }
 
+async function loadVerifiedStoredPdf(sourceStorageUri, expectedSha256) {
+  const match = String(sourceStorageUri || "").match(/^gs:\/\/([^/]+)\/(.+)$/);
+  if (!match || match[1] !== STORAGE_BUCKET || !expectedSha256) {
+    throw new Error("La ubicación de respaldo oficial no coincide con el bucket privado configurado.");
+  }
+  const [buffer] = await admin.storage().bucket(match[1]).file(match[2]).download();
+  const actual = verifyPdfBytes(buffer).sha256;
+  if (actual !== expectedSha256) throw new Error("El objeto del bucket no coincide con el SHA-256 esperado.");
+  return buffer;
+}
+
 async function processFile(filePath, { dryRun = false } = {}) {
   const fileName = path.basename(filePath);
   const docType = getDocType(fileName);
@@ -353,19 +372,49 @@ async function processFile(filePath, { dryRun = false } = {}) {
   console.log(`\n📄 Procesando ${fileName}`);
   console.log(`  - Tipo de documento: ${docType}`);
 
-  const sourceSha256 = await sha256File(filePath);
-  if (metadata.sourceSha256 && metadata.sourceSha256 !== sourceSha256) {
-    throw new Error(`El SHA-256 de ${fileName} no coincide con la fuente oficial verificada.`);
+  let sourceBuffer;
+  let sourceSha256;
+  let sourceStorageUri = metadata.sourceStorageUri || null;
+  if (metadata.sourceStorageUri && metadata.sourceSha256) {
+    sourceBuffer = await loadVerifiedStoredPdf(metadata.sourceStorageUri, metadata.sourceSha256);
+    sourceSha256 = verifyPdfBytes(sourceBuffer).sha256;
+    if (metadata.sourceSha256 !== sourceSha256) throw new Error(`El SHA-256 de ${fileName} no coincide con la fuente oficial verificada.`);
+  } else if (metadata.sourceSha256) {
+    if (metadata.sourceVerification !== "verified" || !metadata.officialSourceUrl || !metadata.publication?.identifier) {
+      throw new Error(`El archivo local de ${fileName} no tiene metadatos oficiales acreditados.`);
+    }
+    sourceBuffer = await fs.readFile(filePath);
+    sourceSha256 = verifyPdfBytes(sourceBuffer).sha256;
+    if (metadata.sourceSha256 !== sourceSha256) throw new Error(`El SHA-256 de ${fileName} no coincide con la copia oficial registrada.`);
+  } else {
+    if (metadata.sourceVerification !== "verified" || !metadata.officialSourceUrl || !metadata.publication?.identifier) {
+      throw new Error(`La fuente oficial de ${fileName} no está acreditada; no se generan embeddings.`);
+    }
+    const officialUrl = new URL(metadata.officialSourceUrl);
+    if (/UploadServlet/i.test(officialUrl.pathname) && /(?:^|\\|\/)bop\.pdf$/i.test(officialUrl.searchParams.get("ruta") || "") && !metadata.sourcePageRange) {
+      throw new Error("La URL identifica un boletín completo; falta una extracción documental acreditada por páginas.");
+    }
+    const downloaded = await downloadOfficialPdf(metadata.officialSourceUrl, { allowedHosts: OFFICIAL_SOURCE_HOSTS });
+    sourceBuffer = downloaded.buffer;
+    sourceSha256 = downloaded.sha256;
   }
-  const { text, pageCount } = await loadPdfText(filePath);
+  const { text, pageCount } = await loadPdfText(sourceBuffer);
   if (metadata.sourcePageCount && metadata.sourcePageCount !== pageCount) {
     throw new Error(`El número de páginas de ${fileName} no coincide con la fuente oficial verificada.`);
+  }
+  if (!metadata.sourceStorageUri && !dryRun) {
+    const objectName = `official-sources/convenios/${sanitizeId(metadata.catalogKey)}/${sourceSha256}.pdf`;
+    sourceStorageUri = await storeOfficialPdf(admin.storage().bucket(STORAGE_BUCKET), objectName, {
+      buffer: sourceBuffer,
+      sha256: sourceSha256,
+      url: metadata.officialSourceUrl,
+      publicationIdentifier: metadata.publication.identifier,
+    });
   }
   if (!text) {
     console.warn(`⚠️  El PDF ${fileName} no devolvió texto legible.`);
     return { chunks: 0 };
   }
-
   const chunks = await splitText(text);
   console.log(`  - Texto extraído: ${text.length} caracteres`);
   console.log(`  - Chunks generados: ${chunks.length}`);
@@ -376,9 +425,21 @@ async function processFile(filePath, { dryRun = false } = {}) {
   const missingChunkIndexes = await inspectExistingChunks(fileName, sourceSha256, chunks);
   console.log(`  - Chunks nuevos: ${missingChunkIndexes.length}; embeddings reutilizados: ${chunks.length - missingChunkIndexes.length}`);
   if (dryRun) return { chunks: chunks.length, newChunks: missingChunkIndexes.length, dryRun: true };
+  if (missingChunkIndexes.length && (metadata.sourceVerification !== "verified" || !metadata.officialSourceUrl || !metadata.publication?.identifier)) {
+    throw new Error(`La fuente oficial de ${fileName} no está acreditada; los chunks nuevos no se activan.`);
+  }
+  if (missingChunkIndexes.length && (metadata.automaticIngestionEligible !== true || !metadata.officialCode || !metadata.province || !metadata.sectorKeys.length)) {
+    throw new Error(`La relación de ${fileName} con el convenio no está aprobada para ingesta automática.`);
+  }
+  if (missingChunkIndexes.length && chunks.length > MAX_ATOMIC_CHUNKS) {
+    throw new Error(`El documento supera el límite de activación atómica (${MAX_ATOMIC_CHUNKS} chunks); no se generan embeddings.`);
+  }
   if (missingChunkIndexes.length && !embeddingModel) {
     throw new Error("Se requieren embeddings nuevos, pero no hay API key configurada. No se han escrito chunks.");
   }
+  const estimatedTokens = missingChunkIndexes.reduce((total, index) => total + Math.ceil(chunks[index].length / 4), 0);
+  const budget = await reserveEmbeddingBudget(db, estimatedTokens);
+  console.log(`  - Presupuesto reservado: ~${budget.estimatedTokens} tokens; mes acumulado: ${budget.monthReservedTokens ?? "sin consumo"}`);
 
   const totalBatches = Math.ceil(missingChunkIndexes.length / GEMINI_BATCH_SIZE);
   for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
@@ -398,6 +459,7 @@ async function processFile(filePath, { dryRun = false } = {}) {
       docType,
       filePath: processedPath,
       pageCount,
+      sourceStorageUri,
       chunks: batchChunks,
       embeddings,
       sourceSha256,
@@ -412,9 +474,35 @@ async function processFile(filePath, { dryRun = false } = {}) {
   }
 
   if (docType === "especifico") {
-    await upsertCatalogForFileNames([fileName]);
+    await upsertCatalogForFileNames([fileName], {
+      fileName,
+      sourceSha256,
+      sourceStorageUri,
+      officialSourceUrl: metadata.officialSourceUrl,
+      publication: metadata.publication,
+      sourcePageCount: pageCount,
+      documentType: metadata.sourceDocumentType || classifyOfficialDocument(metadata.title),
+      officialCode: metadata.officialCode,
+      sourceVerification: metadata.sourceVerification,
+      automaticIngestionEligible: metadata.automaticIngestionEligible === true,
+    });
   } else if (metadata.officialCode === "BOE-A-2015-11430") {
     await upsertNormativeBaseCatalog(fileName, metadata);
+  }
+
+  const stagedSnapshot = await db.collection(COLLECTION_NAME).where("file_name", "==", fileName).get();
+  const chunkRefs = stagedSnapshot.docs.map((doc) => doc.ref);
+  if (chunks.length <= MAX_ATOMIC_CHUNKS) {
+    await activateChunkSet({
+      db,
+      refs: chunkRefs,
+      fileName,
+      sourceSha256,
+      totalChunks: chunks.length,
+      docType,
+      embeddingModel: EMBEDDING_MODEL,
+      dimensions: EMBEDDING_DIMENSIONS,
+    });
   }
 
   if (!isAlreadyProcessed) {

@@ -10,6 +10,7 @@ const {
   parseConvenioFileName,
   resolveWorkersStatuteVersion,
   resolveCatalogEntry,
+  resolveCatalogReference,
 } = require("./convenio-metadata");
 
 const valencia = parseConvenioFileName("Convenio Alojamientos y Hostelería Valencia2022-2025.pdf");
@@ -145,3 +146,28 @@ assert.strictEqual(resolveCatalogEntry([
 ], { provinces: ["MADRID"], sectorKeys: ["transporte"], requestedYears: [] }).status, "not_found");
 
 console.log("OK  Parser, fuentes verificadas, protección de años/salarios, Estatuto y selección documental.");
+
+const barcelonaTablesFile = "BOPB-2026-03-16-08004295011994-tablas-2025.pdf";
+const barcelonaTablesMetadata = parseConvenioFileName(barcelonaTablesFile);
+assert.strictEqual(barcelonaTablesMetadata.sourceVerification, "verified");
+assert.strictEqual(barcelonaTablesMetadata.officialCode, "08004295011994");
+assert.strictEqual(barcelonaTablesMetadata.province, "BARCELONA");
+assert.deepStrictEqual(barcelonaTablesMetadata.sectorKeys, ["transporte"]);
+assert.strictEqual(barcelonaTablesMetadata.sourceDocumentType, "salary_tables");
+assert.strictEqual(barcelonaTablesMetadata.yearStart, 2025);
+assert.strictEqual(barcelonaTablesMetadata.yearEnd, 2025);
+const barcelonaTables = buildCatalogEntriesFromFileNames([barcelonaTablesFile]);
+assert.strictEqual(barcelonaTables[0].title, "Tablas salariales 2025 — Transporte de mercancías Barcelona");
+assert.strictEqual(barcelonaTables[0].sourceSha256, "65ba6993bcbaa71e98ea257969f5ea0b66d401f01e33ed5811031c77d3267571");
+assert.strictEqual(resolveCatalogEntry(barcelonaTables, detectConvenioCriteria({ pregunta: "transporte Barcelona 2025 jornada" })).status, "not_found");
+assert.strictEqual(resolveCatalogEntry(barcelonaTables, detectConvenioCriteria({ pregunta: "salario transporte Barcelona 2025" })).status, "resolved");
+assert.strictEqual(resolveCatalogEntry(barcelonaTables, detectConvenioCriteria({ pregunta: "salario transporte Barcelona 2026" })).status, "not_found");
+assert.strictEqual(
+  resolveCatalogReference(barcelonaTables, barcelonaTablesFile, detectConvenioCriteria({ pregunta: "jornada", ciudad: "Barcelona", sector: "transporte" })),
+  null,
+);
+assert.strictEqual(
+  resolveCatalogReference(barcelonaTables, barcelonaTablesFile, detectConvenioCriteria({ pregunta: "salario", ciudad: "Barcelona", sector: "transporte" })).id,
+  "transporte_barcelona_tablas_2025",
+);
+assert.strictEqual(hasUnindexedSalaryEvidence(barcelonaTables[0], "salario en 2026", 2026), true);

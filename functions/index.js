@@ -305,7 +305,13 @@ function construirBloqueContexto(chunks, etiqueta) {
                 chunk.consultationDate ? `fecha consultada ${chunk.consultationDate}` : null,
                 chunk.officialSourceUrl,
             ].filter(Boolean).join(" | ")
-            : "";
+            : [
+                chunk.sourceDocumentType,
+                chunk.publication?.identifier,
+                chunk.publication?.date ? `publicado ${chunk.publication.date}` : null,
+                chunk.officialSourceUrl,
+                chunk.applicationWarning,
+            ].filter(Boolean).join(" | ");
         return `[${etiqueta}]\nFuente: ${fuente}${sourceDetails ? ` (${sourceDetails})` : ""}\n${chunk.texto}`;
     }).join("\n\n---\n\n");
 }
@@ -2224,7 +2230,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
         let convenioValidado = null;
         if (referenciaConvenio) {
             const criteriosContexto = detectConvenioCriteria({
-                pregunta: "",
+                pregunta: preguntaParaBusqueda,
                 ciudad: req.body.ciudad || req.body.ciudadActual || req.body.location || "",
                 sector: req.body.sector || req.body.sectorUsuario || req.body.profesion || "",
             });
@@ -2306,9 +2312,9 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
 
         if (hasUnindexedSalaryEvidence(convenioResuelto, preguntaOriginal)) {
             const warning = convenioResuelto.salaryEvidenceWarning ||
-                "Hay publicaciones salariales posteriores identificadas que no están indexadas. No puedo confirmar importes con los fragmentos disponibles.";
+                "Hay publicaciones salariales posteriores identificadas que no están verificadas/indexadas. No puedo confirmar importes con los fragmentos disponibles.";
             const payload = construirRespuestaConsulta({
-                respuesta: "El BOPMA publicó documentación posterior de Hostelería de Málaga, incluido un anuncio de tablas salariales de 2026 (edicto 1187/2026, 14/04/2026). Su contenido completo no está indexado ni verificado aquí; no puedo confirmar importes con las tablas locales. Consulta el edicto oficial y facilita tu categoría para comprobar la cifra.",
+                respuesta: `${convenioResuelto?.title || "Este convenio"}: ${warning}`,
                 sourceType: "unconfirmed",
                 grounded: false,
                 warning,

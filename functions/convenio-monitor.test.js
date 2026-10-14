@@ -117,6 +117,13 @@ test("detecta filas REGCON sin tratar una lectura como verificación documental"
   assert.throws(() => announcedResultCount("Resultados 2 - 15 de 22"), /REGCON_RESULT_INCOMPLETE/);
 });
 
+test("conserva la URL oficial de la exportación solo en asientos nuevos", () => {
+  const code = "20100035012014";
+  const rows = parseRegconExport(regconExport(code, [[code, "Alojamientos Gipuzkoa", "REVISIÓN SALARIAL", "Guipúzcoa", "16/02/2026", "01/01/2025", "31/12/2028", "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2026/02/16/c2600553.pdf"]]), code, 1);
+  assert.equal(rows[0].publicationUrl, "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2026/02/16/c2600553.pdf");
+  assert.equal(parseRegconExport(regconExport(code, [[code, "Alojamientos Gipuzkoa", "REVISIÓN SALARIAL", "Guipúzcoa", "16/02/2026", "01/01/2025", "31/12/2028", "http://bop.diba.cat/anuncio/1"]]), code, 1)[0].publicationUrl, null);
+});
+
 test("exportación oficial cubre varias páginas, deduplica filas e identifica inconsistencias", () => {
   const code = "12345678901234";
   const row = [code, "CONVENIO", "CONVENIO COLECTIVO", "Madrid", "01/01/2024", "01/01/2024", "31/12/2026", "https://boe.es/a"];

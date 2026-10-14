@@ -208,9 +208,10 @@ async function writeChunkGroup({
   totalChunks,
   startIndex,
   chunkIndexes,
+  metadata,
 }) {
   const writePromises = [];
-  const convenioMetadata = parseConvenioFileName(fileName);
+  const convenioMetadata = metadata || parseConvenioFileName(fileName);
 
   for (let offset = 0; offset < chunks.length; offset += FIRESTORE_BATCH_SIZE) {
     const writeStart = offset;
@@ -275,8 +276,17 @@ async function writeChunkGroup({
   await Promise.all(writePromises);
 }
 
-async function upsertCatalogForFileNames(fileNames, sourceDocument = null) {
-  const entries = buildCatalogEntriesFromFileNames(fileNames);
+async function upsertCatalogForFileNames(fileNames, sourceDocument = null, metadata = null) {
+  const entries = metadata ? [{
+    id: metadata.catalogKey, catalogKey: metadata.catalogKey, title: metadata.title,
+    province: metadata.province, autonomousCommunity: metadata.autonomousCommunity || null,
+    sectorKeys: metadata.sectorKeys, yearStart: metadata.yearStart, yearEnd: metadata.yearEnd,
+    fileNames, officialCode: metadata.officialCode, publication: metadata.publication,
+    applicationWarning: metadata.applicationWarning, sourceVerification: metadata.sourceVerification,
+    automaticIngestionEligible: metadata.automaticIngestionEligible,
+    sourceDocumentType: metadata.sourceDocumentType, salaryEvidenceVerifiedThroughYear: metadata.salaryEvidenceVerifiedThroughYear,
+    officialSourceUrl: metadata.officialSourceUrl, sourceSha256: metadata.sourceSha256,
+  }] : buildCatalogEntriesFromFileNames(fileNames);
 
   for (const entry of entries) {
     const docRef = db.collection(CATALOGO_CONVENIOS).doc(entry.id || sanitizeId(entry.title));
@@ -369,10 +379,27 @@ async function loadVerifiedStoredPdf(sourceStorageUri, expectedSha256) {
   return buffer;
 }
 
-async function processFile(filePath, { dryRun = false } = {}) {
+async function verifyStagedKnn(fileName, sourceSha256, docs) {
+  const staged = docs.find((doc) => doc.data().doc_type === "staged_especifico" || doc.data().doc_type === "staged_base");
+  if (!staged) return;
+  const vector = staged.data().vector?.toArray?.();
+  if (!vector || vector.length !== EMBEDDING_DIMENSIONS) throw new Error("INGESTION_STAGED_KNN_INVALID_VECTOR");
+  const matches = await db.collection(COLLECTION_NAME)
+    .where("doc_type", "==", staged.data().doc_type)
+    .where("file_name", "==", fileName)
+    .findNearest({ vectorField: "vector", queryVector: vector, limit: 5, distanceMeasure: "COSINE" }).get();
+  if (!matches.docs.some((doc) => doc.id === staged.id && doc.data().sourceSha256 === sourceSha256)) {
+    throw new Error("INGESTION_STAGED_KNN_NOT_VERIFIED");
+  }
+}
+
+async function processFile(filePath, { dryRun = false, metadataOverride = null, keepSource = false } = {}) {
   const fileName = path.basename(filePath);
   const docType = getDocType(fileName);
-  const metadata = parseConvenioFileName(fileName);
+  const metadata = metadataOverride || parseConvenioFileName(fileName);
+  if (metadataOverride && (metadataOverride.fileName !== fileName || !/^BOG-\d{4}-\d{2}-\d{2}-\d{14}-[a-z0-9-]+\.pdf$/.test(fileName))) {
+    throw new Error("INGESTION_DYNAMIC_METADATA_INVALID");
+  }
   console.log(`\n📄 Procesando ${fileName}`);
   console.log(`  - Tipo de documento: ${docType}`);
 
@@ -425,7 +452,7 @@ async function processFile(filePath, { dryRun = false } = {}) {
 
   const convenioId = sanitizeId(path.basename(fileName, path.extname(fileName)));
   const isAlreadyProcessed = path.resolve(path.dirname(filePath)) === path.resolve(PROCESSED_DIR);
-  const processedPath = isAlreadyProcessed ? filePath : await buildProcessedPath(filePath);
+  const processedPath = keepSource ? sourceStorageUri : isAlreadyProcessed ? filePath : await buildProcessedPath(filePath);
   const missingChunkIndexes = await inspectExistingChunks(fileName, sourceSha256, chunks);
   console.log(`  - Chunks nuevos: ${missingChunkIndexes.length}; embeddings reutilizados: ${chunks.length - missingChunkIndexes.length}`);
   if (dryRun) return { chunks: chunks.length, newChunks: missingChunkIndexes.length, dryRun: true };
@@ -470,12 +497,16 @@ async function processFile(filePath, { dryRun = false } = {}) {
       totalChunks: chunks.length,
       startIndex: indexes[0],
       chunkIndexes: indexes,
+      metadata,
     });
 
     if (batchIndex < totalBatches - 1) {
       await pause(BATCH_DELAY_MS);
     }
   }
+
+  const stagedSnapshot = await db.collection(COLLECTION_NAME).where("file_name", "==", fileName).get();
+  await verifyStagedKnn(fileName, sourceSha256, stagedSnapshot.docs);
 
   if (docType === "especifico") {
     await upsertCatalogForFileNames([fileName], {
@@ -489,12 +520,11 @@ async function processFile(filePath, { dryRun = false } = {}) {
       officialCode: metadata.officialCode,
       sourceVerification: metadata.sourceVerification,
       automaticIngestionEligible: metadata.automaticIngestionEligible === true,
-    });
+    }, metadataOverride);
   } else if (metadata.officialCode === "BOE-A-2015-11430") {
     await upsertNormativeBaseCatalog(fileName, metadata);
   }
 
-  const stagedSnapshot = await db.collection(COLLECTION_NAME).where("file_name", "==", fileName).get();
   const chunkRefs = stagedSnapshot.docs.map((doc) => doc.ref);
   if (chunks.length <= MAX_ATOMIC_CHUNKS) {
     await activateChunkSet({
@@ -509,7 +539,7 @@ async function processFile(filePath, { dryRun = false } = {}) {
     });
   }
 
-  if (!isAlreadyProcessed) {
+  if (!isAlreadyProcessed && !keepSource) {
     await moveToProcessed(filePath, processedPath);
     console.log(`  - PDF movido a: ${processedPath}`);
   }
@@ -555,8 +585,10 @@ async function main() {
   console.log(`   - Colección destino: ${COLLECTION_NAME}`);
 }
 
-main().catch((error) => {
+if (require.main === module) main().catch((error) => {
   console.error("❌ Error durante la ingesta de convenios:");
   console.error(error);
   process.exitCode = 1;
 });
+
+module.exports = { loadPdfText, processFile };

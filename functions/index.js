@@ -1,5 +1,6 @@
 const { onRequest } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const { randomUUID } = require("crypto");
 // Forzamos la carga de la versión 1 específicamente para el disparador de usuario
@@ -107,6 +108,10 @@ if (admin.apps.length === 0) {
 const db = admin.firestore();
 exports.syncOfficialHolidays = onSchedule({ schedule: "0 4 * * 0", timeZone: "Europe/Madrid", region: "europe-west1", maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "1GiB" }, async () => runScheduledHolidaySync(db));
 exports.reviewConvenioSources = onSchedule({ schedule: "0 5 1 * *", timeZone: "Europe/Madrid", region: "europe-west1", serviceAccount: "convenio-monitor@calendario-laboral-252b1.iam.gserviceaccount.com", maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "512MiB", retryCount: 0 }, async () => runMonthlyConvenioReview(db));
+exports.processConvenioDocument = onDocumentUpdated({ document: "convenio_monitor_state/{agreementId}", region: "europe-west1", serviceAccount: "convenio-ingestor@calendario-laboral-252b1.iam.gserviceaccount.com", secrets: [geminiSecret], maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "1GiB", retry: false }, async (event) => {
+    const { processPendingDocument } = require("./convenio-document-processor");
+    return processPendingDocument(db, event.params.agreementId);
+});
 const playDeveloperClient = createPlayDeveloperClient();
 const rtdnOidcClient = new OAuth2Client();
 let stripeClient;

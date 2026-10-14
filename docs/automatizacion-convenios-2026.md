@@ -113,4 +113,12 @@ Se incorporó en producción únicamente una publicación complementaria BOPB de
 
 El cambio está en `feat/convenio-document-ingestion`, commit `a578260`, PR #12 abierto en borrador. No se fusiona mientras la conexión automática al monitor y su validación documental sigan pendientes. `main` y `origin/main` permanecen en `77a1452`.
 
-El estado `REGCON_RESULT_INCOMPLETE` no se ha debilitado. Los 19 resultados ahora completos en lectura directa se reconciliarán en la siguiente revisión legítima. No se creó un run adicional ni se modificaron estados de producción para probar la descarga.
+El estado `REGCON_RESULT_INCOMPLETE` no se ha debilitado. La comprobación de solo lectura de la fase 8 no modificó estados; la reconciliación explícita posterior se registra a continuación.
+
+## Reconciliación explícita de estados heredados (14/10/2026)
+
+Se ejecutó `functions/reconcile-convenio-monitor.js --apply` una sola vez, tras vista previa y respaldo de los 28 estados y dos documentos de control. El modo especial seleccionó únicamente los 19 `source_check_failed` con `REGCON_RESULT_INCOMPLETE` y sin baseline. Cada fuente requirió la página oficial REGCON y su exportación Excel íntegra; las 19 fueron completas. El run `2026-10-1792009478011-ab53cbdd` registra `examined=28`, `checked=19`, `failed=0`, `deferred=2`, `newEntries=0`. Firestore quedó con **26 estados `source_checked` y 2 `blocked_missing_official_regcon_reference`** (fichas 18 y 27), sin duplicados ni novedades ficticias. Las siete fuentes ya completas no se adelantaron.
+
+Respaldo local recuperable: `C:\Users\mikel\AppData\Local\BalanceLaboral\firestore-backups\regcon-reconciliation-2026-10-14T20-24-37-975Z-b757bb79.json`; SHA-256 `e585f0fbe5ce377d217289b9bddb0f1a75d0103c4d6541f44947fba1c95827c6`. Las firmas y fechas antiguas permanecieron en el respaldo. No se restaurará en bloque si aparecen revisiones posteriores: cualquier recuperación debe comparar `updateTime` y reparar solo el documento afectado.
+
+La política de reintentos conserva una ejecución mensual por fuente fallida durante los primeros cinco errores. A partir del sexto, timeout, HTTP 429 o 5xx pasan a `source_check_degraded` con revisión bimestral; respuestas estructuralmente incompletas u otros bloqueos persistentes pasan a `source_check_retry_exhausted` con revisión semestral y causa explícita. Un resultado completo restablece el contador. El Scheduler mensual único no cambia.

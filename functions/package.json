@@ -14,7 +14,8 @@
     "holidays:dry-run": "node holidays-dry-run.js",
     "holidays:preview": "node holidays-publish.js preview",
     "holidays:sync": "node holidays-publish.js sync",
-    "test:holidays": "node --test holidays-dry-run.test.js holidays-scheduler.test.js"
+    "test:holidays": "node --test holidays-dry-run.test.js holidays-scheduler.test.js",
+    "test:convenio-monitor": "node --test convenio-monitor.test.js"
   },
   "engines": {
     "node": "22"

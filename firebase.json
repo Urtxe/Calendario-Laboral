@@ -294,7 +294,8 @@
     {
       "source": "functions",
       "codebase": "default",
-      "disallowLegacyRuntimeConfig": true
+      "disallowLegacyRuntimeConfig": true,
+      "predeploy": ["node scripts/build-convenio-monitor-inventory.js"]
     }
   ]
 }

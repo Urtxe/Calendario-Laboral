@@ -64,6 +64,7 @@ No se descargaron claves JSON ni se imprimió el secreto Gemini. Se usó el secr
 - En producción se incorporó un documento, 16 chunks y 16 embeddings; se verificaron el catálogo, sus metadatos, los vectores y KNN. No se ejecutó el monitor ni se modificaron sus 28 estados.
 - Se desplegó solo `consultarConvenio` en `us-central1`; está `ACTIVE` desde 14/10/2026 20:16 UTC. Una petición HTTP sin Firebase Auth devolvió 401 (`Debes iniciar sesión para usar la consulta IA`). El servicio conserva el invocador de Cloud Run existente, pero el código exige sesión Firebase antes de cuotas o IA. No se desplegó monitor ni ingestor como función.
 - Scheduler del monitor: único job, `ENABLED`, `0 5 1 * *`, `Europe/Madrid`; próxima ejecución reportada por Cloud Scheduler: `2026-11-01T04:00:00Z` (05:00 CET). URI y audiencia OIDC coinciden: `https://reviewconveniosources-sbp2cbr34q-ew.a.run.app/`; SA `convenio-monitor@calendario-laboral-252b1.iam.gserviceaccount.com`.
+- Rama `feat/convenio-document-ingestion`, commit `a578260`, publicada. PR #12 está abierto en borrador: https://github.com/Urtxe/Calendario-Laboral/pull/12. No se fusiona mientras la conexión automática monitor→descubrimiento→ingesta siga sin implementarse y validarse. `main` y `origin/main` permanecen en `77a1452`.
 
 ## Pendientes y rollback
 

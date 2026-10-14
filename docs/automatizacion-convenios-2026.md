@@ -111,4 +111,6 @@ Los contadores anteriores son el cierre histórico de la fase 7. En una comproba
 
 Se incorporó en producción únicamente una publicación complementaria BOPB de tablas salariales 2025 de Transporte Barcelona: cinco páginas, CVE `202610047645`, SHA-256 `65ba6993bcbaa71e98ea257969f5ea0b66d401f01e33ed5811031c77d3267571`, 16 chunks y 16 embeddings. No es el texto 2026–2028 de REGCON ni lo activa. La nueva entrada se limita a evidencia salarial 2025; se verificó KNN real y se actualizó `consultarConvenio` para que las tablas salariales no respalden respuestas sobre otros temas. El Scheduler del monitor sigue siendo único y mensual; no se añadió un trabajo de ingesta ni se conectó el monitor a una descarga automática.
 
+El cambio está en `feat/convenio-document-ingestion`, commit `a578260`, PR #12 abierto en borrador. No se fusiona mientras la conexión automática al monitor y su validación documental sigan pendientes. `main` y `origin/main` permanecen en `77a1452`.
+
 El estado `REGCON_RESULT_INCOMPLETE` no se ha debilitado. Los 19 resultados ahora completos en lectura directa se reconciliarán en la siguiente revisión legítima. No se creó un run adicional ni se modificaron estados de producción para probar la descarga.

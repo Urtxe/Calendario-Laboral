@@ -10,6 +10,8 @@ const CYCLE_PATH = "convenio_monitor_control/monthly_cycle";
 const REGCON_HOST = "expinterweb.mites.gob.es";
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 15_000;
+const MAX_EXPORT_ROWS = 500;
+const MAX_TECHNICAL_RETRIES = 6;
 const TWO_MONTHS = 2;
 const SIX_MONTHS = 6;
 const LOCK_MS = 2 * 60 * 60 * 1000;
@@ -30,7 +32,7 @@ function normalizeHtml(value) {
 }
 
 function parseRegconRows(html, officialCode) {
-  const relevantType = /^(?:CONVENIO COLECTIVO(?:\s+\(TEXTO NUEVO\))?|TABLA SALARIAL|MODIFICACI[ÓO]N|REVISI[ÓO]N SALARIAL(?: AUTOM[ÁA]TICA)?|ACUERDOS? DE COMISI[ÓO]N PARITARIA|ACUERDO PARCIAL|ACUERDOS DERIVADOS DE CONVENIOS|PR[ÓO]RROGA|DENUNCIA(?:\s*-\s*PROMOCI[ÓO]N DE NEGOCIACI[ÓO]N)?|CORRECCI[ÓO]N(?: DE ERRORES)?)$/i;
+  const relevantType = /^(?:CONVENIO COLECTIVO(?:\s+\(TEXTO NUEVO\))?|TABLA SALARIAL|MODIFICACI[ÓO]N|REVISI[ÓO]N SALARIAL(?: AUTOM[ÁA]TICA)?|ACUERDOS? DE COMISI[ÓO]N PARITARIA|ACUERDO PARCIAL|ACUERDOS DERIVADOS DE CONVENIOS|PR[ÓO]RROGA|PROMOCI[ÓO]N DE NEGOCIACI[ÓO]N|DENUNCIA(?:\s*-\s*PROMOCI[ÓO]N DE NEGOCIACI[ÓO]N)?|CORRECCI[ÓO]N(?: DE ERRORES)?)$/i;
   const rows = [...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map(([, row]) => {
     const cells = [...row.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map(([, cell]) => normalizeHtml(cell));
     return { cells, text: cells.join(" ") };
@@ -45,6 +47,7 @@ function parseRegconRows(html, officialCode) {
   return [...unique.values()].map(({ cells, occurrences }) => {
     const text = cells.join(" ");
     return {
+      officialCode: cells[0],
       signature: crypto.createHash("sha256").update(cells.join("\u001f")).digest("hex"),
       summary: text.slice(0, 260),
       registrationDate: /^\d{2}\/\d{2}\/\d{4}$/.test(cells[4] || "") ? cells[4] : null,
@@ -54,11 +57,49 @@ function parseRegconRows(html, officialCode) {
   });
 }
 
-function assertCompleteRegconResult(html, rows) {
+function announcedResultCount(html) {
   const resultText = normalizeHtml(html);
   const page = resultText.match(/Resultados\s*(\d+)\s*-\s*(\d+)\s*de\s*(\d+)/i);
-  if (page && Number(page[2]) < Number(page[3])) throw new Error("REGCON_RESULT_INCOMPLETE");
-  if (rows.length === 0) throw new Error("REGCON_RESULT_INCOMPLETE");
+  if (!page || Number(page[1]) !== 1 || Number(page[2]) < 1 || Number(page[2]) > Number(page[3]) || Number(page[3]) < 1) throw new Error("REGCON_RESULT_INCOMPLETE");
+  return Number(page[3]);
+}
+
+function decodeXmlValue(value) {
+  return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, decimal) => String.fromCodePoint(Number(decimal)))
+    .replace(/&#x([\da-f]+);/gi, (_, hexadecimal) => String.fromCodePoint(parseInt(hexadecimal, 16))).trim();
+}
+
+function parseRegconExport(xml, officialCode, expectedRows) {
+  if (!/^\s*<\?xml\b/i.test(xml) || !/<Workbook\b/i.test(xml) || !/<Worksheet\b/i.test(xml)) throw new Error("REGCON_UNEXPECTED_EXPORT");
+  const rows = [];
+  const relevantType = /^(?:CONVENIO COLECTIVO(?:\s+\(TEXTO NUEVO\))?|TABLA SALARIAL|MODIFICACI[ÓO]N|REVISI[ÓO]N SALARIAL(?:\s+AUTOM[ÁA]TICA)?|ACUERDOS? DE COMISI[ÓO]N PARITARIA|ACUERDO PARCIAL|ACUERDOS DERIVADOS DE CONVENIOS|PR[ÓO]RROGA|PROMOCI[ÓO]N DE NEGOCIACI[ÓO]N|DENUNCIA(?:\s*-\s*PROMOCI[ÓO]N DE NEGOCIACI[ÓO]N)?|CORRECCI[ÓO]N(?: DE ERRORES)?)$/i;
+  for (const [, rowXml] of xml.matchAll(/<Row\b[^>]*>([\s\S]*?)<\/Row>/gi)) {
+    const cells = [...rowXml.matchAll(/<Cell\b[^>]*>([\s\S]*?)<\/Cell>/gi)].map(([, cell]) => decodeXmlValue((cell.match(/<Data\b[^>]*>([\s\S]*?)<\/Data>/i) || [])[1] || ""));
+    if (!cells.length || /^(?:C�digo|Código) del Acuerdo$/.test(cells[0])) continue;
+    if (cells.length !== 8) throw new Error("REGCON_RESULT_INCOMPLETE");
+    if (cells[0] !== officialCode) throw new Error("REGCON_EXPORT_CODE_MISMATCH");
+    rows.push(cells);
+  }
+  if (rows.length !== expectedRows || rows.length === 0 || rows.length > MAX_EXPORT_ROWS) throw new Error("REGCON_RESULT_INCOMPLETE");
+  const unique = new Map();
+  for (const cells of rows) {
+    if (!relevantType.test(cells[2] || "")) continue;
+    const key = cells.join("\u001f");
+    const existing = unique.get(key);
+    if (existing) existing.occurrences += 1;
+    else unique.set(key, { cells, occurrences: 1 });
+  }
+  return [...unique.values()].map(({ cells, occurrences }) => ({
+    officialCode: cells[0],
+    signature: crypto.createHash("sha256").update(cells.join("\u001f")).digest("hex"),
+    summary: cells.join(" ").slice(0, 260),
+    registrationDate: /^\d{2}\/\d{2}\/\d{4}$/.test(cells[4] || "") ? cells[4] : null,
+    transactionType: cells[2],
+    occurrences,
+  }));
 }
 
 async function readBoundedText(response, maxBytes) {
@@ -80,10 +121,18 @@ async function readBoundedText(response, maxBytes) {
   } finally {
     reader.releaseLock();
   }
-  return new TextDecoder("utf-8", { fatal: false }).decode(Buffer.concat(chunks));
+  const body = Buffer.concat(chunks);
+  const declaration = body.subarray(0, 256).toString("ascii").match(/<\?xml[^>]*encoding=["']([^"']+)/i);
+  return new TextDecoder(declaration?.[1] || "utf-8", { fatal: false }).decode(body);
 }
 
 function isDue(agreement, state, now) {
+  if (agreement.sourceUrl && state?.status === "blocked_missing_official_regcon_reference" && state.officialCode !== agreement.officialCode) return true;
+  if (state?.status === "source_check_failed" && (state.technicalFailureCount || 0) < MAX_TECHNICAL_RETRIES) {
+    const lastAttempt = state.lastAttemptAt?.toDate ? state.lastAttemptAt.toDate() : new Date(state.lastAttemptAt);
+    if (!state.lastAttemptAt || Number.isNaN(lastAttempt.getTime())) return true;
+    return `${lastAttempt.getUTCFullYear()}-${String(lastAttempt.getUTCMonth() + 1).padStart(2, "0")}` !== `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  }
   if (!state?.nextReviewAt) return true;
   const dueAt = state.nextReviewAt.toDate ? state.nextReviewAt.toDate() : new Date(state.nextReviewAt);
   return Number.isNaN(dueAt.getTime()) || dueAt <= now;
@@ -110,28 +159,47 @@ function addCalendarMonths(date, months) {
   return result;
 }
 
-async function fetchRegcon(agreement, fetchImpl = fetch) {
+async function fetchRegcon(agreement, fetchImpl = fetch, { requestTimeoutMs = REQUEST_TIMEOUT_MS } = {}) {
   const url = new URL(agreement.sourceUrl);
   if (url.protocol !== "https:" || url.hostname !== REGCON_HOST || url.pathname !== "/regcon/pub/consultaCodigoMapas" || url.searchParams.get("convenioMapa") !== agreement.officialCode) {
     throw new Error("REGCON_URL_NOT_ALLOWED");
   }
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    const response = await fetchImpl(url, { method: "GET", redirect: "manual", signal: controller.signal, headers: { accept: "text/html" } });
+  const cookies = new Map();
+  let totalResponseBytes = 0;
+  const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
+  const request = async (method, body = null) => {
+    const headers = { accept: "text/html, application/vnd.ms-excel, application/xml", ...(cookies.size ? { cookie: [...cookies].map(([name, value]) => `${name}=${value}`).join("; ") } : {}) };
+    if (body) headers["content-type"] = "application/x-www-form-urlencoded";
+    const response = await fetchImpl(url, { method, body, redirect: "manual", signal: controller.signal, headers });
     if (response.status >= 300 && response.status < 400) throw new Error("REGCON_REDIRECT_BLOCKED");
     if (!response.ok) throw new Error(`REGCON_HTTP_${response.status}`);
-    const contentType = response.headers.get("content-type") || "";
-    if (!contentType.toLowerCase().includes("text/html")) throw new Error("REGCON_UNEXPECTED_CONTENT_TYPE");
-    const declaredLength = Number(response.headers.get("content-length") || 0);
-    if (declaredLength > MAX_RESPONSE_BYTES) throw new Error("REGCON_RESPONSE_TOO_LARGE");
-    const html = await readBoundedText(response, MAX_RESPONSE_BYTES);
-    if (!html.includes(agreement.officialCode)) throw new Error("REGCON_CODE_NOT_PRESENT");
-    const rows = parseRegconRows(html, agreement.officialCode);
-    assertCompleteRegconResult(html, rows);
-    return rows;
+    const setCookies = response.headers.getSetCookie?.() || (response.headers.get("set-cookie") ? [response.headers.get("set-cookie")] : []);
+    for (const cookie of setCookies) {
+      const first = cookie.split(";", 1)[0];
+      const delimiter = first.indexOf("=");
+      if (delimiter > 0) cookies.set(first.slice(0, delimiter), first.slice(delimiter + 1));
+    }
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    if (Number(response.headers.get("content-length") || 0) > MAX_RESPONSE_BYTES) throw new Error("REGCON_RESPONSE_TOO_LARGE");
+    const content = await readBoundedText(response, MAX_RESPONSE_BYTES);
+    totalResponseBytes += Buffer.byteLength(content, "utf8");
+    if (totalResponseBytes > MAX_RESPONSE_BYTES) throw new Error("REGCON_RESPONSE_TOO_LARGE");
+    return { contentType, content };
+  };
+  try {
+    const page = await request("GET");
+    if (!page.contentType.includes("text/html")) throw new Error("REGCON_UNEXPECTED_CONTENT_TYPE");
+    if (!page.content.includes(agreement.officialCode)) throw new Error("REGCON_CODE_NOT_PRESENT");
+    const expectedRows = announcedResultCount(page.content);
+    if (expectedRows > MAX_EXPORT_ROWS) throw new Error("REGCON_RESULT_INCOMPLETE");
+    const exportForm = new URLSearchParams({ idConvenioResolucion: "", tokenBloqueoDescarga: "", _exportarExcelPublicoXML: "Exportar Excel" });
+    const exported = await request("POST", exportForm.toString());
+    if (!exported.contentType.includes("application/vnd.ms-excel") && !exported.contentType.includes("application/xml") && !exported.contentType.includes("text/xml")) throw new Error("REGCON_UNEXPECTED_EXPORT");
+    return parseRegconExport(exported.content, agreement.officialCode, expectedRows);
   } finally {
     clearTimeout(timeout);
+    controller.abort();
   }
 }
 
@@ -200,25 +268,27 @@ async function runMonthlyConvenioReview(db, {
       }
       try {
         const rows = await fetchRegcon(agreement, fetchImpl);
-        const known = new Set(state?.knownSignatures || []);
+        const known = new Set([...(state?.knownSignatures || []), ...(state?.pendingEntries || []).map((entry) => entry.signature)]);
         const additions = rows.filter((row) => !known.has(row.signature));
         const baseline = !state?.baselineEstablished;
         const newEntries = baseline ? [] : additions;
         counts.checked += 1;
         counts.newEntries += newEntries.length;
-        const pendingEntries = [...(state?.pendingEntries || []), ...newEntries.map(({ signature, registrationDate, transactionType, summary, occurrences }) => ({ signature, registrationDate, transactionType, summary, occurrences, status: "pending_documentary_verification", detectedAt: now }))].slice(-100);
+        const pendingEntries = [...(state?.pendingEntries || []), ...newEntries.map(({ officialCode, signature, registrationDate, transactionType, summary, occurrences }) => ({ officialCode, signature, registrationDate, transactionType, summary, occurrences, status: "pending_documentary_verification", detectedAt: now }))];
         const interval = reviewInterval(agreement, now, { pendingEntries });
         await stateRef.set({
           agreementId: agreement.id,
           officialCode: agreement.officialCode,
           title: agreement.title,
           source: "REGCON",
+          sourceCheck: "available",
           status: "source_checked",
           lastSuccessfulCheckAt: now,
           nextReviewAt: addCalendarMonths(now, interval),
           baselineEstablished: true,
           lastErrorCode: null,
-          knownSignatures: [...new Set([...(state?.knownSignatures || []), ...rows.map((row) => row.signature)])].slice(-250),
+          technicalFailureCount: 0,
+          knownSignatures: [...new Set([...(state?.knownSignatures || []), ...rows.map((row) => row.signature)])],
           latestRows: rows.slice(0, 20).map(({ signature, registrationDate, transactionType, summary, occurrences }) => ({ signature, registrationDate, transactionType, summary, occurrences })),
           pendingEntries,
           lastResult: baseline ? "baseline_established_no_historical_novelties" : newEntries.length ? "new_regcon_entries_pending_verification" : "no_new_regcon_entries",
@@ -227,8 +297,11 @@ async function runMonthlyConvenioReview(db, {
       } catch (error) {
         counts.failed += 1;
         counts.pending += 1;
-        await stateRef.set({ agreementId: agreement.id, officialCode: agreement.officialCode, lastAttemptAt: now, nextReviewAt: addCalendarMonths(now, TWO_MONTHS), lastErrorCode: String(error.message || "SOURCE_ERROR").slice(0, 80), status: "source_check_failed" }, { merge: true });
-        log.warn("convenio_monitor_source_failed", { runId, executionId, agreementId: agreement.id, officialCode: agreement.officialCode, errorCode: String(error.message || "SOURCE_ERROR").slice(0, 80) });
+        const errorCode = error.name === "AbortError" ? "REGCON_TIMEOUT" : String(error.message || "SOURCE_ERROR").slice(0, 80);
+        const technicalFailureCount = (state?.technicalFailureCount || 0) + 1;
+        const exhausted = technicalFailureCount >= MAX_TECHNICAL_RETRIES;
+        await stateRef.set({ agreementId: agreement.id, officialCode: agreement.officialCode, lastAttemptAt: now, nextReviewAt: addCalendarMonths(now, exhausted ? SIX_MONTHS : TWO_MONTHS), technicalFailureCount, lastErrorCode: errorCode, status: exhausted ? "source_check_retry_exhausted" : "source_check_failed" }, { merge: true });
+        log.warn("convenio_monitor_source_failed", { runId, executionId, agreementId: agreement.id, officialCode: agreement.officialCode, errorCode, technicalFailureCount, exhausted });
       }
     }
     const hasFailures = counts.failed > 0;
@@ -247,4 +320,4 @@ async function runMonthlyConvenioReview(db, {
   }
 }
 
-module.exports = { inventory, parseRegconRows, assertCompleteRegconResult, isDue, pendingEntryCount, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview };
+module.exports = { inventory, parseRegconRows, parseRegconExport, announcedResultCount, isDue, pendingEntryCount, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview };

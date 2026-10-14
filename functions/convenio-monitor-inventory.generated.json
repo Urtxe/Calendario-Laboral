@@ -278,12 +278,12 @@
     "id": "convenio-26",
     "number": 26,
     "title": "Transporte de mercancías por carretera · Gipuzkoa",
-    "officialCode": null,
-    "sourceUrl": null,
-    "source": null,
-    "pactEndYear": 2014,
+    "officialCode": "20001175011981",
+    "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=20001175011981",
+    "source": "REGCON",
+    "pactEndYear": 2009,
     "documentaryStatus": "INCOMPLETO",
-    "sourceCheck": "missing_official_regcon_reference"
+    "sourceCheck": "available"
   },
   {
     "id": "convenio-27",

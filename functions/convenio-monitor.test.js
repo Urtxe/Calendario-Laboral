@@ -2,7 +2,38 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { inventory, parseRegconRows, assertCompleteRegconResult, isDue, pendingEntryCount, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview } = require("./convenio-monitor");
+const crypto = require("node:crypto");
+const { inventory, parseRegconRows, parseRegconExport, announcedResultCount, isDue, pendingEntryCount, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview } = require("./convenio-monitor");
+
+function regconPage(code, total = 2) {
+  return `<html><form action="/regcon/pub/consultaCodigoMapas?convenioMapa=${code}"></form><span>Resultados 1 - ${Math.min(15, total)} de ${total}</span><a href="/regcon/pub/consultaCodigoMapas?pagina=2">2</a>${code}</html>`;
+}
+
+function regconExport(code, rows) {
+  const records = rows.map((cells) => `<Row>${cells.map((cell) => `<Cell><Data ss:Type="String">${cell}</Data></Cell>`).join("")}</Row>`).join("");
+  return `<?xml version="1.0" encoding="UTF-8"?><Workbook><Worksheet><Table>${records}</Table></Worksheet></Workbook>`;
+}
+
+function response(body, contentType = "text/html", status = 200, headers = {}) {
+  return new Response(body, { status, headers: { "content-type": contentType, ...headers } });
+}
+
+function exportFetch(code, rows, overrides = {}) {
+  let calls = 0;
+  const fetchImpl = async (url, options) => {
+    calls += 1;
+    assert.equal(new URL(url).hostname, "expinterweb.mites.gob.es");
+    if (calls === 1) {
+      assert.equal(options.method, "GET");
+      return response(regconPage(code, overrides.announced ?? rows.length), "text/html", 200, { "set-cookie": "JSESSIONID=test; Path=/; HttpOnly" });
+    }
+    assert.equal(options.method, "POST");
+    assert.match(options.headers.cookie, /JSESSIONID=test/);
+    return response(overrides.body ?? regconExport(code, rows), overrides.contentType ?? "application/vnd.ms-excel", overrides.status ?? 200);
+  };
+  Object.defineProperty(fetchImpl, "calls", { get: () => calls });
+  return fetchImpl;
+}
 
 function memoryDb() {
   const values = new Map();
@@ -32,6 +63,7 @@ test("inventario deriva exactamente las 28 fichas documentales, sin crear otra l
   assert.equal(inventory.length, 28);
   assert.deepEqual(inventory.map((item) => item.number), Array.from({ length: 28 }, (_, index) => index + 1));
   assert.ok(inventory.every((item) => item.id && item.title));
+  assert.equal(inventory.find((item) => item.number === 26).pactEndYear, 2009, "la cadencia usa el periodo verificado del convenio, no el nombre local del PDF");
 });
 
 test("selecciona revisión bimestral con pendientes, periodo pactado terminado o fuente incompleta", () => {
@@ -58,6 +90,12 @@ test("omite fuentes todavía no vencidas y exige primera revisión en el inventa
   assert.equal(isDue(agreement, { nextReviewAt: new Date("2026-12-01T00:00:00Z") }, now), false);
   assert.equal(isDue({ sourceUrl: null }, { nextReviewAt: new Date("2026-12-01T00:00:00Z") }, now), false);
   assert.equal(isDue(agreement, { nextReviewAt: "invalid" }, now), true);
+  const newlyReferenced = inventory.find((item) => item.number === 26);
+  assert.equal(isDue(newlyReferenced, { status: "blocked_missing_official_regcon_reference", officialCode: null, nextReviewAt: new Date("2026-12-13T00:00:00Z") }, now), true);
+  const failedLastMonth = { status: "source_check_failed", technicalFailureCount: 2, lastAttemptAt: new Date("2026-09-13T10:00:00Z"), nextReviewAt: new Date("2026-11-13T10:00:00Z") };
+  assert.equal(isDue(agreement, failedLastMonth, now), true);
+  assert.equal(isDue(agreement, { ...failedLastMonth, lastAttemptAt: now }, now), false);
+  assert.equal(isDue(agreement, { ...failedLastMonth, technicalFailureCount: 6, nextReviewAt: new Date("2027-04-13T10:00:00Z") }, now), false);
 });
 
 test("detecta filas REGCON sin tratar una lectura como verificación documental", () => {
@@ -72,17 +110,41 @@ test("detecta filas REGCON sin tratar una lectura como verificación documental"
   const duplicates = parseRegconRows(`<tr><td>12345678901234</td><td>HOSTELERIA</td><td>TABLA SALARIAL</td><td>Málaga</td><td>14/04/2026</td></tr><tr><td>12345678901234</td><td>HOSTELERIA</td><td>TABLA SALARIAL</td><td>Málaga</td><td>14/04/2026</td></tr>`, "12345678901234");
   assert.equal(duplicates.length, 1);
   assert.equal(duplicates[0].occurrences, 2);
-  assert.throws(() => assertCompleteRegconResult("Resultados 1 - 15 de 18", rows), /REGCON_RESULT_INCOMPLETE/);
-  assert.throws(() => assertCompleteRegconResult("Página de error", []), /REGCON_RESULT_INCOMPLETE/);
-  assert.doesNotThrow(() => assertCompleteRegconResult("Resultados 1 - 2 de 2", rows));
+  assert.equal(rows[0].officialCode, "08004295011994");
+  assert.equal(announcedResultCount("Resultados 1 - 15 de 22"), 22);
+  assert.throws(() => announcedResultCount("Página de error"), /REGCON_RESULT_INCOMPLETE/);
+  assert.throws(() => announcedResultCount("Resultados 1 - 16 de 15"), /REGCON_RESULT_INCOMPLETE/);
+  assert.throws(() => announcedResultCount("Resultados 2 - 15 de 22"), /REGCON_RESULT_INCOMPLETE/);
 });
 
-test("REGCON rechaza redirecciones, hosts y respuestas fuera del límite", async () => {
+test("exportación oficial cubre varias páginas, deduplica filas e identifica inconsistencias", () => {
+  const code = "12345678901234";
+  const row = [code, "CONVENIO", "CONVENIO COLECTIVO", "Madrid", "01/01/2024", "01/01/2024", "31/12/2026", "https://boe.es/a"];
+  const duplicate = parseRegconExport(regconExport(code, [row, row]), code, 2);
+  assert.equal(duplicate.length, 1);
+  assert.equal(duplicate[0].occurrences, 2);
+  assert.equal(duplicate[0].officialCode, code);
+  assert.throws(() => parseRegconExport(regconExport(code, [row]), code, 2), /REGCON_RESULT_INCOMPLETE/);
+  assert.throws(() => parseRegconExport(regconExport(code, [["99999999999999", ...row.slice(1)]]), code, 1), /REGCON_EXPORT_CODE_MISMATCH/);
+  assert.throws(() => parseRegconExport(regconExport(code, Array.from({ length: 501 }, (_, i) => [code, `Convenio ${i}`, "CONVENIO COLECTIVO", "Madrid", "01/01/2024", "01/01/2024", "31/12/2026", ""])), code, 501), /REGCON_RESULT_INCOMPLETE/);
+  const announce22 = "Resultados 1 - 15 de 22";
+  assert.equal(announcedResultCount(announce22), 22);
+  assert.equal(parseRegconExport(regconExport(code, Array.from({ length: 22 }, (_, i) => [code, `Convenio ${i}`, "CONVENIO COLECTIVO", "Madrid", "01/01/2024", "01/01/2024", "31/12/2026", ""])), code, announcedResultCount(announce22)).length, 22);
+});
+
+test("REGCON exporta cobertura completa por su botón público; rechaza fallos, HTML inesperado y redirecciones", async () => {
   const agreement = { officialCode: "12345678901234", sourceUrl: "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=12345678901234" };
   await assert.rejects(fetchRegcon({ ...agreement, sourceUrl: "https://example.com/" }, async () => {}), /REGCON_URL_NOT_ALLOWED/);
-  await assert.rejects(fetchRegcon(agreement, async () => ({ status: 302, ok: false, headers: new Headers() })), /REGCON_REDIRECT_BLOCKED/);
-  await assert.rejects(fetchRegcon(agreement, async () => ({ status: 200, ok: true, headers: new Headers({ "content-type": "text/html", "content-length": "99999999" }) })), /REGCON_RESPONSE_TOO_LARGE/);
-  await assert.rejects(fetchRegcon(agreement, async () => new Response("x".repeat(2 * 1024 * 1024 + 1), { status: 200, headers: { "content-type": "text/html" } })), /REGCON_RESPONSE_TOO_LARGE/);
+  await assert.rejects(fetchRegcon(agreement, async () => response("", "text/html", 302)), /REGCON_REDIRECT_BLOCKED/);
+  await assert.rejects(fetchRegcon(agreement, async () => response("x", "text/html", 200, { "content-length": "99999999" })), /REGCON_RESPONSE_TOO_LARGE/);
+  await assert.rejects(fetchRegcon(agreement, async () => response(regconPage(agreement.officialCode))), /REGCON_UNEXPECTED_EXPORT/);
+  await assert.rejects(fetchRegcon(agreement, exportFetch(agreement.officialCode, [[agreement.officialCode, "X", "CONVENIO COLECTIVO"]], { contentType: "text/html" })), /REGCON_UNEXPECTED_EXPORT/);
+  await assert.rejects(fetchRegcon(agreement, async (_url, options) => options.method === "GET" ? response(regconPage(agreement.officialCode)) : response("", "text/html", 302)), /REGCON_REDIRECT_BLOCKED/);
+  await assert.rejects(fetchRegcon(agreement, async (_url, options) => options.method === "GET" ? response(regconPage(agreement.officialCode)) : response("<html>error</html>", "application/vnd.ms-excel")), /REGCON_UNEXPECTED_EXPORT/);
+  await assert.rejects(fetchRegcon(agreement, async (_url, options) => options.method === "GET" ? response(regconPage(agreement.officialCode)) : new Promise((_, reject) => options.signal.addEventListener("abort", () => reject(new DOMException("timeout", "AbortError")))), { requestTimeoutMs: 5 }), { name: "AbortError" });
+  const allRowsFetch = exportFetch(agreement.officialCode, [ [agreement.officialCode, "A", "CONVENIO COLECTIVO", "Madrid", "01/01/2024", "01/01/2024", "31/12/2028", ""], [agreement.officialCode, "B", "CONVENIO COLECTIVO", "Madrid", "01/01/2023", "01/01/2023", "31/12/2026", ""] ]);
+  assert.equal((await fetchRegcon(agreement, allRowsFetch)).length, 2);
+  assert.equal(allRowsFetch.calls, 2, "el cliente usa la exportación pública y no recorre enlaces repetidos que pierden la búsqueda");
 });
 
 test("primera ejecución establece baseline sin convertir asientos históricos en novedades y aplaza fichas sin REGCON", async () => {
@@ -90,15 +152,20 @@ test("primera ejecución establece baseline sin convertir asientos históricos e
   const logs = [];
   let fetchCount = 0;
   const now = new Date();
-  const htmlFor = (code) => `<table><tr><td>${code}</td><td>SECTOR</td><td>CONVENIO COLECTIVO (TEXTO NUEVO)</td><td>01/09/2026</td></tr></table>`;
+  const fetchForAgreement = async (url, options) => {
+    fetchCount += 1;
+    const code = new URL(url).searchParams.get("convenioMapa");
+    const rows = [[code, "SECTOR", "CONVENIO COLECTIVO", "Madrid", "01/09/2026", "01/01/2026", "31/12/2028", ""]];
+    return options.method === "GET" ? response(regconPage(code, 1), "text/html", 200, { "set-cookie": "JSESSIONID=test; Path=/" }) : response(regconExport(code, rows), "application/vnd.ms-excel");
+  };
   const result = await runMonthlyConvenioReview(db, {
     now,
-    fetchImpl: async (url) => { fetchCount += 1; return new Response(htmlFor(new URL(url).searchParams.get("convenioMapa")), { status: 200, headers: { "content-type": "text/html" } }); },
+    fetchImpl: fetchForAgreement,
     log: { info: (...args) => logs.push(args), warn: (...args) => logs.push(args) },
   });
   assert.equal(result.examined, 28);
-  assert.equal(result.blocked, 3);
-  assert.equal(result.checked, 25);
+  assert.equal(result.blocked, 2);
+  assert.equal(result.checked, 26);
   assert.equal(result.status, "partial");
   assert.equal(result.geminiCalls, 0);
   assert.equal(db.values.get("convenio_monitor_state/convenio-16").lastResult, "baseline_established_no_historical_novelties");
@@ -110,7 +177,7 @@ test("primera ejecución establece baseline sin convertir asientos históricos e
   const second = await runMonthlyConvenioReview(db, { now: new Date(now.getTime() + 60_000), fetchImpl: async () => { fetchCount += 1; throw new Error("unexpected refetch"); }, log: { info() {}, warn() {} } });
   assert.equal(second.status, "partial");
   assert.equal(second.checked, 0);
-  assert.equal(fetchCount, 25);
+  assert.equal(fetchCount, 52);
   assert.equal(db.values.get("convenio_monitor_state/convenio-16").pendingEntries.length, 0);
   const executions = [...db.values.entries()].filter(([path]) => path.startsWith("convenio_monitor_runs/"));
   assert.equal(executions.length, 2);
@@ -122,26 +189,70 @@ test("fallos por resultado incompleto no avanzan última revisión correcta ni c
   const db = memoryDb();
   const agreement = inventory.find((item) => item.sourceUrl);
   const now = new Date("2026-10-13T10:00:00Z");
+  const previousSuccessfulCheck = new Date("2026-08-13T10:00:00Z");
+  const previousSignature = "b".repeat(64);
+  db.values.set(`convenio_monitor_state/${agreement.id}`, { status: "source_checked", lastSuccessfulCheckAt: previousSuccessfulCheck, knownSignatures: [previousSignature], baselineEstablished: true, pendingEntries: [] });
   await assert.rejects(runMonthlyConvenioReview(db, {
     now,
-    fetchImpl: async () => new Response(`<html>${agreement.officialCode} Resultados 1 - 15 de 18</html>`, { headers: { "content-type": "text/html" } }),
+    fetchImpl: async (_url, options) => options.method === "GET"
+      ? response(regconPage(agreement.officialCode, 18))
+      : response(regconExport(agreement.officialCode, []), "application/vnd.ms-excel"),
     log: { info() {}, warn() {} },
   }), /comprobación de fuentes falló/);
   const state = db.values.get(`convenio_monitor_state/${agreement.id}`);
   assert.equal(state.status, "source_check_failed");
-  assert.equal(state.lastSuccessfulCheckAt, undefined);
+  assert.equal(state.lastSuccessfulCheckAt, previousSuccessfulCheck);
+  assert.deepEqual(state.knownSignatures, [previousSignature]);
   assert.equal(state.lastErrorCode, "REGCON_RESULT_INCOMPLETE");
-  assert.equal(state.pendingEntries, undefined);
+  assert.deepEqual(state.pendingEntries, []);
+});
+
+test("la primera exportación completa tras una parcial establece baseline sin alertas históricas", async () => {
+  const db = memoryDb();
+  const agreement = inventory.find((item) => item.sourceUrl);
+  const now = new Date("2026-10-13T10:00:00Z");
+  const partialSignature = "a".repeat(64);
+  for (const item of inventory) db.values.set(`convenio_monitor_state/${item.id}`, { nextReviewAt: new Date("2027-01-01T00:00:00Z") });
+  db.values.set(`convenio_monitor_state/${agreement.id}`, { status: "source_check_failed", technicalFailureCount: 1, lastAttemptAt: new Date("2026-09-13T10:00:00Z"), nextReviewAt: new Date("2026-11-13T10:00:00Z"), knownSignatures: [partialSignature] });
+  const rows = [[agreement.officialCode, "SECTOR", "CONVENIO COLECTIVO", "Madrid", "01/01/2024", "01/01/2024", "31/12/2028", ""]];
+  const result = await runMonthlyConvenioReview(db, { now, fetchImpl: exportFetch(agreement.officialCode, rows), log: { info() {}, warn() {} } });
+  const state = db.values.get(`convenio_monitor_state/${agreement.id}`);
+  assert.equal(result.checked, 1);
+  assert.equal(result.newEntries, 0);
+  assert.equal(state.baselineEstablished, true);
+  assert.equal(state.lastResult, "baseline_established_no_historical_novelties");
+  const completeSignature = crypto.createHash("sha256").update(rows[0].join("\u001f")).digest("hex");
+  assert.deepEqual(state.knownSignatures.sort(), [partialSignature, completeSignature].sort());
+  assert.equal(state.pendingEntries.length, 0);
+});
+
+test("la revisión es idempotente incluso si la firma está en pendientes y no en la lista limitada", async () => {
+  const db = memoryDb();
+  const agreement = inventory.find((item) => item.sourceUrl);
+  const now = new Date("2026-10-13T10:00:00Z");
+  const row = [agreement.officialCode, "SECTOR", "CONVENIO COLECTIVO", "Madrid", "01/01/2024", "01/01/2024", "31/12/2028", ""];
+  const signature = crypto.createHash("sha256").update(row.join("\u001f")).digest("hex");
+  for (const item of inventory) db.values.set(`convenio_monitor_state/${item.id}`, { nextReviewAt: new Date("2027-01-01T00:00:00Z") });
+  db.values.set(`convenio_monitor_state/${agreement.id}`, { baselineEstablished: true, knownSignatures: [], pendingEntries: [{ signature, status: "pending_documentary_verification" }], nextReviewAt: new Date("2026-10-01T00:00:00Z") });
+  const result = await runMonthlyConvenioReview(db, { now, fetchImpl: exportFetch(agreement.officialCode, [row]), log: { info() {}, warn() {} } });
+  const state = db.values.get(`convenio_monitor_state/${agreement.id}`);
+  assert.equal(result.newEntries, 0);
+  assert.equal(state.pendingEntries.length, 1);
+  assert.equal(state.pendingEntries[0].signature, signature);
 });
 
 test("serializa ejecuciones concurrentes y libera solo el lease propio", async () => {
   const db = memoryDb();
   let releaseFetch;
   const pausedFetch = new Promise((resolve) => { releaseFetch = resolve; });
-  const htmlFor = (code) => `<table><tr><td>${code}</td><td>SECTOR</td><td>CONVENIO COLECTIVO</td><td>fecha</td></tr></table>`;
+  const fetchForAgreement = async (url, options) => {
+    const code = new URL(url).searchParams.get("convenioMapa");
+    await pausedFetch;
+    return options.method === "GET" ? response(regconPage(code, 1), "text/html", 200, { "set-cookie": "JSESSIONID=test; Path=/" }) : response(regconExport(code, [[code, "SECTOR", "CONVENIO COLECTIVO", "Madrid", "01/01/2024", "01/01/2024", "31/12/2028", ""]]), "application/vnd.ms-excel");
+  };
   const first = runMonthlyConvenioReview(db, {
     now: new Date("2026-10-13T10:00:00Z"),
-    fetchImpl: async (url) => { await pausedFetch; return new Response(htmlFor(new URL(url).searchParams.get("convenioMapa")), { headers: { "content-type": "text/html" } }); },
+    fetchImpl: fetchForAgreement,
     log: { info() {}, warn() {} },
   });
   const second = await runMonthlyConvenioReview(db, { now: new Date("2026-10-13T10:00:01Z"), log: { info() {}, warn() {} } });

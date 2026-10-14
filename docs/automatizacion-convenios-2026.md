@@ -2,9 +2,9 @@
 
 ## Estado
 
-**Parcial; estable y desplegado en producción, con cobertura pendiente.** A 14/10/2026, las 28 fichas tienen estado en Firestore: **7 `source_checked`, 19 `source_check_failed` pendientes de reintento y 2 sin referencia REGCON** (18 Limpieza Barcelona y 27 Transporte Navarra). Seis éxitos corresponden a la pasada anterior; una revisión completa por exportación oficial se realizó ahora para 26 Transporte Gipuzkoa. Las 19 respuestas incompletas no avanzaron su última revisión satisfactoria. El run controlado consultó una fuente, no encontró novedades y dejó 21 fichas diferidas.
+**Estado actual, 14/10/2026:** 28 fichas en Firestore: **26 `source_checked` y 2 sin referencia REGCON acreditada** (18 Limpieza Barcelona y 27 Transporte Navarra). La reconciliación explícita de 19 fuentes con errores históricos consultó sus exportaciones oficiales completas y no creó novedades históricas. Los párrafos de ejecución inicial más abajo son antecedentes; la reconciliación final se detalla al final.
 
-La automatización solo detecta cambios en la página pública de trámites de REGCON. Un asiento detectado es una señal para revisión, no acredita publicación íntegra en boletín, autenticidad del PDF, incorporación al RAG ni vigencia jurídica. No se descargan ni se activan documentos automáticamente en esta fase.
+REGCON detecta asientos y su exportación Excel aporta enlaces de publicación. Un asiento sigue siendo una señal para comprobación documental; no acredita por sí solo PDF íntegro, ingesta ni vigencia jurídica. La fase documental posterior incorporó dos complementos salariales acreditados y añadió un procesador separado para PDFs BOG inequívocos, con estado de activación y límites propios.
 
 ## Arquitectura implementada en código
 
@@ -111,7 +111,7 @@ Los contadores anteriores son el cierre histórico de la fase 7. En una comproba
 
 Se incorporó en producción únicamente una publicación complementaria BOPB de tablas salariales 2025 de Transporte Barcelona: cinco páginas, CVE `202610047645`, SHA-256 `65ba6993bcbaa71e98ea257969f5ea0b66d401f01e33ed5811031c77d3267571`, 16 chunks y 16 embeddings. No es el texto 2026–2028 de REGCON ni lo activa. La nueva entrada se limita a evidencia salarial 2025; se verificó KNN real y se actualizó `consultarConvenio` para que las tablas salariales no respalden respuestas sobre otros temas. El Scheduler del monitor sigue siendo único y mensual; no se añadió un trabajo de ingesta ni se conectó el monitor a una descarga automática.
 
-El cambio está en `feat/convenio-document-ingestion`, commit `a578260`, PR #12 abierto en borrador. No se fusiona mientras la conexión automática al monitor y su validación documental sigan pendientes. `main` y `origin/main` permanecen en `77a1452`.
+El PR #12 se fusionó tras validar pruebas, Firestore, KNN y procedencia BOPB. Merge commit `c3ecce2d098a0bf597d256bab452b1ffd0b6c20a`; `main` y `origin/main` quedaron sincronizados y se redesplegaron únicamente `consultarConvenio` y `reviewConvenioSources`. La conexión automática está en una rama posterior.
 
 El estado `REGCON_RESULT_INCOMPLETE` no se ha debilitado. La comprobación de solo lectura de la fase 8 no modificó estados; la reconciliación explícita posterior se registra a continuación.
 
@@ -122,3 +122,11 @@ Se ejecutó `functions/reconcile-convenio-monitor.js --apply` una sola vez, tras
 Respaldo local recuperable: `C:\Users\mikel\AppData\Local\BalanceLaboral\firestore-backups\regcon-reconciliation-2026-10-14T20-24-37-975Z-b757bb79.json`; SHA-256 `e585f0fbe5ce377d217289b9bddb0f1a75d0103c4d6541f44947fba1c95827c6`. Las firmas y fechas antiguas permanecieron en el respaldo. No se restaurará en bloque si aparecen revisiones posteriores: cualquier recuperación debe comparar `updateTime` y reparar solo el documento afectado.
 
 La política de reintentos conserva una ejecución mensual por fuente fallida durante los primeros cinco errores. A partir del sexto, timeout, HTTP 429 o 5xx pasan a `source_check_degraded` con revisión bimestral; respuestas estructuralmente incompletas u otros bloqueos persistentes pasan a `source_check_retry_exhausted` con revisión semestral y causa explícita. Un resultado completo restablece el contador. El Scheduler mensual único no cambia.
+
+## Conexión documental posterior (14/10/2026)
+
+La exportación Excel oficial incluye la URL de publicación en su octava columna. El monitor conserva la URL HTTPS de cada asiento nuevo en `pendingEntries`, sin alterar firmas ni tratar asientos anteriores al baseline como novedades. El procesador `processConvenioDocument` escucha los cambios de estado con una identidad distinta de la del monitor; no añade otro Scheduler. Su primer adaptador admite exclusivamente revisiones/tablas salariales BOG en PDF directo y exige código REGCON, ámbito, año, identificador GAO, texto legible y anexo. Una fuente HTML, BOPB/BOPZ/BOPMA o un convenio nuevo queda pendiente de cotejo manual; el fallo de una ficha no bloquea las demás. El control `convenio_monitor_control/document_ingestion` permite pausar el procesador manteniendo el monitor activo.
+
+La revisión salarial oficial BOG de Alojamientos Gipuzkoa 2026 se incorporó manualmente tras verificar tres páginas y anexos II–VII: 15 chunks, 15 embeddings `gemini-embedding-001`, SHA-256 `a77d5fd34e2f1e54551ebea2eb0b51b18bbd6d0623f24ed50b89594e224c79a9`. El presupuesto de octubre registró 5.483 tokens estimados acumulados (incluye Barcelona 2025). KNN real recuperó 5/5 fragmentos de ese PDF; el resolver selecciona ese complemento solo para consultas salariales de 2026. No se activaron los textos nuevos 2026–28 de Transporte Barcelona y Zaragoza, aunque REGCON enlaza sus publicaciones oficiales. Málaga sigue sin PDF accesible.
+
+El procesador quedó `ACTIVE` en `europe-west1` el 14/10/2026 y sin acceso público. Un cotejo histórico controlado de la publicación BOG ya indexada cerró `convenio-02` como `resolved` sin generar nuevos chunks ni novedades REGCON; `document_ingestion.paused=false`. El monitor sigue `ACTIVE` y su único Scheduler permanece `ENABLED`, `0 5 1 * *` Europe/Madrid, próxima ejecución 01/11/2026 05:00 CET. El primer intento de Eventarc falló por IAM y se corrigieron `roles/eventarc.eventReceiver` y `roles/run.invoker` limitados a la identidad/servicio del procesador. Los resultados y el procedimiento de rollback figuran en [ingesta-automatica-convenios-2026.md](ingesta-automatica-convenios-2026.md).

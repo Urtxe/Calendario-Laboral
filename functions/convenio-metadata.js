@@ -741,7 +741,7 @@ function resolveCatalogEntry(catalogEntries, criteria) {
     };
   }
 
-  const salaryYear = requestedYears.length === 1 ? requestedYears[0] : !requestedYears.length ? new Date().getFullYear() : null;
+  const salaryYear = requestedYears.length === 1 ? requestedYears[0] : !requestedYears.length ? Number(madridDate().slice(0, 4)) : null;
   const salarySupplements = criteria.isSalaryQuery && salaryYear != null
     ? verifiedCandidates.filter((entry) => ["salary_tables", "salary_revision"].includes(entry.sourceDocumentType) &&
       entry.yearStart <= salaryYear && entry.yearEnd >= salaryYear)

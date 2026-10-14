@@ -104,3 +104,21 @@ El ingestor existente `functions/ingest-conventios.js` no publica de forma atóm
 Esta fase solo monitoriza asientos REGCON; no descarga ni preserva PDFs, no comprueba todos los boletines, no clasifica efectos jurídicos, no ingiere ni activa documentos y no llama a KNN. La cobertura ya usa la exportación oficial íntegra en vez de depender de enlaces de paginación que no conservan la búsqueda. Quedan 19 fuentes con resultado incompleto que el próximo ciclo mensual podrá reintentar, y dos fichas sin referencia automática inequívoca (18 y 27). El asiento REGCON no equivale a validar un convenio ni a verificar su publicación íntegra.
 
 La integración de esta fase está cerrada. Permanecen 19 fuentes pendientes de reintento mensual y dos sin referencia REGCON inequívoca; esas limitaciones no bloquean el PR integrado. La futura ingesta seguirá fuera de alcance.
+
+## Actualización de ingesta (14/10/2026)
+
+Los contadores anteriores son el cierre histórico de la fase 7. En una comprobación posterior de solo lectura, las 19 exportaciones que constaban fallidas devolvieron cobertura completa; los documentos Firestore aún conservan el estado fallido porque no se ejecutó el ciclo mensual ni se adelantaron fechas. Los dos estados sin referencia siguen pendientes. Consulte el detalle y la primera ingesta en [ingesta-automatica-convenios-2026.md](ingesta-automatica-convenios-2026.md).
+
+Se incorporó en producción únicamente una publicación complementaria BOPB de tablas salariales 2025 de Transporte Barcelona: cinco páginas, CVE `202610047645`, SHA-256 `65ba6993bcbaa71e98ea257969f5ea0b66d401f01e33ed5811031c77d3267571`, 16 chunks y 16 embeddings. No es el texto 2026–2028 de REGCON ni lo activa. La nueva entrada se limita a evidencia salarial 2025; se verificó KNN real y se actualizó `consultarConvenio` para que las tablas salariales no respalden respuestas sobre otros temas. El Scheduler del monitor sigue siendo único y mensual; no se añadió un trabajo de ingesta ni se conectó el monitor a una descarga automática.
+
+El cambio está en `feat/convenio-document-ingestion`, commit `a578260`, PR #12 abierto en borrador. No se fusiona mientras la conexión automática al monitor y su validación documental sigan pendientes. `main` y `origin/main` permanecen en `77a1452`.
+
+El estado `REGCON_RESULT_INCOMPLETE` no se ha debilitado. La comprobación de solo lectura de la fase 8 no modificó estados; la reconciliación explícita posterior se registra a continuación.
+
+## Reconciliación explícita de estados heredados (14/10/2026)
+
+Se ejecutó `functions/reconcile-convenio-monitor.js --apply` una sola vez, tras vista previa y respaldo de los 28 estados y dos documentos de control. El modo especial seleccionó únicamente los 19 `source_check_failed` con `REGCON_RESULT_INCOMPLETE` y sin baseline. Cada fuente requirió la página oficial REGCON y su exportación Excel íntegra; las 19 fueron completas. El run `2026-10-1792009478011-ab53cbdd` registra `examined=28`, `checked=19`, `failed=0`, `deferred=2`, `newEntries=0`. Firestore quedó con **26 estados `source_checked` y 2 `blocked_missing_official_regcon_reference`** (fichas 18 y 27), sin duplicados ni novedades ficticias. Las siete fuentes ya completas no se adelantaron.
+
+Respaldo local recuperable: `C:\Users\mikel\AppData\Local\BalanceLaboral\firestore-backups\regcon-reconciliation-2026-10-14T20-24-37-975Z-b757bb79.json`; SHA-256 `e585f0fbe5ce377d217289b9bddb0f1a75d0103c4d6541f44947fba1c95827c6`. Las firmas y fechas antiguas permanecieron en el respaldo. No se restaurará en bloque si aparecen revisiones posteriores: cualquier recuperación debe comparar `updateTime` y reparar solo el documento afectado.
+
+La política de reintentos conserva una ejecución mensual por fuente fallida durante los primeros cinco errores. A partir del sexto, timeout, HTTP 429 o 5xx pasan a `source_check_degraded` con revisión bimestral; respuestas estructuralmente incompletas u otros bloqueos persistentes pasan a `source_check_retry_exhausted` con revisión semestral y causa explícita. Un resultado completo restablece el contador. El Scheduler mensual único no cambia.

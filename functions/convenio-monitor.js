@@ -159,6 +159,10 @@ function addCalendarMonths(date, months) {
   return result;
 }
 
+function isTransientSourceError(errorCode) {
+  return errorCode === "REGCON_TIMEOUT" || /^REGCON_HTTP_(?:429|5\d\d)$/.test(errorCode);
+}
+
 async function fetchRegcon(agreement, fetchImpl = fetch, { requestTimeoutMs = REQUEST_TIMEOUT_MS } = {}) {
   const url = new URL(agreement.sourceUrl);
   if (url.protocol !== "https:" || url.hostname !== REGCON_HOST || url.pathname !== "/regcon/pub/consultaCodigoMapas" || url.searchParams.get("convenioMapa") !== agreement.officialCode) {
@@ -227,6 +231,7 @@ async function runMonthlyConvenioReview(db, {
   now = new Date(),
   fetchImpl = fetch,
   log = console,
+  reconcileHistoricalFailures = false,
 } = {}) {
   const runId = now.toISOString().slice(0, 7);
   const leaseToken = crypto.randomUUID();
@@ -248,14 +253,17 @@ async function runMonthlyConvenioReview(db, {
 
   const counts = { examined: 0, checked: 0, newEntries: 0, pending: 0, blocked: 0, failed: 0, deferred: 0 };
   const started = Date.now();
-  await runRef.set({ runId, executionId, startedAt: now, status: "running", inventoryCount: inventory.length }, { merge: true });
+  await runRef.set({ runId, executionId, startedAt: now, status: "running", inventoryCount: inventory.length, reconciliation: reconcileHistoricalFailures }, { merge: true });
   try {
     for (const agreement of inventory) {
       const stateRef = db.collection(STATE_COLLECTION).doc(agreement.id);
       const stateSnapshot = await stateRef.get();
       const state = stateSnapshot.exists ? stateSnapshot.data() : null;
       counts.examined += 1;
-      if (!isDue(agreement, state, now)) {
+      const reconcile = reconcileHistoricalFailures && state?.status === "source_check_failed" &&
+        state.lastErrorCode === "REGCON_RESULT_INCOMPLETE" && !state.baselineEstablished &&
+        state.lastReconciliationRunId !== runId;
+      if (!reconcile && !isDue(agreement, state, now)) {
         if (/failed|blocked/.test(state?.status || "") || pendingEntryCount(state) > 0) counts.deferred += 1;
         continue;
       }
@@ -284,6 +292,8 @@ async function runMonthlyConvenioReview(db, {
           sourceCheck: "available",
           status: "source_checked",
           lastSuccessfulCheckAt: now,
+          lastAttemptAt: now,
+          ...(reconcile ? { lastReconciliationRunId: runId } : {}),
           nextReviewAt: addCalendarMonths(now, interval),
           baselineEstablished: true,
           lastErrorCode: null,
@@ -300,7 +310,8 @@ async function runMonthlyConvenioReview(db, {
         const errorCode = error.name === "AbortError" ? "REGCON_TIMEOUT" : String(error.message || "SOURCE_ERROR").slice(0, 80);
         const technicalFailureCount = (state?.technicalFailureCount || 0) + 1;
         const exhausted = technicalFailureCount >= MAX_TECHNICAL_RETRIES;
-        await stateRef.set({ agreementId: agreement.id, officialCode: agreement.officialCode, lastAttemptAt: now, nextReviewAt: addCalendarMonths(now, exhausted ? SIX_MONTHS : TWO_MONTHS), technicalFailureCount, lastErrorCode: errorCode, status: exhausted ? "source_check_retry_exhausted" : "source_check_failed" }, { merge: true });
+        const transient = isTransientSourceError(errorCode);
+        await stateRef.set({ agreementId: agreement.id, officialCode: agreement.officialCode, lastAttemptAt: now, nextReviewAt: addCalendarMonths(now, exhausted && !transient ? SIX_MONTHS : TWO_MONTHS), technicalFailureCount, lastErrorCode: errorCode, status: exhausted ? transient ? "source_check_degraded" : "source_check_retry_exhausted" : "source_check_failed", ...(reconcile ? { lastReconciliationRunId: runId } : {}) }, { merge: true });
         log.warn("convenio_monitor_source_failed", { runId, executionId, agreementId: agreement.id, officialCode: agreement.officialCode, errorCode, technicalFailureCount, exhausted });
       }
     }

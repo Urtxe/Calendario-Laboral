@@ -98,6 +98,7 @@ function parseRegconExport(xml, officialCode, expectedRows) {
     summary: cells.join(" ").slice(0, 260),
     registrationDate: /^\d{2}\/\d{2}\/\d{4}$/.test(cells[4] || "") ? cells[4] : null,
     transactionType: cells[2],
+    publicationUrl: /^https:\/\//i.test(cells[7] || "") ? cells[7] : null,
     occurrences,
   }));
 }
@@ -282,7 +283,7 @@ async function runMonthlyConvenioReview(db, {
         const newEntries = baseline ? [] : additions;
         counts.checked += 1;
         counts.newEntries += newEntries.length;
-        const pendingEntries = [...(state?.pendingEntries || []), ...newEntries.map(({ officialCode, signature, registrationDate, transactionType, summary, occurrences }) => ({ officialCode, signature, registrationDate, transactionType, summary, occurrences, status: "pending_documentary_verification", detectedAt: now }))];
+        const pendingEntries = [...(state?.pendingEntries || []), ...newEntries.map(({ officialCode, signature, registrationDate, transactionType, summary, publicationUrl, occurrences }) => ({ officialCode, signature, registrationDate, transactionType, summary, publicationUrl, occurrences, status: "pending_documentary_verification", detectedAt: now }))];
         const interval = reviewInterval(agreement, now, { pendingEntries });
         await stateRef.set({
           agreementId: agreement.id,

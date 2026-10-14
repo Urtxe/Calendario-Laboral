@@ -86,6 +86,30 @@ const FILE_METADATA_OVERRIDES = {
     salaryEvidenceWarning: "Las tablas verificadas cubren 2025. No constan aquí tablas oficiales verificadas para 2026 ni se declara actualizado el convenio completo.",
     applicationWarning: "Publicación complementaria de tablas salariales definitivas de 2025; no sustituye el texto completo del convenio ni determina por sí sola la aplicabilidad a una persona o empresa.",
   },
+  "BOG-2026-02-16-20100035012014-revision-salarial-2026.pdf": {
+    catalogKey: "alojamientos_gipuzkoa_revision_salarial_2026",
+    catalogTitle: "Revisión salarial 2026 — Alojamientos de Gipuzkoa",
+    province: "GIPUZKOA",
+    sectorKeys: ["alojamientos"],
+    yearStart: 2026,
+    yearEnd: 2026,
+    officialCode: "20100035012014",
+    publication: {
+      bulletin: "BOG",
+      number: 30,
+      date: "2026-02-16",
+      identifier: "GAO-I-2026-00553",
+      url: "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2026/02/16/c2600553.pdf",
+    },
+    officialSourceUrl: "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2026/02/16/c2600553.pdf",
+    sourceSha256: "a77d5fd34e2f1e54551ebea2eb0b51b18bbd6d0623f24ed50b89594e224c79a9",
+    sourcePageCount: 3,
+    sourceDocumentType: "salary_revision",
+    sourceVerification: "verified",
+    automaticIngestionEligible: true,
+    salaryEvidenceVerifiedThroughYear: 2026,
+    applicationWarning: "Revisión salarial publicada para 2026; complementa el convenio de alojamientos 2025–2028 y no determina por sí sola su aplicabilidad individual.",
+  },
   "estatuto_trabajadores.pdf": {
     sourceVerification: "verified",
     officialCode: "BOE-A-2015-11430",
@@ -717,7 +741,12 @@ function resolveCatalogEntry(catalogEntries, criteria) {
     };
   }
 
-  const sortedCandidates = verifiedCandidates.sort((a, b) => {
+  const salaryYear = requestedYears.length === 1 ? requestedYears[0] : !requestedYears.length ? new Date().getFullYear() : null;
+  const salarySupplements = criteria.isSalaryQuery && salaryYear != null
+    ? verifiedCandidates.filter((entry) => ["salary_tables", "salary_revision"].includes(entry.sourceDocumentType) &&
+      entry.yearStart <= salaryYear && entry.yearEnd >= salaryYear)
+    : [];
+  const sortedCandidates = (salarySupplements.length ? salarySupplements : verifiedCandidates).sort((a, b) => {
     const yearA = a.yearEnd || 0;
     const yearB = b.yearEnd || 0;
     return yearB - yearA || a.title.localeCompare(b.title, "es");

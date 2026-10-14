@@ -171,3 +171,14 @@ assert.strictEqual(
   "transporte_barcelona_tablas_2025",
 );
 assert.strictEqual(hasUnindexedSalaryEvidence(barcelonaTables[0], "salario en 2026", 2026), true);
+
+const gipuzkoaRevisionFile = "BOG-2026-02-16-20100035012014-revision-salarial-2026.pdf";
+const gipuzkoaRevision = parseConvenioFileName(gipuzkoaRevisionFile);
+assert.strictEqual(gipuzkoaRevision.officialCode, "20100035012014");
+assert.strictEqual(gipuzkoaRevision.sourceDocumentType, "salary_revision");
+const gipuzkoaCatalog = buildCatalogEntriesFromFileNames([
+  "Convenio Alojamientos GIPUZKOA 2025-2028.pdf", gipuzkoaRevisionFile,
+]);
+assert.strictEqual(resolveCatalogEntry(gipuzkoaCatalog, detectConvenioCriteria({ pregunta: "salario alojamientos Gipuzkoa 2026" })).entry.id, gipuzkoaRevision.catalogKey);
+assert.notStrictEqual(resolveCatalogEntry(gipuzkoaCatalog, detectConvenioCriteria({ pregunta: "jornada alojamientos Gipuzkoa 2026" })).entry.id, gipuzkoaRevision.catalogKey);
+assert.notStrictEqual(resolveCatalogEntry(gipuzkoaCatalog, detectConvenioCriteria({ pregunta: "salario alojamientos Gipuzkoa 2025" })).entry.id, gipuzkoaRevision.catalogKey);

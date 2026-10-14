@@ -288,6 +288,10 @@ async function upsertCatalogForFileNames(fileNames, sourceDocument = null) {
     const current = existing.exists ? existing.data() : {};
     const documentSources = Array.isArray(current.documentSources) ? current.documentSources : [];
     if (sourceDocument) {
+      if (current.fileNames?.some((name) => !entry.fileNames.includes(name)) ||
+          (current.fileNames?.includes(sourceDocument.fileName) && current.sourceSha256 && current.sourceSha256 !== sourceDocument.sourceSha256)) {
+        throw new Error(`La entrada de catálogo ${docRef.id} ya cubre otra edición; se requiere cotejo antes de modificarla.`);
+      }
       const previous = documentSources.find((item) => item.fileName === sourceDocument.fileName);
       if (previous && previous.sourceSha256 !== sourceDocument.sourceSha256) {
         throw new Error(`La fuente del catálogo ${docRef.id} cambió de checksum; se requiere revisión manual.`);

@@ -207,6 +207,24 @@ test("fallos por resultado incompleto no avanzan última revisión correcta ni c
   assert.deepEqual(state.pendingEntries, []);
 });
 
+test("seis fallos distinguen bloqueo persistente de HTTP temporal", async () => {
+  const agreement = inventory.find((item) => item.sourceUrl);
+  const now = new Date("2026-10-13T10:00:00Z");
+  for (const [failedFetch, expectedStatus, expectedReview] of [
+    [async () => response("error", "text/html", 503), "source_check_degraded", "2026-12-13T10:00:00.000Z"],
+    [async (_url, options) => options.method === "GET" ? response(regconPage(agreement.officialCode, 18)) : response(regconExport(agreement.officialCode, []), "application/vnd.ms-excel"), "source_check_retry_exhausted", "2027-04-13T10:00:00.000Z"],
+  ]) {
+    const db = memoryDb();
+    for (const item of inventory) db.values.set(`convenio_monitor_state/${item.id}`, { nextReviewAt: new Date("2027-01-01T00:00:00Z") });
+    db.values.set(`convenio_monitor_state/${agreement.id}`, { status: "source_check_failed", technicalFailureCount: 5, lastAttemptAt: new Date("2026-09-13T10:00:00Z") });
+    await assert.rejects(runMonthlyConvenioReview(db, { now, fetchImpl: failedFetch, log: { info() {}, warn() {} } }), /comprobación de fuentes falló/);
+    const state = db.values.get(`convenio_monitor_state/${agreement.id}`);
+    assert.equal(state.status, expectedStatus);
+    assert.equal(state.technicalFailureCount, 6);
+    assert.equal(state.nextReviewAt.toISOString(), expectedReview);
+  }
+});
+
 test("la primera exportación completa tras una parcial establece baseline sin alertas históricas", async () => {
   const db = memoryDb();
   const agreement = inventory.find((item) => item.sourceUrl);
@@ -224,6 +242,37 @@ test("la primera exportación completa tras una parcial establece baseline sin a
   const completeSignature = crypto.createHash("sha256").update(rows[0].join("\u001f")).digest("hex");
   assert.deepEqual(state.knownSignatures.sort(), [partialSignature, completeSignature].sort());
   assert.equal(state.pendingEntries.length, 0);
+});
+
+test("reconciliación explícita comprueba un fallo heredado sin adelantar los demás estados", async () => {
+  const db = memoryDb();
+  const agreement = inventory.find((item) => item.sourceUrl);
+  const now = new Date("2026-10-14T12:00:00Z");
+  const row = [agreement.officialCode, "SECTOR", "CONVENIO COLECTIVO", "Madrid", "01/01/2024", "01/01/2024", "31/12/2028", ""];
+  for (const item of inventory) db.values.set(`convenio_monitor_state/${item.id}`, {
+    nextReviewAt: new Date("2026-12-13T00:00:00Z"), status: "source_checked",
+  });
+  db.values.set(`convenio_monitor_state/${agreement.id}`, {
+    status: "source_check_failed", lastErrorCode: "REGCON_RESULT_INCOMPLETE", baselineEstablished: false,
+    knownSignatures: [], pendingEntries: [], lastAttemptAt: new Date("2026-10-13T10:00:00Z"),
+    nextReviewAt: new Date("2026-12-13T00:00:00Z"),
+  });
+  const fetchImpl = exportFetch(agreement.officialCode, [row]);
+  const result = await runMonthlyConvenioReview(db, { now, fetchImpl, reconcileHistoricalFailures: true, log: { info() {}, warn() {} } });
+  const state = db.values.get(`convenio_monitor_state/${agreement.id}`);
+  assert.equal(result.checked, 1);
+  assert.equal(result.newEntries, 0);
+  assert.equal(fetchImpl.calls, 2);
+  assert.equal(state.status, "source_checked");
+  assert.equal(state.baselineEstablished, true);
+  assert.equal(state.pendingEntries.length, 0);
+  assert.equal(state.knownSignatures.length, 1);
+  assert.equal(state.lastReconciliationRunId, "2026-10");
+  assert.equal(state.lastSuccessfulCheckAt.toISOString(), now.toISOString());
+  assert.equal(state.nextReviewAt.toISOString(), "2026-12-14T12:00:00.000Z");
+  db.values.get("convenio_monitor_control/monthly_lock").expiresAt = now;
+  const again = await runMonthlyConvenioReview(db, { now: new Date("2026-10-14T12:01:00Z"), fetchImpl: () => { throw new Error("unexpected fetch"); }, reconcileHistoricalFailures: true, log: { info() {}, warn() {} } });
+  assert.equal(again.status, "already_complete");
 });
 
 test("la revisión es idempotente incluso si la firma está en pendientes y no en la lista limitada", async () => {

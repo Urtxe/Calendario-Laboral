@@ -142,6 +142,7 @@ test("stores original PDFs immutably and detects a hash collision", async () => 
 
 test("classifies only document types supported by deterministic title rules", () => {
   assert.equal(classifyOfficialDocument("Tablas salariales 2026"), "salary_tables");
+  assert.equal(classifyOfficialDocument("Revisión de tablas salariales 2026"), "salary_revision");
   assert.equal(classifyOfficialDocument("Corrección de errores"), "error_correction");
   assert.equal(classifyOfficialDocument("Prórroga del convenio"), "extension");
   assert.equal(classifyOfficialDocument("Convenio colectivo texto nuevo"), "collective_agreement");

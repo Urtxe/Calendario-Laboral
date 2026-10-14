@@ -116,8 +116,8 @@ async function storeOfficialPdf(bucket, objectName, document) {
 function classifyOfficialDocument(title) {
   const value = String(title || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (/correccion/.test(value)) return "error_correction";
-  if (/tabla|tablas salariales|salario/.test(value)) return "salary_tables";
   if (/revision salarial|revision de tablas/.test(value)) return "salary_revision";
+  if (/tabla|salario/.test(value)) return "salary_tables";
   if (/prorroga/.test(value)) return "extension";
   if (/modificacion|modifica/.test(value)) return "partial_amendment";
   if (/acuerdo complementario|acuerdo de comision paritaria/.test(value)) return "complementary_agreement";

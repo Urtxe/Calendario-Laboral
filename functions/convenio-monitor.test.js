@@ -5,6 +5,11 @@ const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const { inventory, parseRegconRows, parseRegconExport, announcedResultCount, isDue, pendingEntryCount, documentaryRetryDue, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview } = require("./convenio-monitor");
 
+assert.equal(inventory.find((item) => item.id === "convenio-18").officialCode, "79002415012005");
+assert.equal(inventory.find((item) => item.id === "convenio-18").sourceCheck, "available");
+assert.equal(inventory.find((item) => item.id === "convenio-27").manualReview.source, "BON");
+assert.equal(inventory.find((item) => item.id === "convenio-27").manualReview.frequencyMonths, 1);
+
 function regconPage(code, total = 2) {
   return `<html><form action="/regcon/pub/consultaCodigoMapas?convenioMapa=${code}"></form><span>Resultados 1 - ${Math.min(15, total)} de ${total}</span><a href="/regcon/pub/consultaCodigoMapas?pagina=2">2</a>${code}</html>`;
 }
@@ -64,6 +69,8 @@ test("inventario deriva exactamente las 28 fichas documentales, sin crear otra l
   assert.deepEqual(inventory.map((item) => item.number), Array.from({ length: 28 }, (_, index) => index + 1));
   assert.ok(inventory.every((item) => item.id && item.title));
   assert.equal(inventory.find((item) => item.number === 26).pactEndYear, 2009, "la cadencia usa el periodo verificado del convenio, no el nombre local del PDF");
+assert.equal(inventory.find((item) => item.number === 24).pactEndYear, 2028, "interpreta el periodo abreviado 2026–28 del convenio de Barcelona");
+assert.equal(inventory.find((item) => item.number === 28).pactEndYear, 2028, "interpreta el periodo abreviado 2026–28 del convenio de Zaragoza");
 });
 
 test("selecciona revisión bimestral con pendientes, periodo pactado terminado o fuente incompleta", () => {
@@ -200,20 +207,28 @@ test("primera ejecución establece baseline sin convertir asientos históricos e
     log: { info: (...args) => logs.push(args), warn: (...args) => logs.push(args) },
   });
   assert.equal(result.examined, 28);
-  assert.equal(result.blocked, 2);
-  assert.equal(result.checked, 26);
+  assert.equal(result.blocked, 1);
+  assert.equal(result.checked, 27);
   assert.equal(result.status, "partial");
   assert.equal(result.geminiCalls, 0);
   assert.equal(db.values.get("convenio_monitor_state/convenio-16").lastResult, "baseline_established_no_historical_novelties");
   assert.equal(db.values.get("convenio_monitor_state/convenio-16").pendingEntries.length, 0);
   assert.equal(db.values.get("convenio_monitor_state/convenio-16").knownSignatures.length, 1);
-  assert.equal(db.values.get("convenio_monitor_state/convenio-18").status, "blocked_missing_official_regcon_reference");
-  assert.equal(isDue(inventory.find((item) => item.id === "convenio-18"), db.values.get("convenio_monitor_state/convenio-18"), new Date(now.getTime() + 24 * 60 * 60 * 1000)), false);
+  assert.equal(db.values.get("convenio_monitor_state/convenio-18").status, "source_checked");
+  assert.equal(db.values.get("convenio_monitor_state/convenio-27").status, "blocked_missing_official_regcon_reference");
+  assert.equal(db.values.get("convenio_monitor_state/convenio-27").manualReview.source, "BON");
+  assert.equal(logs.filter(([event]) => event === "convenio_manual_review_required").length, 1);
+  const manualWarning = logs.find(([event]) => event === "convenio_manual_review_required")[1];
+  assert.equal(manualWarning.agreementId, "convenio-27");
+  assert.equal(manualWarning.source, "BON");
+  assert.match(manualWarning.publication, /bon\.navarra\.es/);
+  assert.equal(isDue(inventory.find((item) => item.id === "convenio-27"), db.values.get("convenio_monitor_state/convenio-27"), new Date(now.getTime() + 24 * 60 * 60 * 1000)), false);
+  assert.equal(isDue(inventory.find((item) => item.id === "convenio-27"), db.values.get("convenio_monitor_state/convenio-27"), new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))), true);
   assert.ok(db.values.get("convenio_monitor_control/monthly_lock").expiresAt <= new Date());
   const second = await runMonthlyConvenioReview(db, { now: new Date(now.getTime() + 60_000), fetchImpl: async () => { fetchCount += 1; throw new Error("unexpected refetch"); }, log: { info() {}, warn() {} } });
   assert.equal(second.status, "partial");
   assert.equal(second.checked, 0);
-  assert.equal(fetchCount, 52);
+  assert.equal(fetchCount, 54);
   assert.equal(db.values.get("convenio_monitor_state/convenio-16").pendingEntries.length, 0);
   const executions = [...db.values.entries()].filter(([path]) => path.startsWith("convenio_monitor_runs/"));
   assert.equal(executions.length, 2);

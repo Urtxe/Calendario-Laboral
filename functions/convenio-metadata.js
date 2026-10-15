@@ -62,6 +62,23 @@ const FILE_METADATA_OVERRIDES = {
     sourceVerification: "unverified",
     documentaryWarning: "El PDF local indica 2011–2023. El BOPB publicó un convenio sectorial posterior de transporte de mercancías por carretera y logística para 2023–2025 (código 08004295011994) y tablas definitivas de 2025 en 2026. No presentar el PDF local como edición actual; el texto posterior debe descargarse, cotejarse por ámbito e incorporarse antes de responder sobre condiciones actuales.",
   },
+  "Convenio Limpieza edificios Barcelona 2022-2025.pdf": {
+    officialCode: "79002415012005",
+    publication: {
+      bulletin: "DOGC",
+      number: 8921,
+      date: "2023-05-23",
+      identifier: "CVE-DOGC-A-23139017-2023",
+      url: "https://dogc.gencat.cat/ca/document-del-dogc/?documentId=960937",
+    },
+    sourceVerification: "unverified",
+    documentaryWarning: "El instrumento oficial identificado es el convenio catalán de limpieza de edificios y locales 2022–2025, código 79002415012005, con ámbito Cataluña. El PDF local es un resumen sindical, no el texto íntegro oficial; no utilizarlo como evidencia jurídica. REGCON registra además modificación de 2025 y acuerdo parcial de 2026 pendientes de cotejo documental.",
+  },
+  "Convenio Transporte Navarra 2007-2008.pdf": {
+    officialCode: "3107405",
+    sourceVerification: "unverified",
+    documentaryWarning: "El instrumento histórico se identifica como el convenio navarro de transporte de mercancías 2007–2008, Resolución 625/2008 y código BON 3107405. La copia local no tiene procedencia e integridad cotejadas con el BON; tampoco acredita sucesión ni vigencia actual. No utilizar como fuente confirmada.",
+  },
   "BOPB-2026-03-16-08004295011994-tablas-2025.pdf": {
     catalogKey: "transporte_barcelona_tablas_2025",
     catalogTitle: "Tablas salariales 2025 — Transporte de mercancías Barcelona",

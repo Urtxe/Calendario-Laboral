@@ -135,6 +135,11 @@ async function readBoundedText(response, maxBytes) {
 
 function isDue(agreement, state, now) {
   if (agreement.sourceUrl && state?.status === "blocked_missing_official_regcon_reference" && state.officialCode !== agreement.officialCode) return true;
+  if (agreement.manualReview && state?.status === "blocked_missing_official_regcon_reference") {
+    const lastAttempt = state.lastAttemptAt?.toDate ? state.lastAttemptAt.toDate() : new Date(state.lastAttemptAt);
+    if (!state.lastAttemptAt || Number.isNaN(lastAttempt.getTime())) return true;
+    return `${lastAttempt.getUTCFullYear()}-${String(lastAttempt.getUTCMonth() + 1).padStart(2, "0")}` !== `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  }
   if (state?.status === "source_check_failed" && (state.technicalFailureCount || 0) < MAX_TECHNICAL_RETRIES) {
     const lastAttempt = state.lastAttemptAt?.toDate ? state.lastAttemptAt.toDate() : new Date(state.lastAttemptAt);
     if (!state.lastAttemptAt || Number.isNaN(lastAttempt.getTime())) return true;
@@ -291,7 +296,20 @@ async function runMonthlyConvenioReview(db, {
       if (!agreement.sourceUrl) {
         counts.blocked += 1;
         counts.pending += 1;
-        await stateRef.set({ agreementId: agreement.id, officialCode: null, status: "blocked_missing_official_regcon_reference", sourceCheck: agreement.sourceCheck, lastAttemptAt: now, nextReviewAt: addCalendarMonths(now, reviewInterval(agreement, now)) }, { merge: true });
+        const followUpMonths = agreement.manualReview?.frequencyMonths || reviewInterval(agreement, now);
+        await stateRef.set({ agreementId: agreement.id, officialCode: null, status: "blocked_missing_official_regcon_reference", sourceCheck: agreement.sourceCheck, lastAttemptAt: now, nextReviewAt: addCalendarMonths(now, followUpMonths), ...(agreement.manualReview ? { manualReview: agreement.manualReview } : {}) }, { merge: true });
+        log.warn("convenio_manual_review_required", {
+          runId,
+          executionId,
+          agreementId: agreement.id,
+          agreement: agreement.title,
+          source: agreement.manualReview?.source || "REGCON",
+          publication: agreement.manualReview?.url || null,
+          problem: agreement.sourceCheck || "missing_official_source_reference",
+          status: "blocked_missing_official_regcon_reference",
+          actionRequired: agreement.manualReview?.action || "Acreditar la fuente oficial antes de habilitar seguimiento automático.",
+          nextReviewAt: addCalendarMonths(now, followUpMonths).toISOString(),
+        });
         continue;
       }
       try {

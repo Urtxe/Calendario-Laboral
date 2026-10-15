@@ -111,3 +111,14 @@ El contenido y el marco temporal se cotejaron con la [Ley 4/2026 publicada en el
 | 14 (revalidación final) | `consultarconvenio-00047-ruz` |
 
 **Total final: 16 PASS, 0 FAIL, 0 BLOCKED, 0 NOT RUN en los 16 escenarios.** Se acumulan 23 consultas reales a Gemini: 22 previas y una única consulta para este cierre. Coste incremental estimado de esta consulta: inferior a USD 0,01; coste acumulado estimado: inferior a USD 0,12. Es una estimación operativa, no una medición de factura.
+
+## Revalidación focal tras saneamiento de fuentes (15/10/2026)
+
+El PR #24 desplegó overrides que excluyen del resolver la copia no cotejada de Limpieza Barcelona y la copia histórica de Transporte Navarra. Se intentó preparar una comprobación autenticada focal en producción para estas dos rutas, contra `consultarconvenio-00048-giv`:
+
+| Escenario | Estado | Entorno / motivo |
+|---|---|---|
+| Limpieza Barcelona, consulta sobre el convenio identificado en la ficha | BLOCKED | Producción. La superficie de navegador controlable devolvió `apps=[]`, `browsers=[]`; el navegador IAB no estaba disponible y el proceso Edge no exponía un puerto de depuración. No se pudo enviar la pregunta ni observar la respuesta autenticada. |
+| Transporte Navarra, consulta histórica 2007–2008 | BLOCKED | Producción. Mismo bloqueo de navegador; no se envió la pregunta ni se consumió Gemini. |
+
+La resolución unitaria de `source_unverified` y los overrides pasan en `convenio-metadata.test.js`; esto no sustituye la validación de las respuestas visibles del asesor. Los 16 escenarios de la tabla anterior conservan sus resultados históricos; esta revalidación adicional no se cuenta como PASS ni altera su denominador. Consultas Gemini adicionales: 0; coste incremental: USD 0 estimado. Para repetirla se necesita una sesión de navegador autenticada expuesta a la herramienta de control aprobada, sin exportar cookies ni tokens.

@@ -12,6 +12,7 @@ const {
 const {
   activateChunkSet,
   validateChunkSet,
+  omitUndefinedFields,
   reserveEmbeddingBudget,
   rollbackChunkSet,
   MAX_EMBEDDING_TOKENS_PER_DOCUMENT,
@@ -82,6 +83,25 @@ function activationArgs(db) {
     now: new Date("2026-10-14T12:00:00Z"),
   };
 }
+
+test("omits undefined catalog fields without changing dates or SDK value objects", () => {
+  class SdkValue { constructor(value) { this.value = value; } }
+  const sdkValue = new SdkValue("server timestamp sentinel");
+  const result = omitUndefinedFields({
+    present: "ok",
+    absent: undefined,
+    nested: [{ retained: 1, missing: undefined }],
+    date: new Date("2026-01-01T00:00:00Z"),
+    sdkValue,
+  });
+  assert.deepEqual(result, {
+    present: "ok",
+    nested: [{ retained: 1 }],
+    date: new Date("2026-01-01T00:00:00Z"),
+    sdkValue,
+  });
+  assert.equal(result.sdkValue, sdkValue);
+});
 
 test("accepts only HTTPS URLs on the exact official host allowlist", () => {
   assert.equal(assertOfficialHttpsUrl("https://bop.diba.cat/doc.pdf", ["bop.diba.cat"]).hostname, "bop.diba.cat");

@@ -2563,10 +2563,17 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
         }
 
         if (convenioFileName || consultaNormativaBase || requiereContextoConvenio) {
+            const fechaHoyMadrid = new Intl.DateTimeFormat("en-CA", {
+                timeZone: "Europe/Madrid",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+            }).format(new Date());
+            const fechaEstatutoFutura = consultaNormativaBase && seleccionEstatuto?.asOfDate > fechaHoyMadrid;
             const message = convenioFileName
                 ? "No he podido confirmar ese dato con los fragmentos verificados del convenio. Consulta la publicación oficial o formula una pregunta más concreta."
                 : consultaNormativaBase
-                    ? "No he podido confirmar ese dato con los fragmentos verificados del Estatuto para la fecha indicada. Consulta la publicación oficial o formula una pregunta más concreta."
+                    ? `${fechaEstatutoFutura ? `La fecha consultada (${seleccionEstatuto.asOfDate}) es futura respecto de hoy (${fechaHoyMadrid}); el cambio aún no está vigente. ` : ""}No he podido confirmar ese dato con los fragmentos verificados del Estatuto para la fecha indicada. Consulta la publicación oficial o formula una pregunta más concreta.`
                     : "No he localizado una fuente verificada para ese convenio. Indica el sector, la provincia y el año, o consulta el boletín oficial.";
             const payload = construirRespuestaConsulta({
                 respuesta: message,

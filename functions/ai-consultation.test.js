@@ -75,6 +75,8 @@ test("el Estatuto se selecciona por fecha antes de la búsqueda vectorial y fall
   assert.match(active, /El texto consolidado del BOE es informativo/);
   assert.match(active, /debeResolverConvenio = !consultaNormativaBase \|\| solicitudConvenioEspecifico/);
   assert.match(active, /La fecha consultada .* es futura respecto de hoy/);
+  assert.match(active, /fechaEstatutoFutura = consultaNormativaBase && seleccionEstatuto\?\.asOfDate > fechaHoyMadrid/);
+  assert.match(active, /el cambio aún no está vigente/);
   assert.match(source, /applyKnownSourceVerificationOverrides/);
 });
 

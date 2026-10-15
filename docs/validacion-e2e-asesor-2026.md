@@ -52,20 +52,20 @@ La ejecución autenticada descrita más abajo es histórica y corresponde a `con
 
 | Caso | Estado | Fuente seleccionada | Resultado observado |
 |---|---|---|---|
-| 1. Barcelona, salarios 2025 | **FAIL** | BOPB, `transporte_barcelona_tablas_2025` | Citó la publicación correcta, pero asignó a «Oficial 1.ª» €27.454,20; la tabla oficial indica €29.442,65. El «Jefe de Servicio» €42.249,20 sí coincide. |
+| 1. Barcelona, salarios 2025 | **FAIL → PASS** | BOPB, `transporte_barcelona_tablas_2025` | Primera respuesta asignó a «Oficial 1.ª» €27.454,20. Tras el cambio, la respuesta identifica la tabla BOPB definitiva de 2025 y las categorías, sin inventar un importe de categoría no solicitada. La tabla oficial indica Oficial 1.ª €29.442,65 y Jefe de Servicio €42.249,20. |
 | 2. Barcelona, convenio 2027 | **PASS** | `Convenio Transporte Barcelona 2026-2028.pdf` | Identificó el convenio nuevo y su periodo; cita visible correcta. |
 | 3. Barcelona, salarios 2026 | **PASS** | `Convenio Transporte Barcelona 2026-2028.pdf` | Seleccionó el ejercicio y documento correctos y no usó la tabla 2025. Los importes individuales no se cotejaron externamente en esta ejecución. |
 | 4. Barcelona, consulta histórica 2022 | **PASS** | Sin fuente histórica acreditada | Indicó que no podía confirmar el convenio histórico; no presentó el agregado 2011–2023 como fuente verificada. |
-| 5. Zaragoza, convenio 2024 | **FAIL** | `Convenio Transporte Zaragoza 2022-2025.pdf` | Afirmó el histórico como aplicable pese a que su procedencia e integridad no estaban verificadas en el catálogo. |
+| 5. Zaragoza, convenio 2024 | **FAIL → PASS** | No se recuperó fuente histórica verificada | Tras el cambio, informó que no podía confirmar la edición; no presentó el documento agregado como fuente verificada. |
 | 6. Zaragoza, convenio 2027 | **PASS** | BOPZ, anuncio 6101/2026 | Identificó la publicación oficial y el periodo 2026–2028; cita correcta. |
-| 7. Zaragoza, salarios y dietas 2026 | **FAIL** | BOPZ, anuncio 6101/2026 | Dio efectos salariales generales desde 01/01/2026, pero situó dietas en octubre; el metadato verificado establece 01/07/2026. |
+| 7. Zaragoza, salarios y dietas 2026 | **FAIL → PASS** | BOPZ, anuncio 6101/2026; `Convenio Transporte Zaragoza 2026-2028.pdf` | Tras el cambio, citó salarios desde 01/01/2026 y dietas desde 01/07/2026; también mostró que la entrada en vigor general es 20/09/2026. La traza confirmó solo chunks del convenio oficial. |
 | 8. Alojamientos Gipuzkoa 2026 | **PASS** | `BOG-2026-02-16-20100035012014-revision-salarial-2026.pdf` | Recuperó y citó la revisión oficial BOG 2026. Los importes no se cotejaron independientemente en esta pasada. |
 | 9. Restauración Gipuzkoa 2026 | **PASS** | `BOG-2026-02-13-20104585012023-revision-salarial-2026.pdf` | Recuperó la revisión BOG y contestó el incremento publicado de 5,9%; cita correcta. |
 | 10. Alojamientos Gipuzkoa, vacaciones | **PASS** | `Convenio Alojamientos GIPUZKOA 2025-2028.pdf` y Estatuto | Usó el texto principal para la cuestión no salarial, no la revisión salarial como sustituto. |
 | 11. Limpieza Zaragoza 2027 | **PASS** | `Convenio Limpieza edificios Zaragoza 2026-2029.pdf` | Identificó el convenio nuevo y el periodo aplicable; cita correcta. |
 | 12. Limpieza Zaragoza 2024 | **PASS** | `Convenio Limpieza edificios Zaragoza 2022-2025.pdf` | No mezcló el documento 2026–2029. La procedencia histórica no se revalidó independientemente en esta pasada. |
-| 13. Estatuto, 15/10/2026 | **FAIL** | `estatuto_trabajadores_parte1.pdf` más chunks de convenio ajenos | El resumen estatutario era temporalmente pertinente, pero la interfaz atribuyó la fuente a «tu convenio» y añadió advertencias de otro convenio. La traza confirmó recuperación de chunks ajenos. |
-| 14. Estatuto desde 23/10/2026 | **FAIL** | `estatuto_trabajadores_2026-10-03.pdf` más chunks de convenio ajenos | No aclaró que la fecha consultada aún era futura al 15/10 y mostró etiqueta/advertencia ajenas al Estatuto. |
+| 13. Estatuto, 15/10/2026 | **FAIL → PASS** | `estatuto_trabajadores_parte1.pdf`, edición `PUB-DT-2025-139` | Tras el cambio, respondió con la edición anterior y etiqueta de normativa general; la traza contiene únicamente chunks de Estatuto y no advierte sobre otro convenio. |
+| 14. Estatuto desde 23/10/2026 | **FAIL** | `estatuto_trabajadores_2026-10-03.pdf`, edición BOE-A-2015-11430 consolidada al 03/10; fecha objetivo 23/10/2026 | La traza seleccionó solo chunks del Estatuto y la edición prevista, sin chunks de convenios. Gemini se abstuvo por evidencia insuficiente, pero no explicó que la fecha era futura. Se añadió después una respuesta determinista para explicitarlo; por el límite de 21 consultas reales, esa última corrección no tuvo repetición E2E. |
 | 15. Hostelería Málaga, salarios 2026 | **PASS** | Fuentes del catálogo con aviso de documento completo pendiente | Rehusó dar cifras exactas no acreditadas. |
 | 16. Transporte Gipuzkoa, salarios 2012 | **PASS** | Sin fuente histórica acreditada para el ejercicio | Reconoció falta de evidencia y no inventó un importe. |
 
@@ -73,9 +73,9 @@ La ejecución autenticada descrita más abajo es histórica y corresponde a `con
 
 ### Correcciones y revalidación pendiente
 
-Se corrigieron cinco causas reproducibles: (1) el asesor escogía importes de ejemplo sin que se indicara categoría; (2) el histórico de Transporte Zaragoza se trataba como verificado; (3) el modelo infería fechas de dietas de una cláusula general, ignorando la fecha estructurada; (4–5) las consultas solo sobre el Estatuto heredaban el convenio del perfil y no advertían que el 23/10 todavía era futuro. La corrección bloquea el histórico no verificado, aplica metadatos locales también a entradas del catálogo Firestore, separa consultas normativas base del convenio del perfil y refuerza las instrucciones de generación.
+Las cinco consultas de regresión (casos 1, 5, 7, 13 y 14) se ejecutaron una vez cada una contra `consultarconvenio-00045-ves`, después de desplegar el commit `cdbe861`. Los cuatro primeros casos se corrigieron y pasaron en la interfaz. El caso 14 se abstuvo correctamente de afirmar el contenido futuro, y la traza confirmó la selección temporal correcta, pero no explicó que la fecha era futura. Tras consumir el límite autorizado de 21 consultas reales, se añadió una respuesta determinista para indicar que el cambio aún no está vigente y se cubrió con test local; esa última corrección no se volvió a invocar en producción.
 
-Las cinco consultas de regresión (casos 1, 5, 7, 13 y 14) se ejecutarán una vez cada una después de desplegar la corrección; tope total autorizado: 21 consultas reales, sin reintentos adicionales. El estado definitivo de esas cinco filas se anotará aquí tras observar respuestas y trazas de la revisión desplegada. No se presenta su corrección local como una revalidación E2E.
+**Resultado E2E observado:** 15 PASS, 1 FAIL, 0 BLOCKED, 0 NOT RUN considerando los 16 casos y sus reintentos de regresión; total 21 consultas reales. Caso 14 queda señalado como fallo de comunicación observado en `00045-ves`, con corrección posterior local/desplegada pendiente de validación generativa por el límite acordado. No se realizaron consultas Gemini adicionales ni se amplió el presupuesto. Coste estimado de las 21 consultas: menos de USD 0,10; no es una medición de factura.
 
 ## Historial: ejecución autenticada, 15/10/2026 (`00031-jus`)
 

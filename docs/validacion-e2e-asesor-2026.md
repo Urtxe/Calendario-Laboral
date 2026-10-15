@@ -75,7 +75,7 @@ La ejecución autenticada descrita más abajo es histórica y corresponde a `con
 
 Las cinco consultas de regresión (casos 1, 5, 7, 13 y 14) se ejecutaron una vez cada una contra `consultarconvenio-00045-ves`, después de desplegar el commit `cdbe861`. Los cuatro primeros casos se corrigieron y pasaron en la interfaz. El caso 14 se abstuvo correctamente de afirmar el contenido futuro, y la traza confirmó la selección temporal correcta, pero no explicó que la fecha era futura. Se añadió una respuesta determinista para el fallback, se cubrió con test local y se desplegó desde `main` (`a8a4dd7`) en `00046-puw`.
 
-**Resultado E2E observado:** 15 PASS, 1 FAIL, 0 BLOCKED, 0 NOT RUN considerando los 16 escenarios y los reintentos; 22 consultas reales. En esta verificación individual, la consulta autorizada del caso 14 contra `00046-puw` volvió a fallar en el aviso temporal. La causa fue que el prefijo determinista solo se aplicaba al fallback; las respuestas Gemini utilizables omitían la fecha. El PR [#21](https://github.com/Urtxe/Calendario-Laboral/pull/21) añadió un prefijo temporal obligatorio a toda respuesta generada del Estatuto cuya fecha seleccionada sea futura, con test de regresión, y se desplegó en `consultarconvenio-00047-ruz` desde el merge `64683bd`. No se repitió la consulta después de ese despliegue porque el encargo autorizaba una sola llamada, ya consumida. Coste estimado acumulado: menos de USD 0,11; no es una medición de factura.
+**Resultado E2E observado antes de la revalidación final:** 15 PASS, 1 FAIL, 0 BLOCKED, 0 NOT RUN considerando los 16 escenarios y los reintentos; 22 consultas reales. En esa verificación, la consulta autorizada del caso 14 contra `00046-puw` falló en el aviso temporal. La causa fue que el prefijo determinista solo se aplicaba al fallback; las respuestas Gemini utilizables omitían la fecha. El PR [#21](https://github.com/Urtxe/Calendario-Laboral/pull/21) añadió un prefijo temporal obligatorio a toda respuesta generada del Estatuto cuya fecha seleccionada sea futura, con test de regresión, y se desplegó en `consultarconvenio-00047-ruz` desde el merge `64683bd`. La revalidación final de `00047-ruz` se registra abajo.
 
 ## Historial: ejecución autenticada, 15/10/2026 (`00031-jus`)
 
@@ -91,3 +91,23 @@ La solicitud actual autorizó la comprobación E2E. Se creó una identidad tempo
 | Hostelería Málaga, salario 2026 | `unconfirmed`; la protección contra tablas no indexadas actuó antes de dar un importe. |
 
 Se corrigió el detector de “revisión salarial”, la recuperación RAG de la norma base y el tratamiento de respuestas truncadas. Una salida `MAX_TOKENS` ya no se marca como fundamentada; si se ha identificado un convenio, se pide uno que no tiene fuente verificada o se pide el Estatuto y no hay respuesta fundada, se devuelve `unconfirmed` en lugar de generar una afirmación general sin citas. La consulta del artículo 37.6 necesitó enriquecer la búsqueda con la materia del apartado y pedir una explicación que incluya límites y supuestos; las dos ediciones dieron después respuestas finales con sus fuentes respectivas. Las identidades temporales se eliminaron tras cada pasada.
+
+## Cierre final del caso 14 (15/10/2026)
+
+**Resultado: PASS.** Se realizó una única consulta autenticada real en `https://balancelaboral.es`, el 15/10/2026 a las 17:35 (hora de Madrid), contra `consultarconvenio-00047-ruz`. No se repitieron los otros escenarios.
+
+Pregunta: «¿Qué establece el artículo 37.6 del Estatuto de los Trabajadores a partir del 23 de octubre de 2026?» La respuesta visible indicó que al 15/10/2026 seguía vigente la redacción anterior, que el 23/10/2026 era una fecha futura y que el texto descrito era el previsto para esa fecha, no el vigente entonces. Resumió la reducción por cuidado y los supuestos reforzados de gran discapacidad/dependencia y corresponsabilidad parental; no mezcló convenios sectoriales. La cita visible identificó `BOE-A-2015-11430` y la edición consolidada de 03/10/2026.
+
+Cloud Logging relaciona la consulta con `requestId=0941790f-de65-4c73-827e-180662c836ea`: revisión `consultarconvenio-00047-ruz`, estado 200, ruta `statute_rag`, `targetDate=2026-10-23`, edición `BOE-A-2015-11430-consolidated-2026-10-03`, cinco chunks `base` de `estatuto_trabajadores_2026-10-03.pdf` y ningún archivo de convenio seleccionado. App Check registró estado `valid`; la cuota confirmó una única llamada consumida. No se consultó ni modificó Firestore documental y no se generaron embeddings.
+
+El contenido y el marco temporal se cotejaron con la [Ley 4/2026 publicada en el BOE](https://www.boe.es/eli/es/l/2026/10/01/4/dof/spa/pdf) y el [texto consolidado oficial del Estatuto](https://www.boe.es/buscar/act.php?id=BOE-A-2015-11430&lang=es&p=20261003&tn=1). La Ley 4/2026 modifica el apartado 6 y entra en vigor veinte días después de su publicación en el BOE de 03/10/2026; el texto consolidado identifica el 23/10/2026 como entrada en vigor y lo marca como todavía no vigente. El resumen del asesor concuerda con la modificación oficial y no la presenta como vigente anticipadamente.
+
+### Resultado final acumulado
+
+| Casos | Última revisión con resultado PASS |
+|---|---|
+| 1, 5, 7 y 13 (regresiones corregidas) | `consultarconvenio-00045-ves` |
+| 2–4, 6, 8–12, 15–16 | `consultarconvenio-00044-qot` |
+| 14 (revalidación final) | `consultarconvenio-00047-ruz` |
+
+**Total final: 16 PASS, 0 FAIL, 0 BLOCKED, 0 NOT RUN en los 16 escenarios.** Se acumulan 23 consultas reales a Gemini: 22 previas y una única consulta para este cierre. Coste incremental estimado de esta consulta: inferior a USD 0,01; coste acumulado estimado: inferior a USD 0,12. Es una estimación operativa, no una medición de factura.

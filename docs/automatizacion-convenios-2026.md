@@ -156,3 +156,8 @@ El resolver de producción usa las tablas Barcelona verificadas para salarios de
 - **Navarra/Transporte:** búsquedas BON por el título y código histórico 3107405 dieron publicaciones 2005–2008, incluida Resolución 625/2008 y corrección. No apareció un sucesor en esa búsqueda, lo cual no prueba su inexistencia ni continuidad. Los 98 vectores no cotejados continúan excluidos. La revisión BON manual mensual de la ficha 27 se mantiene.
 - **Cobertura y avisos:** 28 fichas inventariadas; 27 con seguimiento REGCON y una con revisión manual BON mensual. Esto describe seguimiento, no verificación jurídica. La política de Monitoring y el canal existente figuran habilitados; recepción de email no verificada, pendiente de confirmación por el destinatario. Scheduler/Eventarc permanecen sin cambios.
 - **E2E:** no se ejecutaron los tres E2E focales de producción porque no había una sesión de navegador autenticada controlable. Los resultados locales de resolver/KNN no se presentan como E2E. Coste de consultas E2E: USD 0.
+
+
+### Despliegue focal — 15/10/2026
+
+PR #27 quedó integrado en `main` mediante el commit `7e6a58ca5ed0a28bd7d01a40142378b6ba359d33`. Se desplegó solo `consultarConvenio`, que quedó Ready en `consultarconvenio-00049-fuv`. La comprobación de logs de error para esa revisión devolvió cero entradas. `reviewConvenioSources` (`reviewconveniosources-00011-mux`), `processConvenioDocument` (`processconveniodocument-00008-jot`), Scheduler y Eventarc conservaron sus revisiones/configuración.

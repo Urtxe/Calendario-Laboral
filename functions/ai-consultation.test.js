@@ -77,6 +77,8 @@ test("el Estatuto se selecciona por fecha antes de la búsqueda vectorial y fall
   assert.match(active, /La fecha consultada .* es futura respecto de hoy/);
   assert.match(active, /fechaEstatutoFutura = consultaNormativaBase && seleccionEstatuto\?\.asOfDate > fechaHoyMadrid/);
   assert.match(active, /el cambio aún no está vigente/);
+  assert.match(active, /A fecha de hoy \(\$\{fechaHoyMadrid\}\), está vigente la redacción anterior/);
+  assert.match(active, /respuesta: `\$\{avisoEstatutoFuturo\}\$\{generacion\.respuesta\}`/);
   assert.match(source, /applyKnownSourceVerificationOverrides/);
 });
 

@@ -2470,6 +2470,9 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             const referenciaEstatutoFutura = consultaNormativaBase && seleccionEstatuto?.asOfDate > fechaHoyMadrid
                 ? `La fecha consultada (${seleccionEstatuto.asOfDate}) es futura respecto de hoy (${fechaHoyMadrid}); indica expresamente que describes la redacción prevista para esa fecha y no que ya esté vigente hoy.`
                 : "";
+            const avisoEstatutoFuturo = referenciaEstatutoFutura
+                ? `A fecha de hoy (${fechaHoyMadrid}), está vigente la redacción anterior. La fecha consultada (${seleccionEstatuto.asOfDate}) es futura; el texto siguiente describe la redacción prevista para esa fecha y no la vigente hoy. `
+                : "";
             try {
                 const generacion = await generarRespuestaConvenio({
                     idiomaRespuesta,
@@ -2497,7 +2500,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                 });
                 if (esRespuestaGeneradaUtil(generacion) && !respuestaIndicaDatoNoEncontrado(generacion.respuesta)) {
                     return responderUtil(construirRespuestaConsulta({
-                        respuesta: generacion.respuesta,
+                        respuesta: `${avisoEstatutoFuturo}${generacion.respuesta}`,
                         sourceType: hayConvenioEspecifico ? "convenio" : "estatuto",
                         grounded: true,
                         warning: hayConvenioEspecifico

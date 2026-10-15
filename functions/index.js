@@ -2586,7 +2586,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             }), { sourceType: "web_official", modelRoute: "official_web", fallbackReason, chunksUsed: chunksEspecificos.length });
         }
 
-        if (convenioFileName || consultaNormativaBase || requiereContextoConvenio) {
+        if (convenioFileName || consultaNormativaBase || requiereContextoConvenio || solicitudConvenioEspecifico) {
             const fechaHoyMadrid = new Intl.DateTimeFormat("en-CA", {
                 timeZone: "Europe/Madrid",
                 year: "numeric",

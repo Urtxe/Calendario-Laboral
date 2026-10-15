@@ -1,7 +1,9 @@
 "use strict";
 
 const MAX_ATOMIC_CHUNKS = 499;
-const MAX_EMBEDDING_TOKENS_PER_DOCUMENT = 50_000;
+// Full official texts can exceed the former per-document ceiling. The unchanged monthly ceiling
+// remains the aggregate spend guard; this per-source cap still rejects oversized inputs.
+const MAX_EMBEDDING_TOKENS_PER_DOCUMENT = 100_000;
 const MAX_EMBEDDING_TOKENS_PER_MONTH = 250_000;
 
 function vectorValues(value) {

@@ -5,14 +5,53 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 const { inventory } = require("./convenio-monitor");
-const { parseConvenioFileName, sanitizeId } = require("./convenio-metadata");
-const { assertOfficialHttpsUrl, downloadOfficialPdf } = require("./official-convenio-document");
+const { normalizeText, parseConvenioFileName, sanitizeId } = require("./convenio-metadata");
+const { assertOfficialHttpsUrl, downloadOfficialPdf, verifyPdfBytes } = require("./official-convenio-document");
 
 const STATE_COLLECTION = "convenio_monitor_state";
 const CONTROL_PATH = "convenio_monitor_control/document_ingestion";
 const BOG_HOST = "egoitza.gipuzkoa.eus";
 const LEASE_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 3;
+const STORED_OFFICIAL_AGREEMENTS = {
+  "convenio-24": {
+    catalogKey: "transporte_barcelona_2026_2028",
+    fileName: "Convenio Transporte Barcelona 2026-2028.pdf",
+    markers: ["08004295011994", "202610145528", "2026-2028", "transport de mercaderies per carretera"],
+    hosts: ["bop.diba.cat"],
+  },
+  "convenio-28": {
+    catalogKey: "transporte_zaragoza_2026_2028",
+    fileName: "Convenio Transporte Zaragoza 2026-2028.pdf",
+    markers: ["50001115011981", "6101", "núm. 216", "2026 a 2028", "transporte de mercancías"],
+    hosts: ["bop.dpz.es"],
+  },
+};
+
+function prepareStoredOfficialAgreementMetadata(agreement, entry, document) {
+  const allowed = STORED_OFFICIAL_AGREEMENTS[agreement && agreement.id];
+  const metadata = allowed && parseConvenioFileName(allowed.fileName);
+  if (!allowed || !metadata || entry.officialDocumentKey !== allowed.catalogKey ||
+      entry.fileName !== allowed.fileName || entry.officialCode !== agreement.officialCode ||
+      entry.sourceSha256 !== metadata.sourceSha256 || entry.sourceStorageUri !== metadata.sourceStorageUri ||
+      entry.publicationUrl !== metadata.officialSourceUrl ||
+      entry.signature !== `official:${allowed.catalogKey}:${metadata.sourceSha256}` ||
+      !/^CONVENIO COLECTIVO(?: \(TEXTO NUEVO\))?$/i.test(entry.transactionType || "")) {
+    throw new Error("DOCUMENT_STORED_SOURCE_NOT_PREAPPROVED");
+  }
+  assertOfficialHttpsUrl(metadata.officialSourceUrl, allowed.hosts);
+  if (metadata.sourceVerification !== "verified" || metadata.automaticIngestionEligible !== true ||
+      metadata.officialCode !== agreement.officialCode || document.sha256 !== metadata.sourceSha256 ||
+      document.pageCount !== metadata.sourcePageCount) {
+    throw new Error("DOCUMENT_STORED_SOURCE_METADATA_MISMATCH");
+  }
+  const text = normalizeText(String(document.text || "").replace(/([a-záéíóúüñ])-\s*([a-záéíóúüñ])/gi, "$1$2"));
+  if (STORED_OFFICIAL_AGREEMENTS[agreement.id].markers.some((marker) =>
+    !text.includes(normalizeText(marker)))) {
+    throw new Error("DOCUMENT_STORED_SOURCE_CONTENT_MISMATCH");
+  }
+  return metadata;
+}
 
 function prepareBogSalaryMetadata(agreement, entry, document) {
   if (!agreement || entry.officialCode !== agreement.officialCode ||
@@ -112,6 +151,32 @@ async function processPendingDocument(db, agreementId, { now = new Date(), log =
   let temporaryPath;
   let temporaryDirectory;
   try {
+    if (entry.officialDocumentKey) {
+      const allowed = STORED_OFFICIAL_AGREEMENTS[agreementId];
+      if (!allowed || entry.officialDocumentKey !== allowed.catalogKey) throw new Error("DOCUMENT_STORED_SOURCE_NOT_PREAPPROVED");
+      const { loadPdfText, processFile } = require("./ingest-conventios");
+      const metadata = parseConvenioFileName(allowed.fileName);
+      const match = String(metadata.sourceStorageUri || "").match(/^gs:\/\/([^/]+)\/(.+)$/);
+      if (!match) throw new Error("DOCUMENT_STORED_SOURCE_URI_INVALID");
+      const admin = require("firebase-admin");
+      const [buffer] = await admin.storage().bucket(match[1]).file(match[2]).download();
+      const source = verifyPdfBytes(buffer);
+      const parsed = await loadPdfText(buffer);
+      prepareStoredOfficialAgreementMetadata(agreement, entry, { ...parsed, sha256: source.sha256 });
+      const catalog = await db.collection("catalogo_convenios").doc(metadata.catalogKey).get();
+      if (catalog.exists && catalog.data().sourceSha256 === source.sha256 && catalog.data().fileNames?.includes(metadata.fileName)) {
+        await finishPending(db, agreementId, signature, token, { status: "resolved", documentCatalogKey: metadata.catalogKey, sourceSha256: source.sha256, resolvedAt: now, newChunks: 0 });
+        return { status: "duplicate", catalogKey: metadata.catalogKey };
+      }
+      if (catalog.exists) throw new Error("DOCUMENT_CATALOG_CONFLICT");
+      temporaryDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "convenio-official-"));
+      temporaryPath = path.join(temporaryDirectory, metadata.fileName);
+      const result = await processFile(temporaryPath, { keepSource: true, verifiedSourceBuffer: buffer });
+      if (!result.chunks) throw new Error("DOCUMENT_TEXT_UNREADABLE");
+      await finishPending(db, agreementId, signature, token, { status: "resolved", documentCatalogKey: metadata.catalogKey, sourceSha256: source.sha256, resolvedAt: now, newChunks: result.newChunks });
+      log.info("convenio_document_ingested", { agreementId, catalogKey: metadata.catalogKey, chunks: result.newChunks });
+      return { status: "ingested", catalogKey: metadata.catalogKey, chunks: result.newChunks };
+    }
     if (!entry.publicationUrl) throw new Error("DOCUMENT_PUBLICATION_URL_MISSING");
     const url = assertOfficialHttpsUrl(entry.publicationUrl, [BOG_HOST]);
     if (!url.pathname.endsWith(".pdf")) throw new Error("DOCUMENT_OFFICIAL_PDF_UNAVAILABLE");
@@ -153,4 +218,4 @@ async function processPendingDocument(db, agreementId, { now = new Date(), log =
   }
 }
 
-module.exports = { prepareBogSalaryMetadata, claimPending, finishPending, processPendingDocument };
+module.exports = { prepareBogSalaryMetadata, prepareStoredOfficialAgreementMetadata, claimPending, finishPending, processPendingDocument };

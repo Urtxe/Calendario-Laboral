@@ -2,7 +2,8 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { prepareBogSalaryMetadata, claimPending, finishPending, processPendingDocument } = require("./convenio-document-processor");
+const { prepareBogSalaryMetadata, prepareStoredOfficialAgreementMetadata, claimPending, finishPending, processPendingDocument } = require("./convenio-document-processor");
+const { parseConvenioFileName } = require("./convenio-metadata");
 
 const agreement = { id: "convenio-02", title: "Alojamientos · Gipuzkoa", officialCode: "20100035012014" };
 const entry = {
@@ -28,6 +29,39 @@ test("solo prepara revisión BOG con código, ámbito, año, identificador y ane
   ]) assert.throws(() => prepareBogSalaryMetadata(agreement, changed, document), new RegExp(code));
   for (const text of [document.text.replace(agreement.officialCode, "20100035012015"), document.text.replace("ANEXO", "APÉNDICE"), document.text.replace("Alojamientos", "Transporte"), document.text.replace("2026", "2025")]) {
     assert.throws(() => prepareBogSalaryMetadata(agreement, entry, { ...document, text }), /DOCUMENT_SCOPE_OR_ANNEX_NOT_VERIFIED/);
+  }
+});
+
+test("solo habilita los dos PDF oficiales de transporte preaprobados y conserva sus fechas distintas", () => {
+  for (const [agreementId, catalogKey, fileName, code, markers, effective, economic] of [
+    ["convenio-24", "transporte_barcelona_2026_2028", "Convenio Transporte Barcelona 2026-2028.pdf", "08004295011994", "08004295011994 CVE 202610145528 2026-2028 transport de mercaderies per carretera", "2026-01-01", "2026-01-01"],
+    ["convenio-28", "transporte_zaragoza_2026_2028", "Convenio Transporte Zaragoza 2026-2028.pdf", "50001115011981", "50001115011981 núm. 216 núm. 6101 2026 a 2028 transporte de mercancías", "2026-09-20", "2026-01-01"],
+  ]) {
+    const metadata = parseConvenioFileName(fileName);
+    const candidate = {
+      officialDocumentKey: catalogKey,
+      fileName,
+      officialCode: code,
+      sourceSha256: metadata.sourceSha256,
+      sourceStorageUri: metadata.sourceStorageUri,
+      publicationUrl: metadata.officialSourceUrl,
+      signature: `official:${catalogKey}:${metadata.sourceSha256}`,
+      transactionType: "CONVENIO COLECTIVO (TEXTO NUEVO)",
+    };
+    const agreementInfo = { id: agreementId, officialCode: code };
+    const approved = prepareStoredOfficialAgreementMetadata(agreementInfo, candidate, {
+      text: markers, sha256: metadata.sourceSha256, pageCount: metadata.sourcePageCount,
+    });
+    assert.equal(approved.catalogKey, catalogKey);
+    assert.equal(approved.sourceValidFrom, effective);
+    assert.equal(approved.economicEffectsFrom, economic);
+    assert.equal(approved.sourceVerification, "verified");
+    assert.throws(() => prepareStoredOfficialAgreementMetadata(agreementInfo, {
+      ...candidate, sourceStorageUri: "gs://other-bucket/untrusted.pdf",
+    }, { text: markers, sha256: metadata.sourceSha256, pageCount: metadata.sourcePageCount }), /DOCUMENT_STORED_SOURCE_NOT_PREAPPROVED/);
+    assert.throws(() => prepareStoredOfficialAgreementMetadata(agreementInfo, candidate, {
+      text: "unrelated publication", sha256: metadata.sourceSha256, pageCount: metadata.sourcePageCount,
+    }), /DOCUMENT_STORED_SOURCE_CONTENT_MISMATCH/);
   }
 });
 

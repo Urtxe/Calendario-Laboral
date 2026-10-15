@@ -248,6 +248,8 @@ async function writeChunkGroup({
           ...(convenioMetadata.sourceUpdatedThrough ? { sourceUpdatedThrough: convenioMetadata.sourceUpdatedThrough } : {}),
           ...(convenioMetadata.sourceValidFrom ? { sourceValidFrom: convenioMetadata.sourceValidFrom } : {}),
           ...(convenioMetadata.sourceValidThrough ? { sourceValidThrough: convenioMetadata.sourceValidThrough } : {}),
+          ...(convenioMetadata.economicEffectsFrom ? { economicEffectsFrom: convenioMetadata.economicEffectsFrom } : {}),
+          ...(convenioMetadata.economicEffectsExceptions ? { economicEffectsExceptions: convenioMetadata.economicEffectsExceptions } : {}),
           ...(convenioMetadata.officialSourceUrl ? { officialSourceUrl: convenioMetadata.officialSourceUrl } : {}),
           sourceDocumentType: convenioMetadata.sourceDocumentType || classifyOfficialDocument(convenioMetadata.title),
           sourceSha256,
@@ -286,6 +288,10 @@ async function upsertCatalogForFileNames(fileNames, sourceDocument = null, metad
     automaticIngestionEligible: metadata.automaticIngestionEligible,
     sourceDocumentType: metadata.sourceDocumentType, salaryEvidenceVerifiedThroughYear: metadata.salaryEvidenceVerifiedThroughYear,
     officialSourceUrl: metadata.officialSourceUrl, sourceSha256: metadata.sourceSha256,
+    sourceStorageUri: metadata.sourceStorageUri, sourcePageCount: metadata.sourcePageCount,
+    sourceValidFrom: metadata.sourceValidFrom, sourceValidThrough: metadata.sourceValidThrough,
+    economicEffectsFrom: metadata.economicEffectsFrom,
+    economicEffectsExceptions: metadata.economicEffectsExceptions,
   }] : buildCatalogEntriesFromFileNames(fileNames);
 
   for (const entry of entries) {
@@ -393,7 +399,7 @@ async function verifyStagedKnn(fileName, sourceSha256, docs) {
   }
 }
 
-async function processFile(filePath, { dryRun = false, metadataOverride = null, keepSource = false } = {}) {
+async function processFile(filePath, { dryRun = false, metadataOverride = null, keepSource = false, verifiedSourceBuffer = null } = {}) {
   const fileName = path.basename(filePath);
   const docType = getDocType(fileName);
   const metadata = metadataOverride || parseConvenioFileName(fileName);
@@ -407,7 +413,7 @@ async function processFile(filePath, { dryRun = false, metadataOverride = null, 
   let sourceSha256;
   let sourceStorageUri = metadata.sourceStorageUri || null;
   if (metadata.sourceStorageUri && metadata.sourceSha256) {
-    sourceBuffer = await loadVerifiedStoredPdf(metadata.sourceStorageUri, metadata.sourceSha256);
+    sourceBuffer = verifiedSourceBuffer || await loadVerifiedStoredPdf(metadata.sourceStorageUri, metadata.sourceSha256);
     sourceSha256 = verifyPdfBytes(sourceBuffer).sha256;
     if (metadata.sourceSha256 !== sourceSha256) throw new Error(`El SHA-256 de ${fileName} no coincide con la fuente oficial verificada.`);
   } else if (metadata.sourceSha256) {
@@ -520,6 +526,10 @@ async function processFile(filePath, { dryRun = false, metadataOverride = null, 
       officialCode: metadata.officialCode,
       sourceVerification: metadata.sourceVerification,
       automaticIngestionEligible: metadata.automaticIngestionEligible === true,
+      sourceValidFrom: metadata.sourceValidFrom,
+      sourceValidThrough: metadata.sourceValidThrough,
+      economicEffectsFrom: metadata.economicEffectsFrom,
+      economicEffectsExceptions: metadata.economicEffectsExceptions,
     }, metadataOverride);
   } else if (metadata.officialCode === "BOE-A-2015-11430") {
     await upsertNormativeBaseCatalog(fileName, metadata);

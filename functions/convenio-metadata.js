@@ -86,6 +86,58 @@ const FILE_METADATA_OVERRIDES = {
     salaryEvidenceWarning: "Las tablas verificadas cubren 2025. No constan aquí tablas oficiales verificadas para 2026 ni se declara actualizado el convenio completo.",
     applicationWarning: "Publicación complementaria de tablas salariales definitivas de 2025; no sustituye el texto completo del convenio ni determina por sí sola la aplicabilidad a una persona o empresa.",
   },
+  "Convenio Transporte Barcelona 2026-2028.pdf": {
+    catalogKey: "transporte_barcelona_2026_2028",
+    catalogTitle: "Convenio de transporte de mercancías y logística de Barcelona 2026–2028",
+    province: "BARCELONA",
+    sectorKeys: ["transporte"],
+    yearStart: 2026,
+    yearEnd: 2028,
+    officialCode: "08004295011994",
+    publication: {
+      bulletin: "BOPB",
+      date: "2026-09-29",
+      identifier: "CVE 202610145528",
+      url: "https://bop.diba.cat/anuncio/ver-pdf/3994991",
+    },
+    officialSourceUrl: "https://bop.diba.cat/anuncio/ver-pdf/3994991",
+    sourceSha256: "e81893786bf944d2e42479ab78ad5a0ccc13c305aeb68e880962d10d17f1949b",
+    sourceStorageUri: "gs://calendario-laboral-252b1.firebasestorage.app/official-sources/convenios/transporte_barcelona_2026_2028/e81893786bf944d2e42479ab78ad5a0ccc13c305aeb68e880962d10d17f1949b.pdf",
+    sourcePageCount: 93,
+    sourceDocumentType: "collective_agreement",
+    sourceVerification: "verified",
+    automaticIngestionEligible: true,
+    sourceValidFrom: "2026-01-01",
+    economicEffectsFrom: "2026-01-01",
+    applicationWarning: "Texto pactado 2026–2028, publicado el 29/09/2026; el artículo 4 fija efectos a todos los efectos desde el 01/01/2026. No determina por sí solo la aplicabilidad individual ni completa las condiciones generales de 2025.",
+  },
+  "Convenio Transporte Zaragoza 2026-2028.pdf": {
+    catalogKey: "transporte_zaragoza_2026_2028",
+    catalogTitle: "Convenio de transporte de mercancías, mudanzas, guardamuebles y logística de Zaragoza 2026–2028",
+    province: "ZARAGOZA",
+    sectorKeys: ["transporte"],
+    yearStart: 2026,
+    yearEnd: 2028,
+    officialCode: "50001115011981",
+    publication: {
+      bulletin: "BOPZ",
+      number: 216,
+      date: "2026-09-19",
+      identifier: "Anuncio 6101",
+      url: "https://bop.dpz.es/BOPZ/UploadServlet?ruta=Boletines%5C2026%5C216%5CEdictos%5Cbop_6101_2026.pdf",
+    },
+    officialSourceUrl: "https://bop.dpz.es/BOPZ/UploadServlet?ruta=Boletines%5C2026%5C216%5CEdictos%5Cbop_6101_2026.pdf",
+    sourceSha256: "2c463c832e87ec1b9f596bb523910899549af8ac63692b2e4ab121c6122b565a",
+    sourceStorageUri: "gs://calendario-laboral-252b1.firebasestorage.app/official-sources/convenios/transporte_zaragoza_2026_2028/2c463c832e87ec1b9f596bb523910899549af8ac63692b2e4ab121c6122b565a.pdf",
+    sourcePageCount: 31,
+    sourceDocumentType: "collective_agreement",
+    sourceVerification: "verified",
+    automaticIngestionEligible: true,
+    sourceValidFrom: "2026-09-20",
+    economicEffectsFrom: "2026-01-01",
+    economicEffectsExceptions: [{ subject: "dietas", effectiveFrom: "2026-07-01" }],
+    applicationWarning: "Texto pactado 2026–2028, publicado en BOPZ el 19/09/2026: entrada en vigor general el 20/09/2026; efectos económicos generales desde el 01/01/2026 y actualización de dietas desde el 01/07/2026. Estas fechas no determinan por sí solas la aplicabilidad individual.",
+  },
   "BOG-2026-02-16-20100035012014-revision-salarial-2026.pdf": {
     catalogKey: "alojamientos_gipuzkoa_revision_salarial_2026",
     catalogTitle: "Revisión salarial 2026 — Alojamientos de Gipuzkoa",
@@ -467,6 +519,8 @@ function parseConvenioFileName(fileName) {
     ...(override.sourceUpdatedThrough ? { sourceUpdatedThrough: override.sourceUpdatedThrough } : {}),
     ...(override.sourceValidFrom ? { sourceValidFrom: override.sourceValidFrom } : {}),
     ...(override.sourceValidThrough ? { sourceValidThrough: override.sourceValidThrough } : {}),
+    ...(override.economicEffectsFrom ? { economicEffectsFrom: override.economicEffectsFrom } : {}),
+    ...(override.economicEffectsExceptions ? { economicEffectsExceptions: override.economicEffectsExceptions } : {}),
     ...(override.sourceSha256 ? { sourceSha256: override.sourceSha256 } : {}),
     ...(override.sourceStorageUri ? { sourceStorageUri: override.sourceStorageUri } : {}),
     ...(override.sourcePageCount ? { sourcePageCount: override.sourcePageCount } : {}),
@@ -514,6 +568,8 @@ function buildCatalogEntriesFromFileNames(fileNames) {
       ...(parsed.sourceUpdatedThrough ? { sourceUpdatedThrough: parsed.sourceUpdatedThrough } : {}),
       ...(parsed.sourceValidFrom ? { sourceValidFrom: parsed.sourceValidFrom } : {}),
       ...(parsed.sourceValidThrough ? { sourceValidThrough: parsed.sourceValidThrough } : {}),
+      ...(parsed.economicEffectsFrom ? { economicEffectsFrom: parsed.economicEffectsFrom } : {}),
+      ...(parsed.economicEffectsExceptions ? { economicEffectsExceptions: parsed.economicEffectsExceptions } : {}),
       ...(parsed.sourceSha256 ? { sourceSha256: parsed.sourceSha256 } : {}),
       ...(parsed.sourceStorageUri ? { sourceStorageUri: parsed.sourceStorageUri } : {}),
       ...(parsed.sourcePageCount ? { sourcePageCount: parsed.sourcePageCount } : {}),
@@ -560,13 +616,16 @@ function detectConvenioCriteria({ pregunta, ciudad, sector }) {
   const provincesFromCity = detectProvinceFromText(ciudad);
   const sectorFromQuestion = detectSectorKeysFromText(pregunta);
   const sectorFromField = detectSectorKeysFromText(sector);
+  const requestedDates = parseWorkersStatuteAsOfDates(pregunta);
   const requestedYears = Array.from(new Set((String(pregunta || "").match(/\b(?:19|20)\d{2}\b/g) || []).map(Number)));
 
   return {
+    question: String(pregunta || ""),
     provinces: pickDetectedValue(provincesFromQuestion, provincesFromCity) || [],
     sectorKeys: pickDetectedValue(sectorFromQuestion, sectorFromField) || [],
     requestedYears,
-    isSalaryQuery: /\b(?:salario|salarios|sueldo|sueldos|retribucion|retribuciones|revision salarial|tabla salarial|tablas salariales|importe|bruto|cobrar|cobra|paga|plus|complemento)\b/.test(normalizeText(pregunta)),
+    requestedDates,
+    isSalaryQuery: /\b(?:salario|salarios|sueldo|sueldos|retribucion|retribuciones|revision salarial|tabla salarial|tablas salariales|importe|bruto|cobrar|cobra|paga|plus|complemento|dieta|dietas)\b/.test(normalizeText(pregunta)),
   };
 }
 
@@ -576,6 +635,25 @@ function entryCoversRequestedYears(entry, requestedYears) {
   const yearEnd = Number(entry.yearEnd);
   return Number.isFinite(yearStart) && Number.isFinite(yearEnd) &&
     requestedYears.every((year) => year >= yearStart && year <= yearEnd);
+}
+
+function entryCoversRequestedDates(entry, requestedDates, isSalaryQuery = false, question = "") {
+  if (!requestedDates.length) return true;
+  const normalizedQuestion = normalizeText(question);
+  const effectiveFrom = isSalaryQuery
+    ? entry.economicEffectsFrom || entry.sourceValidFrom
+    : entry.sourceValidFrom;
+  return requestedDates.every((date) => {
+    if ((effectiveFrom && date < effectiveFrom) || (entry.sourceValidThrough && date > entry.sourceValidThrough)) return false;
+    if (isSalaryQuery && Array.isArray(entry.economicEffectsExceptions)) {
+      const hasNotYetEffectiveRequestedException = entry.economicEffectsExceptions.some((exception) => {
+        const subject = normalizeText(exception.subject || "");
+        return subject && normalizedQuestion.includes(subject) && date < exception.effectiveFrom;
+      });
+      if (hasNotYetEffectiveRequestedException) return false;
+    }
+    return true;
+  });
 }
 
 function selectCatalogSourceFiles(entry, requestedYears = []) {
@@ -719,15 +797,19 @@ function resolveCatalogEntry(catalogEntries, criteria) {
   const yearCandidates = requestedYears.length
     ? candidates.filter((entry) => entryCoversRequestedYears(entry, requestedYears))
     : candidates;
-  const verifiedCandidates = yearCandidates.filter((entry) => entry.sourceVerification !== "unverified");
+  const referenceDates = requestedYears.length ? criteria.requestedDates || [] : [madridDate()];
+  const dateCandidates = referenceDates.length
+    ? yearCandidates.filter((entry) => entryCoversRequestedDates(entry, referenceDates, criteria.isSalaryQuery === true, criteria.question || ""))
+    : yearCandidates;
+  const verifiedCandidates = dateCandidates.filter((entry) => entry.sourceVerification !== "unverified");
 
   if (!verifiedCandidates.length) {
-    if (yearCandidates.some((entry) => entry.sourceVerification === "unverified") ||
+    if (dateCandidates.some((entry) => entry.sourceVerification === "unverified") ||
         (!requestedYears.length && candidates.some((entry) => entry.sourceVerification === "unverified"))) {
       return {
         status: "source_unverified",
         message: "He encontrado documentos con fechas o contenido documental sin verificar para ese convenio. No puedo presentarlos como la edición confirmada. Indícame el año concreto o consulta el boletín oficial para verificar la fuente.",
-        options: yearCandidates.filter((entry) => entry.sourceVerification === "unverified").map((entry) => ({
+        options: dateCandidates.filter((entry) => entry.sourceVerification === "unverified").map((entry) => ({
           title: entry.title,
           province: entry.province || null,
           sectorKeys: entry.sectorKeys || [],

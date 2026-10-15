@@ -3,7 +3,7 @@ const path = require("path");
 const admin = require("firebase-admin");
 const { PDFParse } = require("pdf-parse");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { MAX_ATOMIC_CHUNKS, activateChunkSet, reserveEmbeddingBudget } = require("./convenio-ingestion");
+const { MAX_ATOMIC_CHUNKS, activateChunkSet, reserveEmbeddingBudget, omitUndefinedFields } = require("./convenio-ingestion");
 const { downloadOfficialPdf, storeOfficialPdf, verifyPdfBytes, classifyOfficialDocument } = require("./official-convenio-document");
 const {
   CATALOGO_CONVENIOS,
@@ -279,7 +279,7 @@ async function writeChunkGroup({
 }
 
 async function upsertCatalogForFileNames(fileNames, sourceDocument = null, metadata = null) {
-  const entries = metadata ? [{
+  const entries = metadata ? [omitUndefinedFields({
     id: metadata.catalogKey, catalogKey: metadata.catalogKey, title: metadata.title,
     province: metadata.province, autonomousCommunity: metadata.autonomousCommunity || null,
     sectorKeys: metadata.sectorKeys, yearStart: metadata.yearStart, yearEnd: metadata.yearEnd,
@@ -292,7 +292,7 @@ async function upsertCatalogForFileNames(fileNames, sourceDocument = null, metad
     sourceValidFrom: metadata.sourceValidFrom, sourceValidThrough: metadata.sourceValidThrough,
     economicEffectsFrom: metadata.economicEffectsFrom,
     economicEffectsExceptions: metadata.economicEffectsExceptions,
-  }] : buildCatalogEntriesFromFileNames(fileNames);
+  })] : buildCatalogEntriesFromFileNames(fileNames);
 
   for (const entry of entries) {
     const docRef = db.collection(CATALOGO_CONVENIOS).doc(entry.id || sanitizeId(entry.title));
@@ -304,17 +304,18 @@ async function upsertCatalogForFileNames(fileNames, sourceDocument = null, metad
     const current = existing.exists ? existing.data() : {};
     const documentSources = Array.isArray(current.documentSources) ? current.documentSources : [];
     if (sourceDocument) {
+      const definedSourceDocument = omitUndefinedFields(sourceDocument);
       if (current.fileNames?.some((name) => !entry.fileNames.includes(name)) ||
-          (current.fileNames?.includes(sourceDocument.fileName) && current.sourceSha256 && current.sourceSha256 !== sourceDocument.sourceSha256)) {
+          (current.fileNames?.includes(definedSourceDocument.fileName) && current.sourceSha256 && current.sourceSha256 !== definedSourceDocument.sourceSha256)) {
         throw new Error(`La entrada de catálogo ${docRef.id} ya cubre otra edición; se requiere cotejo antes de modificarla.`);
       }
-      const previous = documentSources.find((item) => item.fileName === sourceDocument.fileName);
-      if (previous && previous.sourceSha256 !== sourceDocument.sourceSha256) {
+      const previous = documentSources.find((item) => item.fileName === definedSourceDocument.fileName);
+      if (previous && previous.sourceSha256 !== definedSourceDocument.sourceSha256) {
         throw new Error(`La fuente del catálogo ${docRef.id} cambió de checksum; se requiere revisión manual.`);
       }
       docData.documentSources = [
-        ...documentSources.filter((item) => item.fileName !== sourceDocument.fileName),
-        sourceDocument,
+        ...documentSources.filter((item) => item.fileName !== definedSourceDocument.fileName),
+        definedSourceDocument,
       ];
     }
     await docRef.set(docData, { merge: true });

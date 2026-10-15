@@ -12,6 +12,16 @@ function vectorValues(value) {
   return Array.isArray(value) ? value : null;
 }
 
+function omitUndefinedFields(value) {
+  if (Array.isArray(value)) return value.map(omitUndefinedFields);
+  if (!value || typeof value !== "object" || value instanceof Date) return value;
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return value;
+  return Object.fromEntries(Object.entries(value)
+    .filter(([, fieldValue]) => fieldValue !== undefined)
+    .map(([key, fieldValue]) => [key, omitUndefinedFields(fieldValue)]));
+}
+
 function validateChunkSet(docs, {
   fileName,
   sourceSha256,
@@ -128,6 +138,7 @@ module.exports = {
   MAX_EMBEDDING_TOKENS_PER_DOCUMENT,
   MAX_EMBEDDING_TOKENS_PER_MONTH,
   vectorValues,
+  omitUndefinedFields,
   validateChunkSet,
   activateChunkSet,
   reserveEmbeddingBudget,

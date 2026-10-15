@@ -16,6 +16,8 @@ const { isEnabled: isOfficialWebFallbackEnabled } = require("./official-web-fall
 const { validarPayloadBasicoConsulta } = require("./consultation-payload");
 const { shouldRetrieveWorkersStatute } = require("./workers-statute-fallback");
 const { construirConsultaRag } = require("./rag-query");
+const { classifyLaborIntent } = require("./intent-classifier");
+const { detectConvenioCriteria } = require("./convenio-metadata");
 
 const tests = [];
 function test(name, fn) { tests.push({ name, fn }); }
@@ -80,6 +82,19 @@ test("el Estatuto se selecciona por fecha antes de la búsqueda vectorial y fall
   assert.match(active, /A fecha de hoy \(\$\{fechaHoyMadrid\}\), está vigente la redacción anterior/);
   assert.match(active, /respuesta: `\$\{avisoEstatutoFuturo\}\$\{generacion\.respuesta\}`/);
   assert.match(source, /applyKnownSourceVerificationOverrides/);
+});
+
+test("una consulta explícita sin fuente acreditada termina en abstención y no en respuesta general", () => {
+  const pregunta = "Trabajo en transporte de mercancías por carretera en Navarra. ¿Qué convenio está vigente en 2026 y cuál es el salario que me corresponde?";
+  const intent = classifyLaborIntent({ pregunta });
+  const criteria = detectConvenioCriteria({ pregunta });
+  const source = readFileSync(path.join(__dirname, "index.js"), "utf8");
+  const active = source.split("exports.consultarConvenio =")[1].split("async function consultarConvenioLegacy")[0];
+
+  assert.strictEqual(intent.intent, "current_labor");
+  assert.ok(criteria.provinces.length > 0);
+  assert.ok(criteria.sectorKeys.length > 0);
+  assert.match(active, /if \(convenioFileName \|\| consultaNormativaBase \|\| requiereContextoConvenio \|\| solicitudConvenioEspecifico\)/);
 });
 
 test("la traza de recuperación registra selección documental sin contenido ni identidad", () => {

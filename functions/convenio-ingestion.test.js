@@ -14,6 +14,7 @@ const {
   validateChunkSet,
   reserveEmbeddingBudget,
   rollbackChunkSet,
+  MAX_EMBEDDING_TOKENS_PER_DOCUMENT,
   MAX_EMBEDDING_TOKENS_PER_MONTH,
 } = require("./convenio-ingestion");
 
@@ -199,9 +200,13 @@ test("monthly embedding budget reserves estimates transactionally and stops over
   assert.equal((await reserveEmbeddingBudget(db, 50_000, now)).monthReservedTokens, 200_000);
   assert.equal((await reserveEmbeddingBudget(db, 50_000, now)).monthReservedTokens, 250_000);
   await assert.rejects(reserveEmbeddingBudget(db, 1, now), /INGESTION_MONTHLY_BUDGET_EXCEEDED/);
-  await assert.rejects(reserveEmbeddingBudget(db, 50_001, now), /INGESTION_DOCUMENT_BUDGET_EXCEEDED/);
+  await assert.rejects(reserveEmbeddingBudget(db, 100_001, now), /INGESTION_DOCUMENT_BUDGET_EXCEEDED/);
   assert.equal(db.records.get("ingestion_budget_2026-10").estimatedTokensReserved, 250_000);
+  assert.equal(MAX_EMBEDDING_TOKENS_PER_DOCUMENT, 100_000);
   assert.equal(MAX_EMBEDDING_TOKENS_PER_MONTH, 250_000);
+  const fullTextDb = fakeDb({});
+  assert.equal((await reserveEmbeddingBudget(fullTextDb, 88_200, now)).estimatedTokens, 88_200);
+  await assert.rejects(reserveEmbeddingBudget(fullTextDb, 100_001, now), /INGESTION_DOCUMENT_BUDGET_EXCEEDED/);
 });
 
 test("rollback hides the complete publication and removes only its catalog source", async () => {

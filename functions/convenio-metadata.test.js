@@ -178,6 +178,50 @@ assert.strictEqual(
 );
 assert.strictEqual(hasUnindexedSalaryEvidence(barcelonaTables[0], "salario en 2026", 2026), true);
 
+const barcelonaNewFile = "Convenio Transporte Barcelona 2026-2028.pdf";
+const barcelonaNew = parseConvenioFileName(barcelonaNewFile);
+assert.equal(barcelonaNew.sourceVerification, "verified");
+assert.equal(barcelonaNew.sourceDocumentType, "collective_agreement");
+assert.equal(barcelonaNew.officialCode, "08004295011994");
+assert.equal(barcelonaNew.sourceSha256, "e81893786bf944d2e42479ab78ad5a0ccc13c305aeb68e880962d10d17f1949b");
+assert.equal(barcelonaNew.publication.identifier, "CVE 202610145528");
+assert.equal(barcelonaNew.sourceValidFrom, "2026-01-01");
+assert.equal(barcelonaNew.economicEffectsFrom, "2026-01-01");
+const barcelonaTemporal = buildCatalogEntriesFromFileNames([
+  "Convenio Transporte Barcelona 2011-2023.pdf", barcelonaTablesFile, barcelonaNewFile,
+]);
+assert.equal(resolveCatalogEntry(barcelonaTemporal, detectConvenioCriteria({ pregunta: "convenio transporte Barcelona 2025" })).status, "not_found");
+assert.equal(resolveCatalogEntry(barcelonaTemporal, detectConvenioCriteria({ pregunta: "salarios transporte Barcelona 2025" })).entry.id, "transporte_barcelona_tablas_2025");
+for (const year of [2026, 2027]) {
+  assert.equal(resolveCatalogEntry(barcelonaTemporal, detectConvenioCriteria({ pregunta: `convenio transporte Barcelona ${year}` })).entry.id, "transporte_barcelona_2026_2028");
+  assert.equal(resolveCatalogEntry(barcelonaTemporal, detectConvenioCriteria({ pregunta: `salarios transporte Barcelona ${year}` })).entry.id, "transporte_barcelona_2026_2028");
+}
+assert.equal(resolveCatalogEntry(barcelonaTemporal, detectConvenioCriteria({ pregunta: "convenio transporte Barcelona 2019" })).status, "source_unverified");
+assert.equal(resolveCatalogEntry(barcelonaTemporal, detectConvenioCriteria({ pregunta: "jornada transporte Barcelona 15/01/2026" })).entry.id, "transporte_barcelona_2026_2028");
+
+const zaragozaNewFile = "Convenio Transporte Zaragoza 2026-2028.pdf";
+const zaragozaNew = parseConvenioFileName(zaragozaNewFile);
+assert.equal(zaragozaNew.sourceVerification, "verified");
+assert.equal(zaragozaNew.officialCode, "50001115011981");
+assert.equal(zaragozaNew.publication.identifier, "Anuncio 6101");
+assert.equal(zaragozaNew.sourceValidFrom, "2026-09-20");
+assert.equal(zaragozaNew.economicEffectsFrom, "2026-01-01");
+assert.deepEqual(zaragozaNew.economicEffectsExceptions, [{ subject: "dietas", effectiveFrom: "2026-07-01" }]);
+const zaragozaTemporal = buildCatalogEntriesFromFileNames([
+  "Convenio Transporte Zaragoza 2022-2025.pdf", zaragozaNewFile,
+]);
+assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: "convenio transporte Zaragoza 2024" })).entry.fileNames[0], "Convenio Transporte Zaragoza 2022-2025.pdf");
+assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: "convenio transporte Zaragoza 2025" })).entry.fileNames[0], "Convenio Transporte Zaragoza 2022-2025.pdf");
+for (const year of [2026, 2027]) {
+  assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: `convenio transporte Zaragoza ${year}` })).entry.id, "transporte_zaragoza_2026_2028");
+  assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: `salarios transporte Zaragoza ${year}` })).entry.id, "transporte_zaragoza_2026_2028");
+}
+assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: "jornada transporte Zaragoza 19/09/2026" })).status, "not_found");
+assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: "salarios transporte Zaragoza 15/06/2026" })).entry.id, "transporte_zaragoza_2026_2028");
+assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: "dietas transporte Zaragoza 15/06/2026" })).status, "not_found");
+assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: "dietas transporte Zaragoza 01/07/2026" })).entry.id, "transporte_zaragoza_2026_2028");
+assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: "jornada transporte Zaragoza 20/09/2026" })).entry.id, "transporte_zaragoza_2026_2028");
+
 const gipuzkoaRevisionFile = "BOG-2026-02-16-20100035012014-revision-salarial-2026.pdf";
 const gipuzkoaRevision = parseConvenioFileName(gipuzkoaRevisionFile);
 assert.strictEqual(gipuzkoaRevision.officialCode, "20100035012014");

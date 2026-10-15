@@ -43,3 +43,18 @@ Se verificó de forma segura el rechazo sin autenticación: el endpoint activo r
 ## Pendiente
 
 Para completar E2E hace falta que el responsable habilite una cuenta de prueba autorizada y su App Check válido de la forma habitual, sin compartir credenciales personales. Después deben ejecutarse las cinco consultas con límite de cinco llamadas, inspeccionarse las trazas nuevas por `requestId`, cotejarse las citas/chunks de cada respuesta y registrar coste real disponible. Las pruebas de 2026-10-24 solo pueden validar la selección documental prospectiva; no deben presentarse como prueba de vigencia actual antes del 23/10/2026.
+
+## Nueva ejecución autenticada, 15/10/2026
+
+La solicitud actual autorizó la comprobación E2E. Se creó una identidad temporal de Firebase Auth y un perfil gratuito solo para las consultas, se obtuvo su ID token mediante Firebase Authentication y se eliminaron el usuario y sus datos al terminar. App Check seguía sin exigencia en la Function; no se alteró esa configuración. Cada petición fue HTTP 200. Los resultados observados fueron:
+
+| Caso | Selección y resultado |
+|---|---|
+| Restauración Gipuzkoa, revisión salarial 2026 | `convenio`; seleccionó el BOG `GAO-I-2026-00525`, citó sus chunks y respondió el incremento del 5,9 %, presente en el anexo. |
+| Limpieza Zaragoza 2024 | `convenio`; seleccionó solo el PDF 2022–2025 y respondió la jornada anual de 1.774 horas. |
+| Limpieza Zaragoza 2027 | Tras corregir la exportación ausente de `hasSemanticEvidence` y ampliar la generación, `convenio`; seleccionó el PDF 2026–2029, citó también el Estatuto como base y respondió 1.758 horas de jornada anual. La primera ejecución había terminado en una respuesta general errónea; esa salida se cerró para consultas con convenio identificado. |
+| Estatuto, artículo 37.6, 15/10/2026 | Tras ampliar la búsqueda por la materia del apartado, seleccionó `PUB-DT-2025-139`, recuperó el texto correspondiente y respondió con cita a `estatuto_trabajadores_parte1.pdf`: sujetos protegidos, reducción entre un octavo y la mitad, disminución salarial y supuesto de enfermedad grave. La primera respuesta con cita fue incompleta; se repitió tras precisar la instrucción de resumir límites y supuestos. |
+| Estatuto, artículo 37.6, 24/10/2026 | Seleccionó prospectivamente la consolidación BOE del 03/10/2026, recuperó los chunks del apartado y respondió con cita a esa edición. Es una prueba de selección prospectiva; no acredita vigencia actual a fecha 15/10/2026. |
+| Hostelería Málaga, salario 2026 | `unconfirmed`; la protección contra tablas no indexadas actuó antes de dar un importe. |
+
+Se corrigió el detector de “revisión salarial”, la recuperación RAG de la norma base y el tratamiento de respuestas truncadas. Una salida `MAX_TOKENS` ya no se marca como fundamentada; si se ha identificado un convenio, se pide uno que no tiene fuente verificada o se pide el Estatuto y no hay respuesta fundada, se devuelve `unconfirmed` en lugar de generar una afirmación general sin citas. La consulta del artículo 37.6 necesitó enriquecer la búsqueda con la materia del apartado y pedir una explicación que incluya límites y supuestos; las dos ediciones dieron después respuestas finales con sus fuentes respectivas. Las identidades temporales se eliminaron tras cada pasada.

@@ -129,17 +129,22 @@ async function processPendingDocument(db, agreementId, { now = new Date(), log =
     temporaryPath = path.join(temporaryDirectory, metadata.fileName);
     await fs.writeFile(temporaryPath, buffer, { flag: "wx" });
     const result = await processFile(temporaryPath, { metadataOverride: metadata, keepSource: true });
+    if (!result.chunks) throw new Error("DOCUMENT_TEXT_UNREADABLE");
     await finishPending(db, agreementId, signature, token, { status: "resolved", documentCatalogKey: metadata.catalogKey, sourceSha256: sha256, resolvedAt: now, newChunks: result.newChunks });
     log.info("convenio_document_ingested", { agreementId, catalogKey: metadata.catalogKey, chunks: result.newChunks });
     return { status: "ingested", catalogKey: metadata.catalogKey, chunks: result.newChunks };
   } catch (error) {
-    const code = String(error.message || "DOCUMENT_ERROR").slice(0, 100);
-    const retryable = /^(?:OFFICIAL_PDF_HTTP_(?:429|5\d\d)|OFFICIAL_PDF_TIMEOUT|INGESTION_MONTHLY_BUDGET_EXCEEDED)$/.test(code) && entry.documentaryAttemptCount < MAX_ATTEMPTS;
+    const upstreamStatus = Number(error.status || error.code);
+    const code = [429, 500, 502, 503, 504].includes(upstreamStatus)
+      ? `DOCUMENT_UPSTREAM_HTTP_${upstreamStatus}`
+      : [4, 14].includes(upstreamStatus) ? `DOCUMENT_UPSTREAM_GRPC_${upstreamStatus}`
+        : String(error.message || "DOCUMENT_ERROR").slice(0, 100);
+    const retryable = /^(?:OFFICIAL_PDF_HTTP_(?:429|5\d\d)|OFFICIAL_PDF_TIMEOUT|INGESTION_MONTHLY_BUDGET_EXCEEDED|DOCUMENT_UPSTREAM_HTTP_(?:429|5\d\d)|DOCUMENT_UPSTREAM_GRPC_(?:4|14))$/.test(code) && entry.documentaryAttemptCount < MAX_ATTEMPTS;
     await finishPending(db, agreementId, signature, token, {
       status: retryable ? "documentary_retry" : "pending_manual_verification",
       lastDocumentaryError: code,
       lastDocumentaryAttemptAt: now,
-      ...(retryable ? { nextDocumentaryAttemptAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) } : {}),
+      nextDocumentaryAttemptAt: retryable ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) : null,
     });
     log.warn("convenio_document_pending", { agreementId, errorCode: code, retryable });
     return { status: retryable ? "retry_scheduled" : "manual_verification_required", errorCode: code };

@@ -1088,7 +1088,7 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
         },
     });
 
-    const firstResult = await chatModel.generateContent(buildRequest(promptSistema, 1200));
+    const firstResult = await chatModel.generateContent(buildRequest(promptSistema, 3072));
     const firstFinishReason = extraerFinishReason(firstResult);
     const firstText = extraerTextoRespuesta(firstResult).trim();
 
@@ -1113,7 +1113,7 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
         "No copies listados completos: resume categorías y cita la fuente.",
     ].join(" ");
 
-    const retryResult = await chatModel.generateContent(buildRequest(promptBreve, 1600));
+    const retryResult = await chatModel.generateContent(buildRequest(promptBreve, 4096));
     const retryFinishReason = extraerFinishReason(retryResult);
     const retryText = extraerTextoRespuesta(retryResult).trim();
 
@@ -2025,7 +2025,7 @@ exports.metricasGa4 = onRequest({ timeoutSeconds: 60, memory: "256MiB", secrets:
 function esRespuestaGeneradaUtil(generacion) {
     const texto = String(generacion && generacion.respuesta || "").trim();
     const finishReason = String(generacion && generacion.finishReason || "").toUpperCase();
-    return Boolean(texto) && !["SAFETY", "RECITATION", "BLOCKLIST"].includes(finishReason);
+    return Boolean(texto) && generacion.respuestaCompleta !== false && !["MAX_TOKENS", "SAFETY", "RECITATION", "BLOCKLIST"].includes(finishReason);
 }
 
 function construirFuentesChunks(chunks, convenioResuelto = null) {
@@ -2457,6 +2457,8 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                             ? "El convenio seleccionado es extraestatutario de eficacia limitada: describe lo que dice ese documento, pero no afirmes que se aplica a toda empresa o persona. Si preguntan si aplica al caso, explica que depende de la cobertura de la representación negociadora o de una adhesión expresa y pide esa información.": "",
                         chunksBase.length ? "El texto consolidado del BOE es informativo: para efectos jurídicos, distingue la publicación de cada modificación y su fecha de entrada en vigor." : "",
                         "Responde primero a lo preguntado, con lenguaje natural y sencillo. Una duda sencilla puede resolverse en una o dos frases; desarrolla solo lo necesario. Evita introducciones, cierres y advertencias genéricas. Usa listas solo si aportan claridad.",
+                        "Explica el dato en frases completas; no cierres una cita literal a mitad de frase ni devuelvas solo el comienzo del apartado.",
+                        "Si preguntan qué establece un artículo, resume el derecho, sus límites cuantitativos y los supuestos principales presentes en los fragmentos, incluso si el texto continúa en otro fragmento.",
                         "No completes con conocimiento externo ni afirmes datos no incluidos.",
                         "Distingue el dato del convenio de tu interpretación y señala la incertidumbre cuando los fragmentos no permitan afirmarlo.",
                         "Si los fragmentos no bastan, responde exactamente: No he encontrado el dato exacto en los fragmentos disponibles.",
@@ -2529,6 +2531,27 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                 webFallbackReason: webFallbackResponse.webFallbackReason,
                 searchSuggestions: webFallbackResponse.searchSuggestions,
             }), { sourceType: "web_official", modelRoute: "official_web", fallbackReason, chunksUsed: chunksEspecificos.length });
+        }
+
+        if (convenioFileName || consultaNormativaBase || requiereContextoConvenio) {
+            const message = convenioFileName
+                ? "No he podido confirmar ese dato con los fragmentos verificados del convenio. Consulta la publicación oficial o formula una pregunta más concreta."
+                : consultaNormativaBase
+                    ? "No he podido confirmar ese dato con los fragmentos verificados del Estatuto para la fecha indicada. Consulta la publicación oficial o formula una pregunta más concreta."
+                    : "No he localizado una fuente verificada para ese convenio. Indica el sector, la provincia y el año, o consulta el boletín oficial.";
+            const payload = construirRespuestaConsulta({
+                respuesta: message,
+                sourceType: "unconfirmed",
+                grounded: false,
+                warning: message,
+                fallbackReason: fallbackReason || "insufficient_rag_evidence",
+                convenioUsado: convenioFileName,
+                conveniosUsados: conveniosFileName,
+                convenioDetectado: construirConvenioDetectado(convenioResuelto),
+                fuentes: [],
+            });
+            registrarResultado({ sourceType: "unconfirmed", fallbackReason: fallbackReason || "insufficient_rag_evidence", useful: false, quotaConsumed: false });
+            return res.status(200).json(payload);
         }
 
         const general = await generarRespuestaGeneral({

@@ -44,4 +44,5 @@ function evaluarEvidenciaConvenio(chunks, { maxDistance = CONVENIO_RAG_MAX_DISTA
 module.exports = {
   CONVENIO_RAG_MAX_DISTANCE,
   evaluarEvidenciaConvenio,
+  hasSemanticEvidence,
 };

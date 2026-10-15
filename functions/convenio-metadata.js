@@ -566,7 +566,7 @@ function detectConvenioCriteria({ pregunta, ciudad, sector }) {
     provinces: pickDetectedValue(provincesFromQuestion, provincesFromCity) || [],
     sectorKeys: pickDetectedValue(sectorFromQuestion, sectorFromField) || [],
     requestedYears,
-    isSalaryQuery: /\b(?:salario|salarios|sueldo|sueldos|retribucion|retribuciones|tabla salarial|tablas salariales|importe|bruto|cobrar|cobra|paga|plus|complemento)\b/.test(normalizeText(pregunta)),
+    isSalaryQuery: /\b(?:salario|salarios|sueldo|sueldos|retribucion|retribuciones|revision salarial|tabla salarial|tablas salariales|importe|bruto|cobrar|cobra|paga|plus|complemento)\b/.test(normalizeText(pregunta)),
   };
 }
 
@@ -598,7 +598,7 @@ function selectCatalogSourceFiles(entry, requestedYears = []) {
 function hasUnindexedSalaryEvidence(entry, question, currentYear = new Date().getFullYear()) {
   if (!entry || !Number.isFinite(Number(entry.salaryEvidenceVerifiedThroughYear))) return false;
   const normalized = normalizeText(question);
-  const asksSalary = /\b(?:salario|salarios|sueldo|sueldos|retribucion|retribuciones|tabla salarial|tablas salariales|importe|bruto|cobrar|cobra|paga|plus|complemento)\b/.test(normalized);
+  const asksSalary = /\b(?:salario|salarios|sueldo|sueldos|retribucion|retribuciones|revision salarial|tabla salarial|tablas salariales|importe|bruto|cobrar|cobra|paga|plus|complemento)\b/.test(normalized);
   if (!asksSalary) return false;
   const years = Array.from(new Set((String(question || "").match(/\b(?:19|20)\d{2}\b/g) || []).map(Number)));
   const yearsToCheck = years.length ? years : [currentYear];

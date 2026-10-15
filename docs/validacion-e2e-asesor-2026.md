@@ -122,3 +122,15 @@ El PR #24 desplegó overrides que excluyen del resolver la copia no cotejada de 
 | Transporte Navarra, consulta histórica 2007–2008 | BLOCKED | Producción. Mismo bloqueo de navegador; no se envió la pregunta ni se consumió Gemini. |
 
 La resolución unitaria de `source_unverified` y los overrides pasan en `convenio-metadata.test.js`; esto no sustituye la validación de las respuestas visibles del asesor. Los 16 escenarios de la tabla anterior conservan sus resultados históricos; esta revalidación adicional no se cuenta como PASS ni altera su denominador. Consultas Gemini adicionales: 0; coste incremental: USD 0 estimado. Para repetirla se necesita una sesión de navegador autenticada expuesta a la herramienta de control aprobada, sin exportar cookies ni tokens.
+
+## Cierre focal de fuentes Barcelona, Málaga y Navarra — 15/10/2026
+
+No se pudo controlar una sesión de navegador autenticada en este entorno (`apps=[]`, `browsers=[]`); no se enviaron preguntas al asesor ni se consumió Gemini. Las comprobaciones de resolver/KNN indicadas abajo son pruebas locales y de Firestore, no E2E de respuesta generativa.
+
+| Escenario focal | Estado | Evidencia disponible | Pendiente |
+|---|---|---|---|
+| Limpieza Barcelona 2026, selección territorial y tablas | BLOCKED (E2E) | Resolver local: Barcelona `resolved`, Tarragona `missing_location`; KNN Firestore: 6/6; fechas 01/03 y 01/10 seleccionaron rangos separados. | Ejecutar con sesión de prueba autenticada y revisar respuesta/citas visibles después del despliegue del código integrado. |
+| Hostelería Málaga 2026, importes o abstención | BLOCKED (E2E) | No se obtuvo el PDF oficial íntegro; el sistema no recibió consulta en esta pasada. | Obtener texto/anexos oficiales del BOPMA y probar respuesta auténtica; no aceptar cifras no cotejadas. |
+| Transporte Navarra, fuente actual o abstención | BLOCKED (E2E) | BON acredita publicaciones históricas 2005–2008; no se halló sucesor en las búsquedas realizadas. No se atribuye vigencia ni salario actual. | Revisión BON mensual y prueba autenticada de abstención cuando el navegador de pruebas esté disponible. |
+
+Consultas Gemini generativas de estos tres escenarios: 0. El presupuesto de la ingesta de tablas Barcelona se registra por separado en `ingesta-automatica-convenios-2026.md`.

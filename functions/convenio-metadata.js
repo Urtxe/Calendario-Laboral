@@ -673,6 +673,10 @@ function entryCoversRequestedYears(entry, requestedYears) {
     requestedYears.every((year) => year >= yearStart && year <= yearEnd);
 }
 
+function entryMatchesProvince(entry, province) {
+  return entry.province === province || Array.isArray(entry.applicableProvinces) && entry.applicableProvinces.includes(province);
+}
+
 function entryCoversRequestedDates(entry, requestedDates, isSalaryQuery = false, question = "") {
   if (!requestedDates.length) return true;
   const normalizedQuestion = normalizeText(question);
@@ -824,7 +828,7 @@ function resolveCatalogEntry(catalogEntries, criteria) {
   const candidates = catalogEntries.filter((entry) =>
     entry.catalogStatus !== "superseded" && entry.catalogStatus !== "normative_base" && entry.active !== false &&
     entry.province &&
-    provinces.includes(entry.province) &&
+    provinces.some((province) => entryMatchesProvince(entry, province)) &&
     Array.isArray(entry.sectorKeys) &&
     entry.sectorKeys.some((sectorKey) => sectorKeys.includes(sectorKey)) &&
     (!['salary_tables', 'salary_revision'].includes(entry.sourceDocumentType) || criteria.isSalaryQuery === true)
@@ -923,7 +927,7 @@ function resolveCatalogReference(catalogEntries, reference, criteria) {
     candidate.sourceVerification !== "unverified" &&
     (candidate.id === reference || candidate.title === reference || candidate.fileNames?.includes(reference)) &&
     (!['salary_tables', 'salary_revision'].includes(candidate.sourceDocumentType) || criteria.isSalaryQuery === true));
-  if (!entry || (criteria.provinces.length && !criteria.provinces.includes(entry.province)) ||
+  if (!entry || (criteria.provinces.length && !criteria.provinces.some((province) => entryMatchesProvince(entry, province))) ||
       (criteria.sectorKeys.length && !criteria.sectorKeys.some((key) => entry.sectorKeys?.includes(key)))) {
     return null;
   }
@@ -937,6 +941,7 @@ module.exports = {
   detectConvenioCriteria,
   getDocumentType,
   hasUnindexedSalaryEvidence,
+  entryMatchesProvince,
   isWorkersStatuteChunkCurrent,
   isSupportedLaborLocation,
   isSupportedLaborSector,

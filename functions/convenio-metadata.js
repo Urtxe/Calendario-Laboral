@@ -138,6 +138,10 @@ const FILE_METADATA_OVERRIDES = {
     economicEffectsExceptions: [{ subject: "dietas", effectiveFrom: "2026-07-01" }],
     applicationWarning: "Texto pactado 2026–2028, publicado en BOPZ el 19/09/2026: entrada en vigor general el 20/09/2026; efectos económicos generales desde el 01/01/2026 y actualización de dietas desde el 01/07/2026. Estas fechas no determinan por sí solas la aplicabilidad individual.",
   },
+  "Convenio Transporte Zaragoza 2022-2025.pdf": {
+    sourceVerification: "unverified",
+    documentaryWarning: "La procedencia oficial y la integridad del agregado histórico no están verificadas en esta revisión. No presentarlo como fuente confirmada.",
+  },
   "BOG-2026-02-16-20100035012014-revision-salarial-2026.pdf": {
     catalogKey: "alojamientos_gipuzkoa_revision_salarial_2026",
     catalogTitle: "Revisión salarial 2026 — Alojamientos de Gipuzkoa",
@@ -605,6 +609,21 @@ function buildCatalogEntriesFromFileNames(fileNames) {
   });
 }
 
+function applyKnownSourceVerificationOverrides(entry) {
+  if (!entry || !Array.isArray(entry.fileNames)) return entry;
+  const unverifiedFiles = entry.fileNames
+    .map(parseConvenioFileName)
+    .filter((file) => file.sourceVerification === "unverified");
+  if (!unverifiedFiles.length) return entry;
+
+  const warnings = [...new Set(unverifiedFiles.map((file) => file.documentaryWarning).filter(Boolean))];
+  return {
+    ...entry,
+    sourceVerification: "unverified",
+    ...(warnings.length ? { documentaryWarning: warnings.join(" ") } : {}),
+  };
+}
+
 function pickDetectedValue(primary, fallback) {
   if (Array.isArray(primary) && primary.length) return primary;
   if (typeof primary === "string" && primary) return primary;
@@ -884,6 +903,7 @@ function resolveCatalogEntry(catalogEntries, criteria) {
 function resolveCatalogReference(catalogEntries, reference, criteria) {
   const entry = catalogEntries.find((candidate) =>
     candidate.catalogStatus !== "superseded" && candidate.catalogStatus !== "normative_base" && candidate.active !== false &&
+    candidate.sourceVerification !== "unverified" &&
     (candidate.id === reference || candidate.title === reference || candidate.fileNames?.includes(reference)) &&
     (!['salary_tables', 'salary_revision'].includes(candidate.sourceDocumentType) || criteria.isSalaryQuery === true));
   if (!entry || (criteria.provinces.length && !criteria.provinces.includes(entry.province)) ||
@@ -895,6 +915,7 @@ function resolveCatalogReference(catalogEntries, reference, criteria) {
 
 module.exports = {
   CATALOGO_CONVENIOS,
+  applyKnownSourceVerificationOverrides,
   buildCatalogEntriesFromFileNames,
   detectConvenioCriteria,
   getDocumentType,

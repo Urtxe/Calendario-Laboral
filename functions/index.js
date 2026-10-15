@@ -9,6 +9,7 @@ const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const {
+    applyKnownSourceVerificationOverrides,
     CATALOGO_CONVENIOS,
     detectConvenioCriteria,
     hasUnindexedSalaryEvidence,
@@ -1248,7 +1249,7 @@ async function cargarCatalogoConvenios() {
     }
 
     const snapshot = await db.collection(CATALOGO_CONVENIOS).get();
-    catalogoCache = snapshot.docs.map((doc) => ({
+    catalogoCache = snapshot.docs.map((doc) => applyKnownSourceVerificationOverrides({
         id: doc.id,
         ...doc.data(),
     }));
@@ -2287,7 +2288,11 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             .includes(intentClassification.intent);
 
         const criterioExplicito = detectConvenioCriteria({ pregunta, ciudad: "", sector: "" });
-        if (!convenioResuelto || criterioExplicito.provinces.length || criterioExplicito.sectorKeys.length || criterioExplicito.requestedYears.length) {
+        const solicitudConvenioEspecifico = Boolean(
+            convenioResuelto || criterioExplicito.provinces.length || criterioExplicito.sectorKeys.length,
+        );
+        const debeResolverConvenio = !consultaNormativaBase || solicitudConvenioEspecifico;
+        if (debeResolverConvenio && (!convenioResuelto || criterioExplicito.provinces.length || criterioExplicito.sectorKeys.length || criterioExplicito.requestedYears.length)) {
             convenioResuelto = null;
             const resolucionCatalogo = await resolverConvenioDesdeEntrada(req.body, preguntaParaBusqueda);
             if (CLARIFICATION_STATUSES.has(resolucionCatalogo.status) && requiereContextoConvenio &&
@@ -2310,7 +2315,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             } else {
                 fallbackReason = "no_convenio";
             }
-        } else {
+        } else if (convenioResuelto) {
             conveniosFileName = convenioResuelto.fileNames || [];
             convenioFileName = conveniosFileName[0] || "";
         }
@@ -2442,8 +2447,29 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             const bloquesContexto = [];
             if (chunksBase.length) bloquesContexto.push(construirBloqueContexto(chunksBase, "NORMA BASE - ESTATUTO DE LOS TRABAJADORES"));
             if (evidencia.suficiente) bloquesContexto.push(construirBloqueContexto(chunksEspecificos, "NORMA ESPECÍFICA - CONVENIO"));
+            if (convenioResuelto?.sourceVerification === "verified") {
+                const fechasVerificadas = [
+                    convenioResuelto.sourceValidFrom ? `Vigencia general desde ${convenioResuelto.sourceValidFrom}.` : "",
+                    convenioResuelto.economicEffectsFrom ? `Efectos económicos generales desde ${convenioResuelto.economicEffectsFrom}.` : "",
+                    ...(convenioResuelto.economicEffectsExceptions || []).map((item) =>
+                        `Efectos de ${item.subject} desde ${item.effectiveFrom}.`
+                    ),
+                ].filter(Boolean);
+                if (fechasVerificadas.length) {
+                    bloquesContexto.push(`[FECHAS ESTRUCTURADAS DE FUENTE VERIFICADA]\n${fechasVerificadas.join("\n")}`);
+                }
+            }
             const contexto = bloquesContexto.join("\n\n===\n\n");
             const hayConvenioEspecifico = evidencia.suficiente;
+            const fechaHoyMadrid = new Intl.DateTimeFormat("en-CA", {
+                timeZone: "Europe/Madrid",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+            }).format(new Date());
+            const referenciaEstatutoFutura = consultaNormativaBase && seleccionEstatuto?.asOfDate > fechaHoyMadrid
+                ? `La fecha consultada (${seleccionEstatuto.asOfDate}) es futura respecto de hoy (${fechaHoyMadrid}); indica expresamente que describes la redacción prevista para esa fecha y no que ya esté vigente hoy.`
+                : "";
             try {
                 const generacion = await generarRespuestaConvenio({
                     idiomaRespuesta,
@@ -2456,6 +2482,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                         convenioResuelto?.legalEffect === "extraestatutario_eficacia_limitada"
                             ? "El convenio seleccionado es extraestatutario de eficacia limitada: describe lo que dice ese documento, pero no afirmes que se aplica a toda empresa o persona. Si preguntan si aplica al caso, explica que depende de la cobertura de la representación negociadora o de una adhesión expresa y pide esa información.": "",
                         chunksBase.length ? "El texto consolidado del BOE es informativo: para efectos jurídicos, distingue la publicación de cada modificación y su fecha de entrada en vigor." : "",
+                        referenciaEstatutoFutura,
                         "Responde primero a lo preguntado, con lenguaje natural y sencillo. Una duda sencilla puede resolverse en una o dos frases; desarrolla solo lo necesario. Evita introducciones, cierres y advertencias genéricas. Usa listas solo si aportan claridad.",
                         "Explica el dato en frases completas; no cierres una cita literal a mitad de frase ni devuelvas solo el comienzo del apartado.",
                         "Si preguntan qué establece un artículo, resume el derecho, sus límites cuantitativos y los supuestos principales presentes en los fragmentos, incluso si el texto continúa en otro fragmento.",
@@ -2463,6 +2490,8 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                         "Distingue el dato del convenio de tu interpretación y señala la incertidumbre cuando los fragmentos no permitan afirmarlo.",
                         "Si los fragmentos no bastan, responde exactamente: No he encontrado el dato exacto en los fragmentos disponibles.",
                         "Cita la fuente disponible al final cuando aparezca.",
+                        "Cuando una pregunta salarial no indique una categoría concreta, identifica la publicación y el ejercicio sin escoger importes de ejemplo. Solo cita un importe si el fragmento lo asigna expresamente a esa categoría y ejercicio.",
+                        "Las fechas estructuradas de una fuente verificada son evidencia prioritaria; respétalas sin inferir efectos distintos desde cláusulas generales de firma o publicación.",
                         idiomaRespuesta === "euskera" ? "Responde en euskera." : "Responde en castellano.",
                     ].join(" "),
                 });

@@ -44,32 +44,38 @@ Se verificó de forma segura el rechazo sin autenticación: el endpoint activo r
 
 La ejecución autenticada descrita más abajo es histórica y corresponde a `consultarConvenio` `00031-jus`. Para validar la revisión actual `00044-qot` hace falta una identidad de prueba autorizada y App Check conforme a la configuración vigente, sin compartir credenciales personales. Las pruebas fechadas 24/10 solo validan selección prospectiva, no vigencia actual antes del 23/10/2026.
 
-## Revalidación de los 16 casos solicitados (15/10/2026)
+## Revalidación E2E autenticada en producción (15/10/2026)
 
-**Entorno:** producción `calendario-laboral-252b1`, revisión `consultarconvenio-00044-qot`. **Identidad de pruebas disponible para esta revalidación: no.** No se halló un procedimiento vigente ni una identidad autorizada reutilizable en el repositorio. No se crearon usuarios, no se usaron cuentas personales y no se llamó al endpoint del asesor. `firebase.json` no configura emuladores y el proyecto no declara Playwright como dependencia o script. Auth Emulator más Firestore Emulator no sustituiría una comprobación del índice KNN y de las respuestas generadas desde los datos de producción; por eso no se presenta una prueba local simulada como E2E real. No se modificó Auth, App Check, Firestore ni producción.
+**Entorno:** `https://balancelaboral.es`, producción `calendario-laboral-252b1`, revisión inicial `consultarconvenio-00044-qot`; interfaz visible controlada con Playwright CLI en una sesión Edge autenticada por el propietario. No se leyeron ni registraron identificadores, credenciales, cookies o tokens. Auth y App Check siguieron el flujo normal. Se enviaron 16 consultas reales a Gemini y se relacionaron con eventos `consultarConvenio_retrieval` por `requestId`, fuente y chunks; el navegador mostró respuestas y citas. No se cambiaron datos de Firestore ni se generaron embeddings de documentos.
 
-Todos los casos quedan **BLOCKED** como E2E autenticado actual. La evidencia parcial de selección temporal/KNN de producción procedente de la validación documental del 15/10 se indica expresamente; no equivale a invocar el asesor, generar respuesta, probar citas en pantalla ni validar la sesión. Los resultados de la sección “Nueva ejecución autenticada” son una ejecución anterior ya documentada; no se extrapolan a la revisión `00044-qot`.
+### Primera pasada
 
-| Caso | Estado | Entorno / identidad | Fuente esperada y evidencia de selección disponible | Resultado de esta revalidación |
-|---|---|---|---|---|
-| 1. Barcelona, salarios 2025 | **BLOCKED** | Producción; sin identidad | El resolutor seleccionó `transporte_barcelona_tablas_2025`; KNN real previo: 5/5 del documento filtrado. | Sin respuesta generada ni validación de importes/citas del asesor actual. |
-| 2. Barcelona, convenio 2027 | **BLOCKED** | Producción; sin identidad | `transporte_barcelona_2026_2028`; resolver temporal y KNN real previo: 5/5. | No se validó texto ni cita en respuesta actual. |
-| 3. Barcelona, salarios 2026 | **BLOCKED** | Producción; sin identidad | Resolver selecciona el texto nuevo desde 2026; tablas 2025 permanecen separadas. KNN real previo: 5/5 del texto nuevo. | No se validó que Gemini evitase mezclar importes. |
-| 4. Barcelona, consulta histórica | **BLOCKED** | Producción; sin identidad | La entrada agregada `transporte_barcelona_2011_2023` sigue sin procedencia verificada; el resolver la bloquea (`source_unverified`/`not_found`). | No se comprobó la respuesta final prudente. |
-| 5. Zaragoza, convenio 2024 | **BLOCKED** | Producción; sin identidad | El resolver seleccionó la fuente histórica 2022–2025 y KNN real previo devolvió 5/5 de ella; su catálogo no tiene SHA/procedencia verificados en esta revisión. | No se comprobó prudencia ni ausencia de citas del texto nuevo. |
-| 6. Zaragoza, convenio 2027 | **BLOCKED** | Producción; sin identidad | `transporte_zaragoza_2026_2028`; resolver temporal y KNN real previo: 5/5. | No se validaron respuesta ni cita actuales. |
-| 7. Zaragoza, salarios/dietas 2026 | **BLOCKED** | Producción; sin identidad | El resolver separa efectos económicos generales desde 01/01/2026 y dietas desde 01/07/2026; una consulta de dietas anterior al 01/07 queda sin fuente nueva. | Sin respuesta salarial generada ni comprobación de importes. |
-| 8. Alojamientos Gipuzkoa 2026 | **BLOCKED** | Producción; sin identidad | Revisión oficial separada `alojamientos_gipuzkoa_revision_salarial_2026`; KNN real previo: 5/5. | No se validaron cita y respuesta del asesor actual. |
-| 9. Restauración Gipuzkoa 2026 | **BLOCKED** | Producción; sin identidad | `GAO-I-2026-00525`, catálogo `hosteleria_gipuzkoa_revision_salarial_2026`, 14 chunks activos; Eventarc la resolvió y KNN real previo: 5/5. | Sin nueva invocación autenticada. |
-| 10. Gipuzkoa, consulta no salarial | **BLOCKED** | Producción; sin identidad | Debe utilizar el texto principal, no la revisión salarial como sustituto; no hay resultado de recuperación específico de esta consulta en esta revalidación. | No ejecutado; no se infiere el resultado desde el caso salarial. |
-| 11. Limpieza Zaragoza 2027 | **BLOCKED** | Producción; sin identidad | La matriz y catálogo identifican el convenio BOPZ 216/2026, anuncio 6181, para 2026–2029; no se obtuvo selección nueva en esta revalidación. | Sin respuesta, chunks ni citas observadas. |
-| 12. Limpieza Zaragoza histórica | **BLOCKED** | Producción; sin identidad | La sección histórica anterior registra una prueba de 2024 en la revisión `00031-jus`; eso no valida el código actual `00044-qot`. | No repetido en la revisión actual. |
-| 13. Estatuto anterior al 23/10/2026 | **BLOCKED** | Producción; sin identidad | La ejecución anterior documentó selección de `PUB-DT-2025-139`; no se repitió con la revisión actual. | Sin respuesta actual ni citas comprobadas. |
-| 14. Estatuto desde el 23/10/2026 | **BLOCKED** | Producción; sin identidad | La ejecución anterior documentó selección prospectiva de la consolidación BOE 03/10/2026; es una fecha futura al corte de 15/10. | No repetido; no prueba vigencia actual antes de la fecha de efectos. |
-| 15. Hostelería Málaga, salarios 2026 | **BLOCKED** | Producción; sin identidad | El PDF íntegro de tablas sigue sin cotejar; el caso anterior documentó respuesta `unconfirmed`, sin importe. | No se repitió la comprobación generativa. |
-| 16. Convenio histórico no acreditado | **BLOCKED** | Producción; sin identidad | Debe bloquearse una afirmación de vigencia/aplicabilidad mientras falte procedencia acreditada; no se definió una ficha concreta para esta nueva consulta. | Sin consulta de asesor; no hay salida que evaluar. |
+| Caso | Estado | Fuente seleccionada | Resultado observado |
+|---|---|---|---|
+| 1. Barcelona, salarios 2025 | **FAIL** | BOPB, `transporte_barcelona_tablas_2025` | Citó la publicación correcta, pero asignó a «Oficial 1.ª» €27.454,20; la tabla oficial indica €29.442,65. El «Jefe de Servicio» €42.249,20 sí coincide. |
+| 2. Barcelona, convenio 2027 | **PASS** | `Convenio Transporte Barcelona 2026-2028.pdf` | Identificó el convenio nuevo y su periodo; cita visible correcta. |
+| 3. Barcelona, salarios 2026 | **PASS** | `Convenio Transporte Barcelona 2026-2028.pdf` | Seleccionó el ejercicio y documento correctos y no usó la tabla 2025. Los importes individuales no se cotejaron externamente en esta ejecución. |
+| 4. Barcelona, consulta histórica 2022 | **PASS** | Sin fuente histórica acreditada | Indicó que no podía confirmar el convenio histórico; no presentó el agregado 2011–2023 como fuente verificada. |
+| 5. Zaragoza, convenio 2024 | **FAIL** | `Convenio Transporte Zaragoza 2022-2025.pdf` | Afirmó el histórico como aplicable pese a que su procedencia e integridad no estaban verificadas en el catálogo. |
+| 6. Zaragoza, convenio 2027 | **PASS** | BOPZ, anuncio 6101/2026 | Identificó la publicación oficial y el periodo 2026–2028; cita correcta. |
+| 7. Zaragoza, salarios y dietas 2026 | **FAIL** | BOPZ, anuncio 6101/2026 | Dio efectos salariales generales desde 01/01/2026, pero situó dietas en octubre; el metadato verificado establece 01/07/2026. |
+| 8. Alojamientos Gipuzkoa 2026 | **PASS** | `BOG-2026-02-16-20100035012014-revision-salarial-2026.pdf` | Recuperó y citó la revisión oficial BOG 2026. Los importes no se cotejaron independientemente en esta pasada. |
+| 9. Restauración Gipuzkoa 2026 | **PASS** | `BOG-2026-02-13-20104585012023-revision-salarial-2026.pdf` | Recuperó la revisión BOG y contestó el incremento publicado de 5,9%; cita correcta. |
+| 10. Alojamientos Gipuzkoa, vacaciones | **PASS** | `Convenio Alojamientos GIPUZKOA 2025-2028.pdf` y Estatuto | Usó el texto principal para la cuestión no salarial, no la revisión salarial como sustituto. |
+| 11. Limpieza Zaragoza 2027 | **PASS** | `Convenio Limpieza edificios Zaragoza 2026-2029.pdf` | Identificó el convenio nuevo y el periodo aplicable; cita correcta. |
+| 12. Limpieza Zaragoza 2024 | **PASS** | `Convenio Limpieza edificios Zaragoza 2022-2025.pdf` | No mezcló el documento 2026–2029. La procedencia histórica no se revalidó independientemente en esta pasada. |
+| 13. Estatuto, 15/10/2026 | **FAIL** | `estatuto_trabajadores_parte1.pdf` más chunks de convenio ajenos | El resumen estatutario era temporalmente pertinente, pero la interfaz atribuyó la fuente a «tu convenio» y añadió advertencias de otro convenio. La traza confirmó recuperación de chunks ajenos. |
+| 14. Estatuto desde 23/10/2026 | **FAIL** | `estatuto_trabajadores_2026-10-03.pdf` más chunks de convenio ajenos | No aclaró que la fecha consultada aún era futura al 15/10 y mostró etiqueta/advertencia ajenas al Estatuto. |
+| 15. Hostelería Málaga, salarios 2026 | **PASS** | Fuentes del catálogo con aviso de documento completo pendiente | Rehusó dar cifras exactas no acreditadas. |
+| 16. Transporte Gipuzkoa, salarios 2012 | **PASS** | Sin fuente histórica acreditada para el ejercicio | Reconoció falta de evidencia y no inventó un importe. |
 
-**Balance de esta revalidación:** 0 PASS, 0 FAIL, 16 BLOCKED, 0 NOT RUN. “BLOCKED” significa que el escenario no se pudo ejecutar como E2E autenticado; la evidencia parcial citada no altera el estado. Llamadas a Gemini, consultas KNN y coste atribuibles a esta revalidación: **0**. Para desbloquear se necesita una identidad de pruebas autorizada por el responsable, con su flujo normal de Auth y App Check; no hace falta cambiar producción ni compartir secretos.
+**Primera pasada:** 11 PASS, 5 FAIL, 0 BLOCKED, 0 NOT RUN; 16 consultas reales. La comprobación del caso 1 se cotejó con la [tabla oficial BOPB de 2025](https://bop.diba.cat/anuncio/ver-pdf/3910056), donde Oficial 1.ª figura con €29.442,65 y Jefe de Servicio con €42.249,20.
+
+### Correcciones y revalidación pendiente
+
+Se corrigieron cinco causas reproducibles: (1) el asesor escogía importes de ejemplo sin que se indicara categoría; (2) el histórico de Transporte Zaragoza se trataba como verificado; (3) el modelo infería fechas de dietas de una cláusula general, ignorando la fecha estructurada; (4–5) las consultas solo sobre el Estatuto heredaban el convenio del perfil y no advertían que el 23/10 todavía era futuro. La corrección bloquea el histórico no verificado, aplica metadatos locales también a entradas del catálogo Firestore, separa consultas normativas base del convenio del perfil y refuerza las instrucciones de generación.
+
+Las cinco consultas de regresión (casos 1, 5, 7, 13 y 14) se ejecutarán una vez cada una después de desplegar la corrección; tope total autorizado: 21 consultas reales, sin reintentos adicionales. El estado definitivo de esas cinco filas se anotará aquí tras observar respuestas y trazas de la revisión desplegada. No se presenta su corrección local como una revalidación E2E.
 
 ## Historial: ejecución autenticada, 15/10/2026 (`00031-jus`)
 

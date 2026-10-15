@@ -119,6 +119,7 @@ function classifyOfficialDocument(title) {
   if (/revision salarial|revision de tablas/.test(value)) return "salary_revision";
   if (/tabla|salario/.test(value)) return "salary_tables";
   if (/prorroga/.test(value)) return "extension";
+  if (/acuerdo parcial|acord parcial/.test(value)) return "partial_amendment";
   if (/modificacion|modifica/.test(value)) return "partial_amendment";
   if (/acuerdo complementario|acuerdo de comision paritaria/.test(value)) return "complementary_agreement";
   if (/convenio|texto nuevo/.test(value)) return "collective_agreement";

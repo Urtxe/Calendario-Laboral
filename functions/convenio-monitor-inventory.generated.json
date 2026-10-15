@@ -6,7 +6,7 @@
     "officialCode": "20104585012023",
     "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=20104585012023",
     "source": "REGCON",
-    "pactEndYear": 2026,
+    "pactEndYear": 2031,
     "documentaryStatus": "VERIFICADO CON ACTUALIZACIONES PENDIENTES",
     "sourceCheck": "available"
   },
@@ -17,7 +17,7 @@
     "officialCode": "20100035012014",
     "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=20100035012014",
     "source": "REGCON",
-    "pactEndYear": 2028,
+    "pactEndYear": 2031,
     "documentaryStatus": "VERIFICADO CON ACTUALIZACIONES DOCUMENTALES PENDIENTES",
     "sourceCheck": "available"
   },
@@ -28,7 +28,7 @@
     "officialCode": "48001205011981",
     "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=48001205011981",
     "source": "REGCON",
-    "pactEndYear": 2027,
+    "pactEndYear": 2031,
     "documentaryStatus": "VERIFICADO CON ACTUALIZACIONES PENDIENTES",
     "sourceCheck": "available"
   },
@@ -61,7 +61,7 @@
     "officialCode": "41001465011981",
     "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=41001465011981",
     "source": "REGCON",
-    "pactEndYear": 2028,
+    "pactEndYear": 2031,
     "documentaryStatus": "VERIFICADO CON ACTUALIZACIONES PENDIENTES",
     "sourceCheck": "available"
   },
@@ -116,7 +116,7 @@
     "officialCode": "28100055012016",
     "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=28100055012016",
     "source": "REGCON",
-    "pactEndYear": 2025,
+    "pactEndYear": 2031,
     "documentaryStatus": "VERIFICADO CON ACTUALIZACIONES PENDIENTES",
     "sourceCheck": "available"
   },
@@ -171,7 +171,7 @@
     "officialCode": "29000945011981",
     "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=29000945011981",
     "source": "REGCON",
-    "pactEndYear": 2027,
+    "pactEndYear": 2031,
     "documentaryStatus": "VERIFICADO CON ACTUALIZACIONES PENDIENTES",
     "sourceCheck": "available"
   },
@@ -182,7 +182,7 @@
     "officialCode": "46001285011982",
     "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=46001285011982",
     "source": "REGCON",
-    "pactEndYear": null,
+    "pactEndYear": 2031,
     "documentaryStatus": "VERIFICADO CON ACTUALIZACIONES PENDIENTES",
     "sourceCheck": "available"
   },
@@ -190,12 +190,12 @@
     "id": "convenio-18",
     "number": 18,
     "title": "Limpieza · Barcelona",
-    "officialCode": null,
-    "sourceUrl": null,
-    "source": null,
+    "officialCode": "79002415012005",
+    "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=79002415012005",
+    "source": "REGCON",
     "pactEndYear": 2025,
-    "documentaryStatus": "INCOMPLETO",
-    "sourceCheck": "missing_official_regcon_reference"
+    "documentaryStatus": "SEGUIMIENTO REGCON; PUBLICACIÓN OFICIAL VERIFICADA, INGESTA PENDIENTE DE SEGMENTACIÓN TERRITORIAL",
+    "sourceCheck": "available"
   },
   {
     "id": "convenio-19",
@@ -204,7 +204,7 @@
     "officialCode": "31004605011982",
     "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=31004605011982",
     "source": "REGCON",
-    "pactEndYear": 2027,
+    "pactEndYear": 2031,
     "documentaryStatus": "VERIFICADO CON ACTUALIZACIONES PENDIENTES",
     "sourceCheck": "available"
   },
@@ -215,7 +215,7 @@
     "officialCode": "41001705011982",
     "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=41001705011982",
     "source": "REGCON",
-    "pactEndYear": 2027,
+    "pactEndYear": 2031,
     "documentaryStatus": "VERIFICADO CON ACTUALIZACIONES PENDIENTES",
     "sourceCheck": "available"
   },
@@ -260,7 +260,7 @@
     "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=08004295011994",
     "source": "REGCON",
     "pactEndYear": 2028,
-    "documentaryStatus": "VERIFICADO CON ACTUALIZACIONES DOCUMENTALES PENDIENTES",
+    "documentaryStatus": "VERIFICADO; HISTÓRICO AGREGADO PENDIENTE",
     "sourceCheck": "available"
   },
   {
@@ -293,8 +293,14 @@
     "sourceUrl": null,
     "source": null,
     "pactEndYear": 2008,
-    "documentaryStatus": "INCOMPLETO",
-    "sourceCheck": "missing_official_regcon_reference"
+    "documentaryStatus": "REVISIÓN MANUAL ASISTIDA; DOCUMENTACIÓN INCOMPLETA",
+    "sourceCheck": "missing_official_regcon_reference",
+    "manualReview": {
+      "source": "BON",
+      "frequencyMonths": 1,
+      "action": "Comprobar publicaciones de transporte de mercancías, buscar convenio sucesor y confirmar su ámbito y relación con el instrumento 3107405.",
+      "url": "https://bon.navarra.es/es/busquedas"
+    }
   },
   {
     "id": "convenio-28",
@@ -303,8 +309,8 @@
     "officialCode": "50001115011981",
     "sourceUrl": "https://expinterweb.mites.gob.es/regcon/pub/consultaCodigoMapas?convenioMapa=50001115011981",
     "source": "REGCON",
-    "pactEndYear": 2025,
-    "documentaryStatus": "VERIFICADO CON ACTUALIZACIONES PENDIENTES",
+    "pactEndYear": 2028,
+    "documentaryStatus": "VERIFICADO; PROCEDENCIA DEL CATÁLOGO HISTÓRICO PENDIENTE",
     "sourceCheck": "available"
   }
 ]

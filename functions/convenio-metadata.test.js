@@ -85,6 +85,40 @@ assert.strictEqual(
   "source_unverified",
 );
 
+const cleaningBarcelonaFile = "Convenio Limpieza edificios Barcelona 2022-2025.pdf";
+const cleaningBarcelona = parseConvenioFileName(cleaningBarcelonaFile);
+assert.strictEqual(cleaningBarcelona.officialCode, "79002415012005");
+assert.strictEqual(cleaningBarcelona.sourceVerification, "unverified");
+assert.match(cleaningBarcelona.documentaryWarning, /resumen sindical, no el texto íntegro oficial/);
+const cleaningBarcelonaEntry = applyKnownSourceVerificationOverrides({
+  id: "limpieza_barcelona_2022_2025",
+  title: "Limpieza Barcelona 2022–2025",
+  province: "BARCELONA",
+  sectorKeys: ["limpieza"],
+  yearStart: 2022,
+  yearEnd: 2025,
+  fileNames: [cleaningBarcelonaFile],
+  sourceVerification: "verified",
+});
+assert.strictEqual(cleaningBarcelonaEntry.sourceVerification, "unverified");
+assert.strictEqual(resolveCatalogEntry([cleaningBarcelonaEntry], detectConvenioCriteria({ pregunta: "convenio limpieza Barcelona 2024" })).status, "source_unverified");
+assert.strictEqual(resolveCatalogReference([cleaningBarcelonaEntry], cleaningBarcelonaFile, detectConvenioCriteria({ pregunta: "limpieza Barcelona" })), null);
+
+const navarraTransportFile = "Convenio Transporte Navarra 2007-2008.pdf";
+const navarraTransportEntry = applyKnownSourceVerificationOverrides({
+  id: "transporte_navarra_2007_2008",
+  title: "Transporte Navarra 2007–2008",
+  province: "NAVARRA",
+  sectorKeys: ["transporte"],
+  yearStart: 2007,
+  yearEnd: 2008,
+  fileNames: [navarraTransportFile],
+  sourceVerification: "verified",
+});
+assert.strictEqual(navarraTransportEntry.sourceVerification, "unverified");
+assert.strictEqual(resolveCatalogEntry([navarraTransportEntry], detectConvenioCriteria({ pregunta: "transporte Navarra 2008" })).status, "source_unverified");
+assert.strictEqual(resolveCatalogReference([navarraTransportEntry], navarraTransportFile, detectConvenioCriteria({ pregunta: "transporte Navarra" })), null);
+
 const statuteChunk = { officialCode: "BOE-A-2015-11430", sourceValidThrough: "2026-10-22" };
 assert.strictEqual(isWorkersStatuteChunkCurrent(statuteChunk, new Date("2026-10-22T20:00:00Z")), true);
 assert.strictEqual(isWorkersStatuteChunkCurrent(statuteChunk, new Date("2026-10-22T22:00:00Z")), false);

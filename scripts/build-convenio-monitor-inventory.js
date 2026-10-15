@@ -6,6 +6,13 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const matrixPath = path.join(root, "docs", "matriz-vigencia-convenios-2026.md");
 const outputPath = path.join(root, "functions", "convenio-monitor-inventory.generated.json");
+const MANUAL_REVIEW = {
+  27: {
+    source: "BON",
+    frequencyMonths: 1,
+    action: "Comprobar publicaciones de transporte de mercancías, buscar convenio sucesor y confirmar su ámbito y relación con el instrumento 3107405.",
+  },
+};
 
 function cell(value) {
   return value.trim().replace(/^`|`$/g, "");
@@ -24,9 +31,16 @@ function buildInventory(markdown) {
     const statusMatch = columns.at(-1).match(/\*\*([^*]+)\*\*/);
     const status = statusMatch ? statusMatch[1] : "INCOMPLETO";
     const explicitPactPeriod = columns[3].match(/(?:periodo pactado|vigencia pactada)\s+(20\d{2})\s*[–-]\s*(20\d{2})/i)?.[0];
-    const periods = (explicitPactPeriod || columns.slice(2, 4).join(" ")).match(/\b(20\d{2})\s*[–-]\s*(20\d{2})\b/g) || [];
-    const pactEndYear = periods.length ? Math.max(...periods.map((period) => Number(period.match(/20\d{2}$/)[0]))) : null;
+    const periods = [...(explicitPactPeriod || columns.slice(2, 4).join(" ")).matchAll(/\b(20\d{2})\s*[–-]\s*(20\d{2}|\d{2})\b/g)];
+    const pactEndYear = periods.length ? Math.max(...periods.map((period) => {
+      const endYear = Number(period[2]);
+      return period[2].length === 2 ? Math.floor(Number(period[1]) / 100) * 100 + endYear : endYear;
+    })) : null;
     const id = `convenio-${String(number).padStart(2, "0")}`;
+    const manualReviewConfig = MANUAL_REVIEW[number] || null;
+    const manualReviewUrl = columns.slice(2, 7).join(" ").match(/https:\/\/bon\.navarra\.es\/es\/[^\s)]+/)?.[0] || null;
+    if (manualReviewConfig && !manualReviewUrl) throw new Error(`Fila ${number}: revisión manual sin una URL oficial de seguimiento`);
+    const manualReview = manualReviewConfig ? { ...manualReviewConfig, url: manualReviewUrl } : null;
     return {
       id,
       number,
@@ -37,6 +51,7 @@ function buildInventory(markdown) {
       pactEndYear,
       documentaryStatus: status,
       sourceCheck: regconUrl ? "available" : "missing_official_regcon_reference",
+      ...(manualReview ? { manualReview } : {}),
     };
   });
   if (rows.length !== 28 || rows.some((row, index) => row.number !== index + 1)) {

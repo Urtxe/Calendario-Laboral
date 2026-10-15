@@ -118,3 +118,33 @@ El rollback por fuente es reversible: pausar `convenio_monitor_control/document_
 Las Functions `consultarConvenio` (`consultarconvenio-00044-qot`), `processConvenioDocument` (`processconveniodocument-00007-xiq`) y `reviewConvenioSources` (`reviewconveniosources-00010-yag`) están `ACTIVE`. El Scheduler mensual sigue `ENABLED` con `0 5 1 * *` en `Europe/Madrid`; el trigger Eventarc `processconveniodocument-942300` sigue asociado a `convenio_monitor_state/{agreementId}` y a la identidad `convenio-ingestor`. No hubo cambios de IAM, reglas Firestore, Hosting ni otros proyectos. El SHA interno `firebase-functions-hash` no es un SHA de Git.
 - **Avisos:** se creó la política activa de Cloud Monitoring `13741873351838438326`, ligada al canal de correo preexistente. Detecta `convenio_document_pending`, `convenio_monitor_source_failed` y HTTP 5xx del procesador, con límite de un aviso cada seis horas. La configuración se leyó de vuelta; no se generó una incidencia artificial para probar la entrega del correo.
 - **Málaga:** las tres URL de tablas de REGCON apuntan a edictos BOPMA de 2024, 2025 y 2026. El sumario oficial de 14/04/2026 identifica el edicto 1187 y su PDF de fascículo, pero la descarga oficial del PDF respondió HTTP 403. No se ingirieron importes.
+
+## Saneamiento de fuentes y seguimiento manual (15/10/2026)
+
+### Hostelería Málaga
+
+La consulta y exportación oficial REGCON del código `29000945011981` confirman publicaciones de tablas salariales con fechas de registro 19/08/2024, 14/05/2025 y 14/04/2026, y enlazan los edictos BOPMA `20240820-02957-2024-00`, `20250514-01559-2025-00` y `20260414-01187-2026-00`. Los sumarios oficiales identifican los anuncios y ofrecen el PDF del fascículo; el enlace individual de 1187/2026 ya había respondido HTTP 403 y la descarga del fascículo de abril no entregó un PDF verificable en esta revisión. No se extrajeron ni incorporaron tablas, no se generaron embeddings y se mantiene el aviso que bloquea salarios exactos no acreditados.
+
+### Limpieza Barcelona / instrumento catalán
+
+REGCON identifica el instrumento `Neteja d'Edificis i Locals de Catalunya`, código `79002415012005`, autoridad Cataluña. Registra el texto nuevo de 23/05/2023, modificación de 02/06/2025, denuncia de 07/07/2025 y acuerdo parcial de 26/02/2026. El código se vincula a la ficha de Barcelona para seguimiento; no se convierte la fuente en un convenio provincial ni se atribuye al resumen local validez oficial.
+
+El DOGC 9613 publicó la Resolució EMT/427/2026, CVE `CVE-DOGC-A-26050075-2026`: acuerdo parcial aplicable desde 01/01/2026, duración pactada hasta 31/12/2030, incremento de 3,25% sobre salarios a 31/12/2025 con efectos retroactivos desde 01/01/2026 y tablas definitivas para 2026. El acuerdo modifica además la estructura salarial, crea un complemento con importes/tablas territoriales y prevé integración progresiva en el salario base. El documento firmado refleja desacuerdo de CCOO con el acuerdo parcial. La verificación digital del DOGC informa que el texto es auténtico e íntegro.
+
+El PDF oficial descargado desde el enlace publicado por el propio portal DOGC tiene 15 páginas, 965.858 bytes y SHA-256 `f091278fd24c989bd3f2ecccf2a0a79c1cd8daedd593508ebebc96e88fa32300`. Se conservó sin modificación en el bucket privado: `gs://calendario-laboral-252b1.firebasestorage.app/official-sources/convenios/limpieza_catalunya_2022_2030/2026-02-26-CVE-DOGC-A-26050075-2026.pdf`, generación `1792087625018247`; sus metadatos registran CVE, URL DOGC, SHA, páginas y tipo `partial_agreement`.
+
+La fuente oficial contiene tablas compartidas Barcelona/Girona/Lleida, tablas diferentes de Tarragona y cambios de texto aplicables al instrumento catalán. Como la búsqueda actual etiqueta el documento por archivo y no segmenta cada disposición/anexo por provincia, no se generaron chunks ni embeddings para activarlo como fuente exclusivamente Barcelona. La publicación está identificada, guardada y seguida por REGCON, pero su indexación queda pendiente de segmentación territorial verificable. El resumen UGT local de 108 chunks queda marcado `unverified` por el código y se excluye del catálogo resoluble; no se borran sus vectores.
+
+### Transporte Navarra e históricos
+
+El instrumento histórico BON de Transporte Navarra se identifica por la Resolución 625/2008, código antiguo `3107405`, BON núm. 111 de 10/09/2008 y corrección núm. 123. La copia local de 98 chunks carece de cotejo de integridad/procedencia con el BON y no acredita sucesor ni vigencia actual; el catálogo se marca `unverified` y el resolver deja de usarla como evidencia. La ficha permanece en revisión manual periódica BON.
+
+El agregado Transporte Barcelona 2011–2023 (363 vectores) y Transporte Zaragoza 2022–2025 (191 vectores) se mantienen excluidos como evidencia no acreditada según los overrides ya existentes. No se borraron vectores ni se generó ninguno nuevo durante este saneamiento.
+
+### Resultado técnico y avisos
+
+El inventario sigue siendo de 28 filas. La ficha 18 pasa a seguimiento REGCON mediante el código catalán verificable; la ficha 27 conserva fuente manual BON mensual y un registro de acción pendiente. El monitor registra `convenio_manual_review_required`; la política existente añade ese evento al filtro sin crear un canal ni una política paralela. La política tiene límite de aviso de seis horas.
+
+El canal de correo de Monitoring está habilitado, pero la API devuelve `verificationStatus` nulo y la API/CLI disponibles no ofrecen un envío de prueba de entrega. No se generó un incidente artificial. La recepción efectiva requiere que el propietario verifique el canal en la consola de Cloud Monitoring. Hasta integrar y desplegar los cambios de este PR, la revisión mensual y el nuevo filtro de alerta siguen pendientes de despliegue; Scheduler/Eventarc y la programación existentes no se alteran.
+
+**Consumo de esta fase:** 0 llamadas Gemini y 0 embeddings; coste de IA estimado USD 0. El objeto PDF privado se conserva para una futura segmentación, no está activo en el RAG. No se ejecutaron KNN ni E2E porque no se añadieron documentos a recuperación.

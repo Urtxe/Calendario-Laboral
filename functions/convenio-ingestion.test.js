@@ -166,6 +166,8 @@ test("classifies only document types supported by deterministic title rules", ()
   assert.equal(classifyOfficialDocument("Revisión de tablas salariales 2026"), "salary_revision");
   assert.equal(classifyOfficialDocument("Corrección de errores"), "error_correction");
   assert.equal(classifyOfficialDocument("Prórroga del convenio"), "extension");
+  assert.equal(classifyOfficialDocument("Resolució EMT/427/2026 - Acord parcial de neteja"), "partial_amendment");
+  assert.equal(classifyOfficialDocument("Acuerdo parcial de limpieza 2026"), "partial_amendment");
   assert.equal(classifyOfficialDocument("Convenio colectivo texto nuevo"), "collective_agreement");
   assert.equal(classifyOfficialDocument("Anuncio sin relación"), "not_relevant");
 });

@@ -53,6 +53,8 @@ test("los prompts activos piden respuestas directas y de longitud adaptable", ()
   assert.match(general, /No inventes datos vigentes/);
   assert.match(convenio, /Distingue el dato del convenio de tu interpretación/);
   assert.match(convenio, /No completes con conocimiento externo ni afirmes datos no incluidos/);
+  assert.match(convenio, /fechas estructuradas de una fuente verificada son evidencia prioritaria/);
+  assert.match(convenio, /respétalas sin inferir efectos distintos/);
   assert.match(convenio, /Si los fragmentos no bastan, responde exactamente/);
   assert.match(convenio, /Cita la fuente disponible al final cuando aparezca/);
   assert.match(convenio, /\.\.\.construirFuentesBase\(chunksBase\)/);
@@ -71,6 +73,9 @@ test("el Estatuto se selecciona por fecha antes de la búsqueda vectorial y fall
   assert.match(active, /No hay una edición completa y verificada del Estatuto disponible/);
   assert.match(active, /No he podido recuperar una fuente oficial completa del Estatuto/);
   assert.match(active, /El texto consolidado del BOE es informativo/);
+  assert.match(active, /debeResolverConvenio = !consultaNormativaBase \|\| solicitudConvenioEspecifico/);
+  assert.match(active, /La fecha consultada .* es futura respecto de hoy/);
+  assert.match(source, /applyKnownSourceVerificationOverrides/);
 });
 
 test("la traza de recuperación registra selección documental sin contenido ni identidad", () => {

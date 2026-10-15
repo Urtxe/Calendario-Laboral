@@ -2,6 +2,7 @@
 
 const assert = require("assert");
 const {
+  applyKnownSourceVerificationOverrides,
   buildCatalogEntriesFromFileNames,
   detectConvenioCriteria,
   getDocumentType,
@@ -210,8 +211,24 @@ assert.deepEqual(zaragozaNew.economicEffectsExceptions, [{ subject: "dietas", ef
 const zaragozaTemporal = buildCatalogEntriesFromFileNames([
   "Convenio Transporte Zaragoza 2022-2025.pdf", zaragozaNewFile,
 ]);
-assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: "convenio transporte Zaragoza 2024" })).entry.fileNames[0], "Convenio Transporte Zaragoza 2022-2025.pdf");
-assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: "convenio transporte Zaragoza 2025" })).entry.fileNames[0], "Convenio Transporte Zaragoza 2022-2025.pdf");
+const zaragozaHistoricalFile = "Convenio Transporte Zaragoza 2022-2025.pdf";
+assert.equal(parseConvenioFileName(zaragozaHistoricalFile).sourceVerification, "unverified");
+for (const year of [2024, 2025]) {
+  assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: `convenio transporte Zaragoza ${year}` })).status, "source_unverified");
+}
+const firestoreHistoricalEntry = applyKnownSourceVerificationOverrides({
+  id: "transporte_zaragoza_2022_2025",
+  province: "ZARAGOZA",
+  sectorKeys: ["transporte"],
+  yearStart: 2022,
+  yearEnd: 2025,
+  fileNames: [zaragozaHistoricalFile],
+  sourceVerification: "verified",
+});
+assert.equal(firestoreHistoricalEntry.sourceVerification, "unverified");
+const zaragozaHistoricalCriteria = detectConvenioCriteria({ pregunta: "convenio transporte Zaragoza 2024" });
+assert.equal(resolveCatalogEntry([firestoreHistoricalEntry], zaragozaHistoricalCriteria).status, "source_unverified");
+assert.equal(resolveCatalogReference([firestoreHistoricalEntry], zaragozaHistoricalFile, zaragozaHistoricalCriteria), null);
 for (const year of [2026, 2027]) {
   assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: `convenio transporte Zaragoza ${year}` })).entry.id, "transporte_zaragoza_2026_2028");
   assert.equal(resolveCatalogEntry(zaragozaTemporal, detectConvenioCriteria({ pregunta: `salarios transporte Zaragoza ${year}` })).entry.id, "transporte_zaragoza_2026_2028");

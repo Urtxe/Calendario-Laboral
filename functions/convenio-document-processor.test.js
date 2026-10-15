@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { prepareBogSalaryMetadata, claimPending, finishPending } = require("./convenio-document-processor");
+const { prepareBogSalaryMetadata, claimPending, finishPending, processPendingDocument } = require("./convenio-document-processor");
 
 const agreement = { id: "convenio-02", title: "Alojamientos · Gipuzkoa", officialCode: "20100035012014" };
 const entry = {
@@ -61,4 +61,36 @@ test("pausa, reclama una vez y finaliza el pendiente sin duplicar", async () => 
   await finishPending(db, agreement.id, entry.signature, "token", { status: "resolved" });
   assert.equal(await claimPending(db, agreement.id, now, "another"), null);
   assert.equal(db.values.get("convenio_monitor_state/convenio-02").pendingEntries[0].status, "resolved");
+});
+
+test("reintenta errores HTTP temporales y pasa a revisión manual tras tres intentos", async () => {
+  const db = memoryDb();
+  const now = new Date("2026-10-15T10:00:00Z");
+  db.values.set("convenio_monitor_control/document_ingestion", { paused: false });
+  db.values.set("convenio_monitor_state/convenio-02", { pendingEntries: [{
+    ...entry, status: "pending_documentary_verification",
+  }] });
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({ status: 503, ok: false });
+  try {
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const at = new Date(now.getTime() + (attempt - 1) * 30 * 24 * 60 * 60 * 1000);
+      const result = await processPendingDocument(db, agreement.id, { now: at, log: { info() {}, warn() {} } });
+      const pending = db.values.get("convenio_monitor_state/convenio-02").pendingEntries[0];
+      assert.equal(pending.documentaryAttemptCount, attempt);
+      assert.equal(pending.lastDocumentaryError, "OFFICIAL_PDF_HTTP_503");
+      if (attempt < 3) {
+        assert.equal(result.status, "retry_scheduled");
+        assert.equal(pending.status, "documentary_retry");
+        assert.equal(pending.nextDocumentaryAttemptAt.getTime(), at.getTime() + 30 * 24 * 60 * 60 * 1000);
+      } else {
+        assert.equal(result.status, "manual_verification_required");
+        assert.equal(pending.status, "pending_manual_verification");
+        assert.equal(pending.nextDocumentaryAttemptAt, null);
+      }
+    }
+  } finally {
+    global.fetch = originalFetch;
+  }
 });

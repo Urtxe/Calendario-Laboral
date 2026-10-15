@@ -4,7 +4,7 @@ const assert = require("assert");
 const { readFileSync } = require("fs");
 const path = require("path");
 const { construirRespuestaConsulta, GENERAL_LABOR_WARNING } = require("./consultation-contract");
-const { CONVENIO_RAG_MAX_DISTANCE, evaluarEvidenciaConvenio } = require("./rag-evidence");
+const { CONVENIO_RAG_MAX_DISTANCE, evaluarEvidenciaConvenio, hasSemanticEvidence } = require("./rag-evidence");
 const { FREE_AI_DAILY_LIMIT, PREMIUM_AI_DAILY_LIMIT, limiteDiarioIA } = require("./quota-policy");
 const {
   AI_QUOTA_RESERVATION_TTL_MS,
@@ -15,6 +15,7 @@ const {
 const { isEnabled: isOfficialWebFallbackEnabled } = require("./official-web-fallback");
 const { validarPayloadBasicoConsulta } = require("./consultation-payload");
 const { shouldRetrieveWorkersStatute } = require("./workers-statute-fallback");
+const { construirConsultaRag } = require("./rag-query");
 
 const tests = [];
 function test(name, fn) { tests.push({ name, fn }); }
@@ -86,6 +87,7 @@ test("la traza de recuperación registra selección documental sin contenido ni 
 });
 
 test("evidencia semántica suficiente permite respuesta de convenio", () => {
+  assert.strictEqual(typeof hasSemanticEvidence, "function", "el filtro de normativa base comparte esta función");
   const result = evaluarEvidenciaConvenio([{
     doc_type: "especifico",
     texto: "Artículo 12. Vacaciones.",
@@ -94,6 +96,12 @@ test("evidencia semántica suficiente permite respuesta de convenio", () => {
   }]);
   assert.strictEqual(result.suficiente, true);
   assert.strictEqual(result.reason, null);
+});
+
+test("artículo 37.6 recupera su materia sin cambiar la fecha de selección", () => {
+  const query = construirConsultaRag({ preguntaParaBusqueda: "Estatuto a 15 de octubre de 2026: ¿qué dice el artículo 37.6?", intent: "mixed_labor" });
+  assert.match(query, /15 de octubre de 2026/);
+  assert.match(query, /guarda legal cuidado menor/);
 });
 
 test("fragmentos lejanos no se presentan como evidencia de convenio", () => {

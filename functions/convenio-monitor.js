@@ -87,14 +87,20 @@ function parseRegconExport(xml, officialCode, expectedRows) {
   const unique = new Map();
   for (const cells of rows) {
     if (!relevantType.test(cells[2] || "")) continue;
-    const key = cells.join("\u001f");
+    // REGCON can add a publication URL to an existing row after the baseline.
+    // Keep the historical empty-URL signature so this does not create a false novelty.
+    const key = [...cells.slice(0, 7), ""].join("\u001f");
     const existing = unique.get(key);
-    if (existing) existing.occurrences += 1;
+    if (existing) {
+      existing.occurrences += 1;
+      if (!existing.cells[7] && cells[7]) existing.cells = cells;
+    }
     else unique.set(key, { cells, occurrences: 1 });
   }
   return [...unique.values()].map(({ cells, occurrences }) => ({
     officialCode: cells[0],
-    signature: crypto.createHash("sha256").update(cells.join("\u001f")).digest("hex"),
+    signature: crypto.createHash("sha256").update([...cells.slice(0, 7), ""].join("\u001f")).digest("hex"),
+    legacySignature: crypto.createHash("sha256").update(cells.join("\u001f")).digest("hex"),
     summary: cells.join(" ").slice(0, 260),
     registrationDate: /^\d{2}\/\d{2}\/\d{4}$/.test(cells[4] || "") ? cells[4] : null,
     transactionType: cells[2],
@@ -141,6 +147,17 @@ function isDue(agreement, state, now) {
 
 function pendingEntryCount(state) {
   return (state?.pendingEntries || []).filter((entry) => !["resolved", "rejected", "closed"].includes(entry.status)).length;
+}
+
+function documentaryRetryDue(state, now) {
+  return (state?.pendingEntries || []).some((entry) => {
+    const retry = entry.status === "documentary_retry";
+    const expired = entry.status === "documentary_processing" && entry.processingLeaseUntil;
+    if (!retry && !expired) return false;
+    const value = retry ? entry.nextDocumentaryAttemptAt : entry.processingLeaseUntil;
+    const due = value?.toDate ? value.toDate() : new Date(value || 0);
+    return due <= now && (entry.documentaryAttemptCount || 0) < 3;
+  });
 }
 
 function reviewInterval(agreement, now, state = null) {
@@ -265,6 +282,8 @@ async function runMonthlyConvenioReview(db, {
         state.lastErrorCode === "REGCON_RESULT_INCOMPLETE" && !state.baselineEstablished &&
         state.lastReconciliationRunId !== runId;
       if (!reconcile && !isDue(agreement, state, now)) {
+        // The monthly Scheduler also wakes due documentary retries when REGCON is not due.
+        if (documentaryRetryDue(state, now)) await stateRef.set({ documentaryWakeAt: now }, { merge: true });
         if (/failed|blocked/.test(state?.status || "") || pendingEntryCount(state) > 0) counts.deferred += 1;
         continue;
       }
@@ -278,7 +297,7 @@ async function runMonthlyConvenioReview(db, {
       try {
         const rows = await fetchRegcon(agreement, fetchImpl);
         const known = new Set([...(state?.knownSignatures || []), ...(state?.pendingEntries || []).map((entry) => entry.signature)]);
-        const additions = rows.filter((row) => !known.has(row.signature));
+        const additions = rows.filter((row) => !known.has(row.signature) && !known.has(row.legacySignature));
         const baseline = !state?.baselineEstablished;
         const newEntries = baseline ? [] : additions;
         counts.checked += 1;
@@ -332,4 +351,4 @@ async function runMonthlyConvenioReview(db, {
   }
 }
 
-module.exports = { inventory, parseRegconRows, parseRegconExport, announcedResultCount, isDue, pendingEntryCount, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview };
+module.exports = { inventory, parseRegconRows, parseRegconExport, announcedResultCount, isDue, pendingEntryCount, documentaryRetryDue, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview };

@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
-const { inventory, parseRegconRows, parseRegconExport, announcedResultCount, isDue, pendingEntryCount, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview } = require("./convenio-monitor");
+const { inventory, parseRegconRows, parseRegconExport, announcedResultCount, isDue, pendingEntryCount, documentaryRetryDue, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview } = require("./convenio-monitor");
 
 function regconPage(code, total = 2) {
   return `<html><form action="/regcon/pub/consultaCodigoMapas?convenioMapa=${code}"></form><span>Resultados 1 - ${Math.min(15, total)} de ${total}</span><a href="/regcon/pub/consultaCodigoMapas?pagina=2">2</a>${code}</html>`;
@@ -121,7 +121,36 @@ test("conserva la URL oficial de la exportación solo en asientos nuevos", () =>
   const code = "20100035012014";
   const rows = parseRegconExport(regconExport(code, [[code, "Alojamientos Gipuzkoa", "REVISIÓN SALARIAL", "Guipúzcoa", "16/02/2026", "01/01/2025", "31/12/2028", "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2026/02/16/c2600553.pdf"]]), code, 1);
   assert.equal(rows[0].publicationUrl, "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2026/02/16/c2600553.pdf");
+  const withoutUrl = parseRegconExport(regconExport(code, [[code, "Alojamientos Gipuzkoa", "REVISIÓN SALARIAL", "Guipúzcoa", "16/02/2026", "01/01/2025", "31/12/2028", ""]]), code, 1);
+  assert.equal(rows[0].signature, withoutUrl[0].signature, "una URL añadida al asiento histórico no crea una novedad");
+  assert.equal(rows[0].signature, withoutUrl[0].legacySignature, "conserva las firmas del baseline anterior");
+  const duplicated = parseRegconExport(regconExport(code, [
+    [code, "Alojamientos Gipuzkoa", "REVISIÓN SALARIAL", "Guipúzcoa", "16/02/2026", "01/01/2025", "31/12/2028", ""],
+    [code, "Alojamientos Gipuzkoa", "REVISIÓN SALARIAL", "Guipúzcoa", "16/02/2026", "01/01/2025", "31/12/2028", rows[0].publicationUrl],
+  ]), code, 2);
+  assert.equal(duplicated.length, 1);
+  assert.equal(duplicated[0].publicationUrl, rows[0].publicationUrl);
   assert.equal(parseRegconExport(regconExport(code, [[code, "Alojamientos Gipuzkoa", "REVISIÓN SALARIAL", "Guipúzcoa", "16/02/2026", "01/01/2025", "31/12/2028", "http://bop.diba.cat/anuncio/1"]]), code, 1)[0].publicationUrl, null);
+});
+
+test("despierta el reintento documental vencido aunque REGCON no venza", async () => {
+  const db = memoryDb();
+  const now = new Date("2026-11-01T04:00:00Z");
+  const agreement = inventory.find((item) => item.id === "convenio-02");
+  const statePath = `convenio_monitor_state/${agreement.id}`;
+  for (const item of inventory) db.values.set(`convenio_monitor_state/${item.id}`, {
+    status: "source_checked", nextReviewAt: new Date("2026-12-01T04:00:00Z"), pendingEntries: [],
+  });
+  db.values.set(statePath, {
+    status: "source_checked", baselineEstablished: true, nextReviewAt: new Date("2026-12-01T04:00:00Z"),
+    pendingEntries: [{ signature: "retry", status: "documentary_retry", documentaryAttemptCount: 1,
+      nextDocumentaryAttemptAt: new Date("2026-10-31T04:00:00Z") }],
+  });
+  assert.equal(documentaryRetryDue(db.values.get(statePath), now), true);
+  const result = await runMonthlyConvenioReview(db, { now, fetchImpl: async () => { throw new Error("REGCON no vence"); }, log: { info() {}, warn() {} } });
+  assert.equal(result.deferred > 0, true);
+  assert.equal(db.values.get(statePath).documentaryWakeAt.toISOString(), now.toISOString());
+  assert.equal(db.values.get(statePath).pendingEntries[0].status, "documentary_retry");
 });
 
 test("exportación oficial cubre varias páginas, deduplica filas e identifica inconsistencias", () => {

@@ -50,6 +50,12 @@ const zaragozaEntries = buildCatalogEntriesFromFileNames([
 assert.strictEqual(resolveCatalogEntry(zaragozaEntries, detectConvenioCriteria({ pregunta: "Limpieza Zaragoza 2024" })).entry.yearStart, 2022);
 assert.strictEqual(resolveCatalogEntry(zaragozaEntries, detectConvenioCriteria({ pregunta: "Limpieza Zaragoza 2026" })).entry.yearStart, 2026);
 assert.strictEqual(resolveCatalogEntry(zaragozaEntries, detectConvenioCriteria({ pregunta: "Limpieza Zaragoza" })).entry.yearStart, 2026);
+const revisionQuery = detectConvenioCriteria({ pregunta: "Revisión salarial 2026 de restauración en Gipuzkoa" });
+assert.strictEqual(revisionQuery.isSalaryQuery, true);
+assert.strictEqual(resolveCatalogEntry([
+  { id: "restauracion", title: "Restauración", province: "GIPUZKOA", sectorKeys: ["hosteleria"], yearStart: 2023, yearEnd: 2026, fileNames: ["convenio.pdf"], sourceVerification: "verified" },
+  { id: "revision", title: "Revisión salarial", province: "GIPUZKOA", sectorKeys: ["hosteleria"], yearStart: 2026, yearEnd: 2026, fileNames: ["revision.pdf"], sourceVerification: "verified", sourceDocumentType: "salary_revision" },
+], revisionQuery).entry.id, "revision");
 
 const statuteBeforeChange = resolveWorkersStatuteVersion("Estatuto a 22/10/2026");
 const statuteAfterChange = resolveWorkersStatuteVersion("Estatuto a 23 de octubre de 2026");

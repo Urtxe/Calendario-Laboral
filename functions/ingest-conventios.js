@@ -34,6 +34,18 @@ const OFFICIAL_SOURCE_HOSTS = [
   "boe.es", "www.boe.es", "bop.diba.cat", "bop.dpz.es", "bopmalaga.es", "www.bopmalaga.es",
   "egoitza.gipuzkoa.eus", "boletin.gipuzkoa.eus", "bon.navarra.es", "www.araba.eus",
 ];
+const CLEANING_CATALUNYA_2026_TABLES = {
+  fileName: "Acuerdo parcial Limpieza Cataluña 2026 tablas Barcelona Girona Lleida.pdf",
+  approval: "CVE-DOGC-A-26050075-2026-pages-10-12-salary-tables",
+  sourceSha256: "f091278fd24c989bd3f2ecccf2a0a79c1cd8daedd593508ebebc96e88fa32300",
+  sourcePageRange: [10, 12],
+  sourceStorageUri: "gs://calendario-laboral-252b1.firebasestorage.app/official-sources/convenios/limpieza_catalunya_2022_2030/2026-02-26-CVE-DOGC-A-26050075-2026.pdf",
+  officialSourceUrl: "https://dogc.gencat.cat/ca/document-del-dogc/?documentId=1037935",
+  markers: [
+    "Taules salarials Barcelona, Lleida i Girona 2026 1/01/2026 - 31/08/2026",
+    "Taules salarials Barcelona, Lleida i Girona 01/09/2026 - 31/12/2026",
+  ],
+};
 
 const apiKey =
   process.env.GEMINI_API_KEY ||
@@ -90,11 +102,23 @@ async function findPdfFiles(dir) {
   return results;
 }
 
-async function loadPdfText(buffer) {
+async function loadPdfText(buffer, pageRange = null) {
   verifyPdfBytes(buffer);
   const parser = new PDFParse({ data: buffer });
   const parsed = await parser.getText();
-  const text = (parsed && parsed.text ? parsed.text : "")
+  let sourceText = parsed && parsed.text ? parsed.text : "";
+  if (pageRange) {
+    const [firstPage, lastPage] = pageRange;
+    if (!Array.isArray(parsed?.pages) || !Number.isInteger(firstPage) || !Number.isInteger(lastPage) ||
+        firstPage < 1 || lastPage < firstPage || lastPage > parsed.total) {
+      throw new Error("INGESTION_SOURCE_PAGE_RANGE_INVALID");
+    }
+    sourceText = parsed.pages
+      .filter((page) => page.num >= firstPage && page.num <= lastPage)
+      .map((page) => `[Página ${page.num} de ${parsed.total}]\n${page.text}`)
+      .join("\n\n");
+  }
+  const text = sourceText
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
@@ -106,6 +130,49 @@ async function loadPdfText(buffer) {
     text,
     pageCount,
   };
+}
+
+function isApprovedCleaningBarcelonaFragment(metadataOverride) {
+  return metadataOverride?.fileName === CLEANING_CATALUNYA_2026_TABLES.fileName &&
+    metadataOverride?.manualIngestionApproval === CLEANING_CATALUNYA_2026_TABLES.approval &&
+    metadataOverride?.officialCode === "79002415012005" &&
+    metadataOverride?.sourceVerification === "verified" &&
+    metadataOverride?.sourceSha256 === CLEANING_CATALUNYA_2026_TABLES.sourceSha256 &&
+    JSON.stringify(metadataOverride?.sourcePageRange) === JSON.stringify(CLEANING_CATALUNYA_2026_TABLES.sourcePageRange) &&
+    metadataOverride?.sourceDocumentType === "salary_tables" &&
+    metadataOverride?.province === "BARCELONA" &&
+    JSON.stringify(metadataOverride?.applicableProvinces) === JSON.stringify(["BARCELONA", "GIRONA", "LLEIDA"]) &&
+    metadataOverride?.catalogKey === "limpieza_catalunya_barcelona_tablas_2026" &&
+    metadataOverride?.title === "Acord parcial per als anys 2026 a 2030 de neteja d’edificis i locals de Catalunya — taules Barcelona, Girona i Lleida" &&
+    metadataOverride?.yearStart === 2026 && metadataOverride?.yearEnd === 2026 &&
+    metadataOverride?.sourceValidFrom === "2026-01-01" && metadataOverride?.sourceValidThrough === "2026-12-31" &&
+    metadataOverride?.sourcePageCount === 15 && metadataOverride?.automaticIngestionEligible !== true &&
+    metadataOverride?.officialSourceUrl === CLEANING_CATALUNYA_2026_TABLES.officialSourceUrl &&
+    metadataOverride?.sourceStorageUri === CLEANING_CATALUNYA_2026_TABLES.sourceStorageUri &&
+    metadataOverride?.publication?.bulletin === "DOGC" &&
+    metadataOverride?.publication?.identifier === "CVE-DOGC-A-26050075-2026" &&
+    metadataOverride?.publication?.date === "2026-02-26" &&
+    Array.isArray(metadataOverride?.sectorKeys) && metadataOverride.sectorKeys.length === 1 && metadataOverride.sectorKeys[0] === "limpieza";
+}
+
+function splitCleaningBarcelonaSalaryTables(text) {
+  if (typeof text !== "string") throw new Error("CLEANING_BARCELONA_TABLE_TEXT_INVALID");
+  const [firstMarker, secondMarker] = CLEANING_CATALUNYA_2026_TABLES.markers;
+  if (text.split(firstMarker).length !== 2 || text.split(secondMarker).length !== 2) {
+    throw new Error("CLEANING_BARCELONA_TABLE_PERIOD_MARKERS_INVALID");
+  }
+  const firstStart = text.indexOf(firstMarker);
+  const secondStart = text.indexOf(secondMarker);
+  if (firstStart < 0 || secondStart <= firstStart) throw new Error("CLEANING_BARCELONA_TABLE_PERIOD_ORDER_INVALID");
+  const first = text.slice(firstStart, secondStart).trim();
+  const second = text.slice(secondStart).trim();
+  if (!first.includes(firstMarker) || !second.includes(secondMarker) || !/Grup|Nivell/i.test(first) || !/Grup|Nivell/i.test(second)) {
+    throw new Error("CLEANING_BARCELONA_TABLE_PERIOD_CONTENT_INVALID");
+  }
+  return [
+    { text: first, sourceValidFrom: "2026-01-01", sourceValidThrough: "2026-08-31", sourcePageRange: "10-11" },
+    { text: second, sourceValidFrom: "2026-09-01", sourceValidThrough: "2026-12-31", sourcePageRange: "11-12" },
+  ];
 }
 
 async function splitText(text) {
@@ -209,6 +276,7 @@ async function writeChunkGroup({
   startIndex,
   chunkIndexes,
   metadata,
+  metadataByChunk,
 }) {
   const writePromises = [];
   const convenioMetadata = metadata || parseConvenioFileName(fileName);
@@ -222,6 +290,7 @@ async function writeChunkGroup({
       const now = admin.firestore.FieldValue.serverTimestamp();
 
       for (let i = writeStart; i < writeEnd; i += 1) {
+        const chunkMetadata = metadataByChunk?.[i] || convenioMetadata;
         const globalIndex = chunkIndexes ? chunkIndexes[i] : startIndex + i;
         const docId = `${convenioId}_${String(globalIndex + 1).padStart(4, "0")}`;
         const docRef = db.collection(COLLECTION_NAME).doc(docId);
@@ -233,29 +302,31 @@ async function writeChunkGroup({
           doc_type: `staged_${docType}`,
           filePath,
           pageCount,
-          province: convenioMetadata.province,
-          autonomousCommunity: convenioMetadata.autonomousCommunity,
-          sectorKeys: convenioMetadata.sectorKeys,
-          catalogKey: convenioMetadata.catalogKey,
-          yearStart: convenioMetadata.yearStart,
-          yearEnd: convenioMetadata.yearEnd,
-          ...(convenioMetadata.officialCode ? { officialCode: convenioMetadata.officialCode } : {}),
-          ...(convenioMetadata.publication ? { publication: convenioMetadata.publication } : {}),
-          ...(convenioMetadata.legalEffect ? { legalEffect: convenioMetadata.legalEffect } : {}),
-          ...(convenioMetadata.sourceVerification ? { sourceVerification: convenioMetadata.sourceVerification } : {}),
-          ...(convenioMetadata.automaticIngestionEligible === true ? { automaticIngestionEligible: true } : {}),
-          ...(convenioMetadata.sourceEdition ? { sourceEdition: convenioMetadata.sourceEdition } : {}),
-          ...(convenioMetadata.sourceUpdatedThrough ? { sourceUpdatedThrough: convenioMetadata.sourceUpdatedThrough } : {}),
-          ...(convenioMetadata.sourceValidFrom ? { sourceValidFrom: convenioMetadata.sourceValidFrom } : {}),
-          ...(convenioMetadata.sourceValidThrough ? { sourceValidThrough: convenioMetadata.sourceValidThrough } : {}),
-          ...(convenioMetadata.economicEffectsFrom ? { economicEffectsFrom: convenioMetadata.economicEffectsFrom } : {}),
-          ...(convenioMetadata.economicEffectsExceptions ? { economicEffectsExceptions: convenioMetadata.economicEffectsExceptions } : {}),
-          ...(convenioMetadata.officialSourceUrl ? { officialSourceUrl: convenioMetadata.officialSourceUrl } : {}),
-          sourceDocumentType: convenioMetadata.sourceDocumentType || classifyOfficialDocument(convenioMetadata.title),
+          province: chunkMetadata.province,
+          autonomousCommunity: chunkMetadata.autonomousCommunity || null,
+          ...(chunkMetadata.applicableProvinces ? { applicableProvinces: chunkMetadata.applicableProvinces } : {}),
+          sectorKeys: chunkMetadata.sectorKeys,
+          catalogKey: chunkMetadata.catalogKey,
+          yearStart: chunkMetadata.yearStart,
+          yearEnd: chunkMetadata.yearEnd,
+          ...(chunkMetadata.officialCode ? { officialCode: chunkMetadata.officialCode } : {}),
+          ...(chunkMetadata.publication ? { publication: chunkMetadata.publication } : {}),
+          ...(chunkMetadata.legalEffect ? { legalEffect: chunkMetadata.legalEffect } : {}),
+          ...(chunkMetadata.sourceVerification ? { sourceVerification: chunkMetadata.sourceVerification } : {}),
+          ...(chunkMetadata.automaticIngestionEligible === true ? { automaticIngestionEligible: true } : {}),
+          ...(chunkMetadata.sourceEdition ? { sourceEdition: chunkMetadata.sourceEdition } : {}),
+          ...(chunkMetadata.sourceUpdatedThrough ? { sourceUpdatedThrough: chunkMetadata.sourceUpdatedThrough } : {}),
+          ...(chunkMetadata.sourceValidFrom ? { sourceValidFrom: chunkMetadata.sourceValidFrom } : {}),
+          ...(chunkMetadata.sourceValidThrough ? { sourceValidThrough: chunkMetadata.sourceValidThrough } : {}),
+          ...(chunkMetadata.economicEffectsFrom ? { economicEffectsFrom: chunkMetadata.economicEffectsFrom } : {}),
+          ...(chunkMetadata.economicEffectsExceptions ? { economicEffectsExceptions: chunkMetadata.economicEffectsExceptions } : {}),
+          ...(chunkMetadata.officialSourceUrl ? { officialSourceUrl: chunkMetadata.officialSourceUrl } : {}),
+          ...(chunkMetadata.sourcePageRange ? { sourcePageRange: chunkMetadata.sourcePageRange } : {}),
+          sourceDocumentType: chunkMetadata.sourceDocumentType || classifyOfficialDocument(chunkMetadata.title),
           sourceSha256,
           ...(sourceStorageUri ? { sourceStorageUri } : {}),
-          ...(convenioMetadata.sourcePageCount ? { sourcePageCount: convenioMetadata.sourcePageCount } : {}),
-          ...(convenioMetadata.sourceDocumentType ? { sourceDocumentType: convenioMetadata.sourceDocumentType } : {}),
+          ...(chunkMetadata.sourcePageCount ? { sourcePageCount: chunkMetadata.sourcePageCount } : {}),
+          ...(chunkMetadata.sourceDocumentType ? { sourceDocumentType: chunkMetadata.sourceDocumentType } : {}),
           chunkIndex: globalIndex,
           chunkTotal: totalChunks,
           texto: chunks[i],
@@ -282,6 +353,7 @@ async function upsertCatalogForFileNames(fileNames, sourceDocument = null, metad
   const entries = metadata ? [omitUndefinedFields({
     id: metadata.catalogKey, catalogKey: metadata.catalogKey, title: metadata.title,
     province: metadata.province, autonomousCommunity: metadata.autonomousCommunity || null,
+    applicableProvinces: metadata.applicableProvinces,
     sectorKeys: metadata.sectorKeys, yearStart: metadata.yearStart, yearEnd: metadata.yearEnd,
     fileNames, officialCode: metadata.officialCode, publication: metadata.publication,
     applicationWarning: metadata.applicationWarning, sourceVerification: metadata.sourceVerification,
@@ -289,6 +361,9 @@ async function upsertCatalogForFileNames(fileNames, sourceDocument = null, metad
     sourceDocumentType: metadata.sourceDocumentType, salaryEvidenceVerifiedThroughYear: metadata.salaryEvidenceVerifiedThroughYear,
     officialSourceUrl: metadata.officialSourceUrl, sourceSha256: metadata.sourceSha256,
     sourceStorageUri: metadata.sourceStorageUri, sourcePageCount: metadata.sourcePageCount,
+    sourcePageRange: Array.isArray(metadata.sourcePageRange)
+      ? `${metadata.sourcePageRange[0]}-${metadata.sourcePageRange[1]}`
+      : metadata.sourcePageRange,
     sourceValidFrom: metadata.sourceValidFrom, sourceValidThrough: metadata.sourceValidThrough,
     economicEffectsFrom: metadata.economicEffectsFrom,
     economicEffectsExceptions: metadata.economicEffectsExceptions,
@@ -404,7 +479,9 @@ async function processFile(filePath, { dryRun = false, metadataOverride = null, 
   const fileName = path.basename(filePath);
   const docType = getDocType(fileName);
   const metadata = metadataOverride || parseConvenioFileName(fileName);
-  if (metadataOverride && (metadataOverride.fileName !== fileName || !/^BOG-\d{4}-\d{2}-\d{2}-\d{14}-[a-z0-9-]+\.pdf$/.test(fileName))) {
+  const approvedCleaningFragment = isApprovedCleaningBarcelonaFragment(metadataOverride);
+  const approvedBogMetadata = metadataOverride?.fileName === fileName && /^BOG-\d{4}-\d{2}-\d{2}-\d{14}-[a-z0-9-]+\.pdf$/.test(fileName);
+  if (metadataOverride && !approvedBogMetadata && !approvedCleaningFragment) {
     throw new Error("INGESTION_DYNAMIC_METADATA_INVALID");
   }
   console.log(`\n📄 Procesando ${fileName}`);
@@ -436,7 +513,7 @@ async function processFile(filePath, { dryRun = false, metadataOverride = null, 
     sourceBuffer = downloaded.buffer;
     sourceSha256 = downloaded.sha256;
   }
-  const { text, pageCount } = await loadPdfText(sourceBuffer);
+  const { text, pageCount } = await loadPdfText(sourceBuffer, metadata.sourcePageRange || null);
   if (metadata.sourcePageCount && metadata.sourcePageCount !== pageCount) {
     throw new Error(`El número de páginas de ${fileName} no coincide con la fuente oficial verificada.`);
   }
@@ -453,7 +530,15 @@ async function processFile(filePath, { dryRun = false, metadataOverride = null, 
     console.warn(`⚠️  El PDF ${fileName} no devolvió texto legible.`);
     return { chunks: 0 };
   }
-  const chunks = await splitText(text);
+  const sourceSegments = approvedCleaningFragment ? splitCleaningBarcelonaSalaryTables(text) : [{ text, ...metadata }];
+  const chunks = [];
+  const metadataByChunk = [];
+  for (const segment of sourceSegments) {
+    const segmentMetadata = { ...metadata, ...segment };
+    const segmentChunks = await splitText(segment.text);
+    chunks.push(...segmentChunks);
+    metadataByChunk.push(...segmentChunks.map(() => segmentMetadata));
+  }
   console.log(`  - Texto extraído: ${text.length} caracteres`);
   console.log(`  - Chunks generados: ${chunks.length}`);
 
@@ -466,7 +551,7 @@ async function processFile(filePath, { dryRun = false, metadataOverride = null, 
   if (missingChunkIndexes.length && (metadata.sourceVerification !== "verified" || !metadata.officialSourceUrl || !metadata.publication?.identifier)) {
     throw new Error(`La fuente oficial de ${fileName} no está acreditada; los chunks nuevos no se activan.`);
   }
-  if (missingChunkIndexes.length && (metadata.automaticIngestionEligible !== true || !metadata.officialCode || !metadata.province || !metadata.sectorKeys.length)) {
+  if (missingChunkIndexes.length && ((metadata.automaticIngestionEligible !== true && !approvedCleaningFragment) || !metadata.officialCode || !metadata.province || !metadata.sectorKeys.length)) {
     throw new Error(`La relación de ${fileName} con el convenio no está aprobada para ingesta automática.`);
   }
   if (missingChunkIndexes.length && chunks.length > MAX_ATOMIC_CHUNKS) {
@@ -483,6 +568,7 @@ async function processFile(filePath, { dryRun = false, metadataOverride = null, 
   for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
     const indexes = missingChunkIndexes.slice(batchIndex * GEMINI_BATCH_SIZE, (batchIndex + 1) * GEMINI_BATCH_SIZE);
     const batchChunks = indexes.map((index) => chunks[index]);
+    const batchMetadata = indexes.map((index) => metadataByChunk[index]);
 
     console.log(`  - Procesando lote ${batchIndex + 1} de ${totalBatches} para ${fileName}...`);
 
@@ -505,6 +591,7 @@ async function processFile(filePath, { dryRun = false, metadataOverride = null, 
       startIndex: indexes[0],
       chunkIndexes: indexes,
       metadata,
+      metadataByChunk: batchMetadata,
     });
 
     if (batchIndex < totalBatches - 1) {
@@ -523,6 +610,7 @@ async function processFile(filePath, { dryRun = false, metadataOverride = null, 
       officialSourceUrl: metadata.officialSourceUrl,
       publication: metadata.publication,
       sourcePageCount: pageCount,
+      sourcePageRange: metadata.sourcePageRange ? `${metadata.sourcePageRange[0]}-${metadata.sourcePageRange[1]}` : null,
       documentType: metadata.sourceDocumentType || classifyOfficialDocument(metadata.title),
       officialCode: metadata.officialCode,
       sourceVerification: metadata.sourceVerification,
@@ -602,4 +690,4 @@ if (require.main === module) main().catch((error) => {
   process.exitCode = 1;
 });
 
-module.exports = { loadPdfText, processFile };
+module.exports = { loadPdfText, splitCleaningBarcelonaSalaryTables, isApprovedCleaningBarcelonaFragment, processFile };

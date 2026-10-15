@@ -5,6 +5,7 @@ const {
   applyKnownSourceVerificationOverrides,
   buildCatalogEntriesFromFileNames,
   detectConvenioCriteria,
+  entryMatchesProvince,
   getDocumentType,
   hasUnindexedSalaryEvidence,
   isWorkersStatuteChunkCurrent,
@@ -103,6 +104,29 @@ const cleaningBarcelonaEntry = applyKnownSourceVerificationOverrides({
 assert.strictEqual(cleaningBarcelonaEntry.sourceVerification, "unverified");
 assert.strictEqual(resolveCatalogEntry([cleaningBarcelonaEntry], detectConvenioCriteria({ pregunta: "convenio limpieza Barcelona 2024" })).status, "source_unverified");
 assert.strictEqual(resolveCatalogReference([cleaningBarcelonaEntry], cleaningBarcelonaFile, detectConvenioCriteria({ pregunta: "limpieza Barcelona" })), null);
+
+const cleaningBarcelonaTables = {
+  id: "limpieza_catalunya_barcelona_tablas_2026",
+  title: "Acuerdo parcial de limpieza de edificios y locales de Cataluña — tablas 2026",
+  province: "BARCELONA",
+  applicableProvinces: ["BARCELONA", "GIRONA", "LLEIDA"],
+  sectorKeys: ["limpieza"],
+  yearStart: 2026,
+  yearEnd: 2026,
+  fileNames: ["Acuerdo parcial Limpieza Cataluña 2026 tablas Barcelona Girona Lleida.pdf"],
+  sourceVerification: "verified",
+  sourceDocumentType: "salary_tables",
+};
+assert.equal(resolveCatalogEntry([cleaningBarcelonaTables], detectConvenioCriteria({
+  pregunta: "salarios limpieza Barcelona 2026",
+})).status, "resolved");
+for (const province of ["BARCELONA", "GIRONA", "LLEIDA"]) {
+  assert.equal(entryMatchesProvince(cleaningBarcelonaTables, province), true);
+}
+assert.equal(entryMatchesProvince(cleaningBarcelonaTables, "TARRAGONA"), false);
+assert.equal(resolveCatalogEntry([cleaningBarcelonaTables], detectConvenioCriteria({
+  pregunta: "vacaciones limpieza Barcelona 2026",
+})).status, "not_found", "una ficha de tablas no debe sustituir el texto general");
 
 const navarraTransportFile = "Convenio Transporte Navarra 2007-2008.pdf";
 const navarraTransportEntry = applyKnownSourceVerificationOverrides({

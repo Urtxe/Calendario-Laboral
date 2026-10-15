@@ -41,6 +41,7 @@ const {
 const {
     CONVENIO_RAG_MAX_DISTANCE,
     evaluarEvidenciaConvenio,
+    filterSalaryChunksForReferenceDates,
     hasSemanticEvidence,
 } = require("./rag-evidence");
 const {
@@ -312,6 +313,9 @@ function construirBloqueContexto(chunks, etiqueta) {
                 chunk.officialSourceUrl,
             ].filter(Boolean).join(" | ")
             : [
+                chunk.sourcePageRange ? `páginas ${chunk.sourcePageRange}` : null,
+                chunk.sourceValidFrom ? `aplicable desde ${chunk.sourceValidFrom}` : null,
+                chunk.sourceValidThrough ? `aplicable hasta ${chunk.sourceValidThrough}` : null,
                 chunk.sourceDocumentType,
                 chunk.publication?.identifier,
                 chunk.publication?.date ? `publicado ${chunk.publication.date}` : null,
@@ -1030,7 +1034,7 @@ async function buscarChunksKeywordDisciplinario(pregunta, convenioReferencia) {
     return seleccionados.sort(ordenarPorIndice);
 }
 
-async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
+async function buscarChunksEspecificos(vectorPregunta, convenioReferencia, referenceDates = []) {
     const baseQuery = db.collection(COLLECTION_VECTORES).where("doc_type", "==", "especifico");
     const referencias = crearReferenciasConvenio(convenioReferencia);
     const resultados = [];
@@ -1042,7 +1046,9 @@ async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
                 vectorField: "vector",
                 queryVector: vectorPregunta,
                 distanceMeasure: "COSINE",
-                limit: SPECIFIC_CHUNKS_TOP_K,
+                limit: referenceDates.length
+                    ? Math.max(SPECIFIC_CHUNKS_TOP_K * 4, 20)
+                    : SPECIFIC_CHUNKS_TOP_K,
                 distanceResultField: "distancia",
             })
             .get();
@@ -1058,7 +1064,7 @@ async function buscarChunksEspecificos(vectorPregunta, convenioReferencia) {
     }
 
     if (resultados.length) {
-        return resultados
+        return filterSalaryChunksForReferenceDates(resultados, referenceDates)
             .sort((a, b) => {
                 const distA = typeof a.distancia === "number" ? a.distancia : Number.MAX_SAFE_INTEGER;
                 const distB = typeof b.distancia === "number" ? b.distancia : Number.MAX_SAFE_INTEGER;
@@ -2037,6 +2043,9 @@ function construirFuentesChunks(chunks, convenioResuelto = null) {
         convenioId: chunk.convenioId,
         chunkIndex: chunk.chunkIndex,
         doc_type: chunk.doc_type,
+        sourcePageRange: chunk.sourcePageRange || null,
+        sourceValidFrom: chunk.sourceValidFrom || null,
+        sourceValidThrough: chunk.sourceValidThrough || null,
         fuente: "especifica",
         distancia: chunk.distancia ?? null,
         officialCode: chunk.officialCode || convenioResuelto?.officialCode || null,
@@ -2381,10 +2390,22 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                     convenio: convenioResuelto?.title || convenioFileName.replace(/\.pdf$/i, "").split(/[\\/]/).pop(),
                 });
                 const vectorPregunta = await generarEmbeddingPregunta(consultaRag);
+                const fechasReferenciaSalarial = criterioExplicito.isSalaryQuery
+                    ? criterioExplicito.requestedDates.length
+                        ? criterioExplicito.requestedDates
+                        : criterioExplicito.requestedYears.length
+                            ? []
+                            : [new Intl.DateTimeFormat("en-CA", {
+                                timeZone: "Europe/Madrid",
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                            }).format(new Date())]
+                    : [];
                 const [keywordPermisos, keywordDisciplinario, vectoriales, chunksBaseRecuperados] = await Promise.all([
                     convenioFileName ? buscarChunksKeywordPermisos(preguntaParaBusqueda, conveniosFileName) : Promise.resolve([]),
                     convenioFileName ? buscarChunksKeywordDisciplinario(preguntaParaBusqueda, conveniosFileName) : Promise.resolve([]),
-                    convenioFileName ? buscarChunksEspecificos(vectorPregunta, conveniosFileName) : Promise.resolve([]),
+                    convenioFileName ? buscarChunksEspecificos(vectorPregunta, conveniosFileName, fechasReferenciaSalarial) : Promise.resolve([]),
                     buscarChunksBase(vectorPregunta, seleccionEstatuto, baseEditionAvailable),
                 ]);
                 baseEditionAvailable = chunksBaseRecuperados.available;

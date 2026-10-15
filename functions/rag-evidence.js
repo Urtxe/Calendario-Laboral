@@ -20,6 +20,18 @@ function hasKeywordEvidence(chunk) {
   return hasUsableText(chunk) && chunk.retrievalMethod === "keyword";
 }
 
+function filterSalaryChunksForReferenceDates(chunks, referenceDates = []) {
+  if (!Array.isArray(referenceDates) || referenceDates.length === 0) return chunks || [];
+  return (chunks || []).filter((chunk) => {
+    if (!chunk || !["salary_tables", "salary_revision"].includes(chunk.sourceDocumentType)) return true;
+    if (!chunk.sourceValidFrom && !chunk.sourceValidThrough) return true;
+    return referenceDates.some((date) =>
+      (!chunk.sourceValidFrom || date >= chunk.sourceValidFrom) &&
+      (!chunk.sourceValidThrough || date <= chunk.sourceValidThrough)
+    );
+  });
+}
+
 function evaluarEvidenciaConvenio(chunks, { maxDistance = CONVENIO_RAG_MAX_DISTANCE } = {}) {
   const specificChunks = (chunks || []).filter((chunk) =>
     chunk && chunk.doc_type === "especifico" && hasUsableText(chunk)
@@ -44,5 +56,6 @@ function evaluarEvidenciaConvenio(chunks, { maxDistance = CONVENIO_RAG_MAX_DISTA
 module.exports = {
   CONVENIO_RAG_MAX_DISTANCE,
   evaluarEvidenciaConvenio,
+  filterSalaryChunksForReferenceDates,
   hasSemanticEvidence,
 };

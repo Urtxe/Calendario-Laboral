@@ -18,6 +18,7 @@ const {
   MAX_EMBEDDING_TOKENS_PER_DOCUMENT,
   MAX_EMBEDDING_TOKENS_PER_MONTH,
 } = require("./convenio-ingestion");
+const { splitCleaningBarcelonaSalaryTables, isApprovedCleaningBarcelonaFragment } = require("./ingest-conventios");
 
 function pdfBytes() {
   return Buffer.concat([Buffer.from("%PDF-1.7\n"), Buffer.alloc(600, 0x20), Buffer.from("\n%%EOF\n")]);
@@ -170,6 +171,56 @@ test("classifies only document types supported by deterministic title rules", ()
   assert.equal(classifyOfficialDocument("Acuerdo parcial de limpieza 2026"), "partial_amendment");
   assert.equal(classifyOfficialDocument("Convenio colectivo texto nuevo"), "collective_agreement");
   assert.equal(classifyOfficialDocument("Anuncio sin relación"), "not_relevant");
+});
+
+test("segments only the verified Barcelona, Girona, and Lleida 2026 table periods", () => {
+  const source = [
+    "Taules salarials Barcelona, Lleida i Girona 2026 1/01/2026 - 31/08/2026",
+    "Grup IV Nivell 1: salari base 1.056,99 euros",
+    "Taules salarials Barcelona, Lleida i Girona 01/09/2026 - 31/12/2026",
+    "Grup IV Nivell 1: salari base 1.068,99 euros",
+  ].join("\n");
+  const [first, second] = splitCleaningBarcelonaSalaryTables(source);
+  assert.equal(first.sourceValidFrom, "2026-01-01");
+  assert.equal(first.sourceValidThrough, "2026-08-31");
+  assert.equal(first.sourcePageRange, "10-11");
+  assert.match(first.text, /1\/01\/2026 - 31\/08\/2026/);
+  assert.doesNotMatch(first.text, /01\/09\/2026 - 31\/12\/2026/);
+  assert.equal(second.sourceValidFrom, "2026-09-01");
+  assert.equal(second.sourceValidThrough, "2026-12-31");
+  assert.equal(second.sourcePageRange, "11-12");
+  assert.match(second.text, /01\/09\/2026 - 31\/12\/2026/);
+  assert.doesNotMatch(second.text, /Tarragona/);
+  assert.throws(() => splitCleaningBarcelonaSalaryTables("ambiguous table"), /PERIOD_MARKERS_INVALID/);
+});
+
+test("manual excerpt approval is limited to the recorded official source and page range", () => {
+  const approved = {
+    fileName: "Acuerdo parcial Limpieza Cataluña 2026 tablas Barcelona Girona Lleida.pdf",
+    manualIngestionApproval: "CVE-DOGC-A-26050075-2026-pages-10-12-salary-tables",
+    officialCode: "79002415012005",
+    sourceVerification: "verified",
+    sourceSha256: "f091278fd24c989bd3f2ecccf2a0a79c1cd8daedd593508ebebc96e88fa32300",
+    sourcePageRange: [10, 12],
+    sourceDocumentType: "salary_tables",
+    province: "BARCELONA",
+    applicableProvinces: ["BARCELONA", "GIRONA", "LLEIDA"],
+    catalogKey: "limpieza_catalunya_barcelona_tablas_2026",
+    title: "Acord parcial per als anys 2026 a 2030 de neteja d’edificis i locals de Catalunya — taules Barcelona, Girona i Lleida",
+    yearStart: 2026,
+    yearEnd: 2026,
+    sourceValidFrom: "2026-01-01",
+    sourceValidThrough: "2026-12-31",
+    sourcePageCount: 15,
+    automaticIngestionEligible: false,
+    officialSourceUrl: "https://dogc.gencat.cat/ca/document-del-dogc/?documentId=1037935",
+    sourceStorageUri: "gs://calendario-laboral-252b1.firebasestorage.app/official-sources/convenios/limpieza_catalunya_2022_2030/2026-02-26-CVE-DOGC-A-26050075-2026.pdf",
+    publication: { bulletin: "DOGC", identifier: "CVE-DOGC-A-26050075-2026", date: "2026-02-26" },
+    sectorKeys: ["limpieza"],
+  };
+  assert.equal(isApprovedCleaningBarcelonaFragment(approved), true);
+  assert.equal(isApprovedCleaningBarcelonaFragment({ ...approved, sourcePageRange: [10, 15] }), false);
+  assert.equal(isApprovedCleaningBarcelonaFragment({ ...approved, applicableProvinces: ["BARCELONA", "TARRAGONA"] }), false);
 });
 
 test("does not activate partial, duplicated, wrong-source, or invalid-vector chunk sets", async () => {

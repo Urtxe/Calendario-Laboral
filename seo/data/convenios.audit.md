@@ -1,5 +1,7 @@
 # Informe SEO de convenios
 
+> Informe histórico de extracción (06/07/2026). Las filas de los dos pilotos fueron sustituidas por el catálogo de afirmaciones verificadas del 16/10/2026; para estos convenios consultar `seo/data/convenios.claims.json`. Las métricas siguientes no acreditan verificación jurídica.
+
 Generado: 2026-07-06T21:04:00.024Z
 
 ## Resumen
@@ -28,7 +30,7 @@ Generado: 2026-07-06T21:04:00.024Z
 
 ## Fuentes oficiales añadidas
 
-- hosteleria-gipuzkoa: Referencia de publicacion localizada en el PDF: Boletín Oficial Del País Vasco De..
+- hosteleria-gipuzkoa: ficha piloto sustituida por afirmaciones con enlace individual al BOG; véase `convenios.claims.json`.
 - alojamientos-gipuzkoa: Referencia de publicacion localizada en el PDF: Boletín Oficial Del País Vasco De..
 - hosteleria-bizkaia: Referencia de publicacion localizada en el PDF: Boletín Oficial De Bizkaia..
 - hosteleria-madrid: Referencia de publicacion localizada en el PDF: Boletín Oficial De La Comunidad De Madridbocm I..
@@ -55,7 +57,7 @@ Generado: 2026-07-06T21:04:00.024Z
 
 ## Paginas mejoradas
 
-- Convenio de Hosteleria de Gipuzkoa (hosteleria-gipuzkoa): extraido Vigencia, Jornada anual, Vacaciones, Permisos, Horas extra, Nocturnidad, Descansos, Festivos, Fuente oficial/boletin; no localizado URL del boletin; enlaces app 3, sector 4, provincia 3, indice 2.
+- Convenio de restauración de Gipuzkoa (hosteleria-gipuzkoa): esta fila histórica se sustituyó por la ficha verificada del 16/10/2026.
 - Convenio de Alojamientos de Gipuzkoa (alojamientos-gipuzkoa): extraido Vigencia, Jornada anual, Vacaciones, Permisos, Horas extra, Nocturnidad, Descansos, Festivos, Fuente oficial/boletin; no localizado URL del boletin; enlaces app 3, sector 4, provincia 3, indice 2.
 - Convenio de Hosteleria de Bizkaia (hosteleria-bizkaia): extraido Vigencia, Jornada anual, Permisos, Horas extra, Nocturnidad, Descansos, Festivos, Fuente oficial/boletin; no localizado Vacaciones, URL del boletin; enlaces app 3, sector 4, provincia 2, indice 2.
 - Convenio de Hosteleria de Madrid (hosteleria-madrid): extraido Vigencia, Jornada anual, Vacaciones, Permisos, Horas extra, Nocturnidad, Descansos, Festivos, Fuente oficial/boletin; no localizado URL del boletin; enlaces app 3, sector 4, provincia 2, indice 2.
@@ -72,7 +74,7 @@ Generado: 2026-07-06T21:04:00.024Z
 - Convenio de Alojamientos de Navarra (alojamientos-navarra): extraido Vigencia, Jornada anual, Permisos, Horas extra, Nocturnidad, Descansos, Festivos, Fuente oficial/boletin; no localizado Vacaciones, URL del boletin; enlaces app 3, sector 4, provincia 2, indice 2.
 - Convenio de Hosteleria de Malaga (hosteleria-malaga): extraido Vigencia, Jornada anual, Vacaciones, Permisos, Horas extra, Nocturnidad, Descansos, Festivos, Fuente oficial/boletin, URL del boletin; no localizado ninguno; enlaces app 3, sector 4, provincia 0, indice 2.
 - Convenio de Hosteleria de Valencia (hosteleria-valencia): extraido Vigencia, Jornada anual, Vacaciones, Permisos, Horas extra, Nocturnidad, Descansos, Festivos, Fuente oficial/boletin, URL del boletin; no localizado ninguno; enlaces app 3, sector 4, provincia 2, indice 2.
-- Convenio de Limpieza de Barcelona (limpieza-barcelona): extraido Vigencia, Vacaciones, Permisos, Horas extra, Nocturnidad, Descansos, Festivos; no localizado Jornada anual, Fuente oficial/boletin, URL del boletin; enlaces app 3, sector 4, provincia 2, indice 2.
+- Convenio de limpieza de Cataluña (limpieza-barcelona): esta fila histórica se sustituyó por la ficha verificada del 16/10/2026.
 - Convenio de Limpieza de Navarra (limpieza-navarra): extraido Vigencia, Jornada anual, Vacaciones, Permisos, Horas extra, Nocturnidad, Descansos, Festivos, Fuente oficial/boletin; no localizado URL del boletin; enlaces app 3, sector 4, provincia 2, indice 2.
 - Convenio de Limpieza de Sevilla (limpieza-sevilla): extraido Vigencia, Jornada anual, Permisos, Horas extra, Nocturnidad, Descansos, Festivos, Fuente oficial/boletin; no localizado Vacaciones, URL del boletin; enlaces app 3, sector 4, provincia 2, indice 2.
 - Convenio de Limpieza de Valencia (limpieza-valencia): extraido Vigencia, Jornada anual, Vacaciones, Permisos, Horas extra, Nocturnidad, Descansos, Festivos, Fuente oficial/boletin; no localizado URL del boletin; enlaces app 3, sector 4, provincia 2, indice 2.

@@ -341,6 +341,16 @@ p {
   scroll-margin-top: 22px;
 }
 
+.claim-page .hero {
+  padding: 8px 0;
+}
+
+.claim-page .claim-source {
+  color: var(--muted);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
 .faq-list {
   display: grid;
   gap: 12px;

@@ -3,6 +3,7 @@ const fsp = require("fs/promises");
 const path = require("path");
 const { PDFParse } = require("../functions/node_modules/pdf-parse");
 const { parseConvenioFileName, normalizeText } = require("../functions/convenio-metadata");
+const { loadClaims, publishableClaims } = require("./seo-convenio-claims");
 
 const ROOT = path.join(__dirname, "..");
 const PROCESSED_DIR = path.join(ROOT, "functions", "convenios", "processed");
@@ -13,6 +14,7 @@ const SITEMAP_XML = path.join(ROOT, "sitemap.xml");
 const ROBOTS_TXT = path.join(ROOT, "robots.txt");
 const MANUAL_METADATA_JSON = path.join(SEO_DATA_DIR, "convenios.manual.json");
 const SITE_URL = "https://balancelaboral.es";
+const CLAIMS = loadClaims().convenios;
 const NOT_FOUND = "No localizado en el texto disponible";
 const PRUDENT_NOT_FOUND = "No he podido extraer este dato con fiabilidad del texto disponible. Consulta el convenio completo o la publicacion oficial antes de tomar decisiones laborales.";
 
@@ -486,7 +488,21 @@ function buildEntry({ fileName, filePath, parsed, text, manual }) {
     content,
   };
 
-  entry.faq = buildFaq(entry);
+  if (CLAIMS[slug]) {
+    entry.claims = publishableClaims(CLAIMS[slug]);
+    if (!entry.claims.length) throw new Error(`Sin afirmaciones verificadas para ${slug}; se evita generar una página vacía.`);
+    entry.autoCandidates = Object.entries(extractedContent)
+      .filter(([key, value]) => key !== "resumen" && isFound(value))
+      .map(([key, value]) => ({
+        id: `auto-${key}`, materia: key, texto: value,
+        documentoOficial: { identificador: null, titulo: null, url: null, fechaPublicacion: null },
+        ambito: { funcional: sectorLabel, territorial: provinciaDisplay },
+        referencia: null, periodoEfectos: { descripcion: null, desde: null, hasta: null },
+        procedencia: { tipo: "extraccion_automatica", evidencia: fileName }, estado: "pendiente",
+      }));
+    entry.content = Object.fromEntries(Object.keys(content).map((key) => [key, NOT_FOUND]));
+  }
+  entry.faq = entry.claims ? [] : buildFaq(entry);
   return entry;
 }
 
@@ -532,6 +548,15 @@ function buildRelatedByProvince(entry, generatedEntries) {
 }
 
 function buildMeta(entry) {
+  if (entry.claims) {
+    const title = entry.slug === "hosteleria-gipuzkoa"
+      ? "Convenio de restauración de Gipuzkoa"
+      : "Convenio de limpieza de edificios y locales de Cataluña (Barcelona)";
+    const description = entry.slug === "hosteleria-gipuzkoa"
+      ? "Restauración de Gipuzkoa: jornada general y de colectividades, vacaciones y festivos con referencias al BOG."
+      : "Limpieza de Cataluña en Barcelona: jornada, vacaciones, festivos y acuerdo parcial de 2026 con fuentes oficiales.";
+    return { title: `${title} | Balance Laboral`, description };
+  }
   const core = `${entry.title}: vigencia, jornada, vacaciones, permisos y horas extra`;
   const foundBits = [
     isFound(entry.content.vigencia) ? entry.content.vigencia.replace(/^Vigencia detectada en el documento: /, "Vigencia ") : "",
@@ -553,6 +578,22 @@ function buildSchema(entry) {
   const faqId = `${url}#faq`;
   const breadcrumbId = `${url}#breadcrumb`;
   const meta = buildMeta(entry);
+  if (entry.claims) {
+    return {
+      "@context": "https://schema.org",
+      "@graph": [
+        { "@type": "WebPage", "@id": `${url}#webpage`, url, name: meta.title,
+          description: meta.description, inLanguage: "es",
+          isPartOf: { "@type": "WebSite", "@id": `${SITE_URL}/#website`, name: "Balance Laboral", url: `${SITE_URL}/` },
+          breadcrumb: { "@id": breadcrumbId }, citation: [...new Set(entry.claims.flatMap((claim) => [claim.documentoOficial.url, claim.correccionOficial?.url].filter(Boolean)))] },
+        { "@type": "BreadcrumbList", "@id": breadcrumbId, inLanguage: "es", itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Inicio", item: `${SITE_URL}/` },
+          { "@type": "ListItem", position: 2, name: "Convenios", item: `${SITE_URL}/convenios` },
+          { "@type": "ListItem", position: 3, name: meta.title.replace(" | Balance Laboral", ""), item: url },
+        ] },
+      ],
+    };
+  }
   const graph = [
     {
       "@type": "WebPage",
@@ -627,6 +668,7 @@ function buildSchema(entry) {
 }
 
 function renderPage(entry, generatedEntries) {
+  if (entry.claims) return renderClaimPage(entry);
   const meta = buildMeta(entry);
   const sameSector = buildRelatedBySector(entry, generatedEntries);
   const sameProvince = buildRelatedByProvince(entry, generatedEntries);
@@ -821,6 +863,69 @@ ${sameProvinceHtml || `          <li><a href="/convenios#provincia-${slugify(ent
 `;
 }
 
+function renderClaimPage(entry) {
+  const meta = buildMeta(entry);
+  const url = `${SITE_URL}/convenios/${entry.slug}`;
+  const title = meta.title.replace(" | Balance Laboral", "");
+  const claimHeadings = { ambito: "Ámbito", jornada_anual: "Jornada anual", jornada_colectividades: "Jornada en colectividades", pausa_jornada: "Pausa durante la jornada", festivos_contrato_exclusivo: "Festivos: contratos exclusivos", festividad_santa_marta: "Festividad de Santa Marta", horas_extra: "Horas extraordinarias", permiso_traslado: "Permiso por traslado", registro_jornada: "Registro de jornada", revision_salarial: "Revisión salarial", periodo_acuerdo_parcial: "Acuerdo parcial de 2026" };
+  const ctaHtml = `
+      <section class="conversion-panel" aria-labelledby="cta-horas"><div><h2 id="cta-horas">Registra tus jornadas</h2><p>Guarda tus horas trabajadas y compáralas con tu calendario en Balance Laboral.</p></div><div class="conversion-actions"><a class="btn primary" href="/">Empezar a registrar horas</a></div></section>`;
+  const claimsHtml = entry.claims.map((claim, index) => `
+      <section class="topic-section" id="${escapeHtml(claim.materia.replace(/_/g, "-"))}">
+        <h2>${escapeHtml(claimHeadings[claim.materia] || titleCase(claim.materia.replace(/_/g, " ")))}</h2>
+        <p>${escapeHtml(claim.texto)}</p>
+        <p class="claim-source">Fuente: <a href="${escapeHtml(claim.documentoOficial.url)}" rel="nofollow noopener" target="_blank">${escapeHtml(claim.documentoOficial.titulo)}</a> · ${escapeHtml(claim.documentoOficial.identificador)} · ${escapeHtml(claim.documentoOficial.fechaPublicacion)} · ${escapeHtml(claim.referencia)}.${claim.correccionOficial ? ` Corrección del título: <a href="${escapeHtml(claim.correccionOficial.url)}" rel="nofollow noopener" target="_blank">${escapeHtml(claim.correccionOficial.titulo)}</a> · ${escapeHtml(claim.correccionOficial.fechaPublicacion)} · ${escapeHtml(claim.correccionOficial.referencia)}.` : ""}</p>
+      </section>${index === 4 ? ctaHtml : ""}`).join("\n");
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="${escapeHtml(meta.description)}">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#24344d">
+  <meta property="og:type" content="article">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:title" content="${escapeHtml(meta.title)}">
+  <meta property="og:description" content="${escapeHtml(meta.description)}">
+  <meta property="og:url" content="${url}">
+  <meta property="og:site_name" content="Balance Laboral">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="${escapeHtml(meta.title)}">
+  <meta name="twitter:description" content="${escapeHtml(meta.description)}">
+  <link rel="canonical" href="${url}">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="../src/css/convenios.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>${escapeHtml(meta.title)}</title>
+  <script type="application/ld+json">
+  ${escapeJson(buildSchema(entry))}
+  </script>
+</head>
+<body>
+  <header class="site-header"><div class="page-wrap header-inner">
+    <a class="brand" href="/" aria-label="Balance Laboral"><img src="../assets/images/logo.png" alt="Balance Laboral" width="42" height="42"><span>Balance Laboral</span></a>
+    <a class="header-link" href="/convenios">Convenios</a>
+  </div></header>
+  <main class="narrow-wrap article-layout">
+    <nav class="breadcrumbs" aria-label="Migas de pan"><ol><li><a href="/">Inicio</a></li><li><a href="/convenios">Convenios</a></li><li aria-current="page">${escapeHtml(title)}</li></ol></nav>
+    <article class="article-shell claim-page">
+      <section class="hero"><p class="eyebrow">${escapeHtml(entry.slug === "hosteleria-gipuzkoa" ? "Restauración · Gipuzkoa" : "Limpieza de edificios y locales · Cataluña")}</p><h1>${escapeHtml(title)}</h1><p class="lead">Jornada, vacaciones y otras condiciones con enlace al artículo publicado en el boletín oficial.</p></section>
+      <section class="notice"><strong>Qué convenio se resume.</strong> ${escapeHtml(entry.slug === "hosteleria-gipuzkoa" ? "Empresas de restauración con centros de trabajo en Gipuzkoa; la jornada de colectividades tiene una escala propia." : "Convenio de limpieza de edificios y locales de Cataluña, aplicable también en Barcelona. El acuerdo parcial de 2026 modifica algunas reglas y distingue los contratos exclusivos de fines de semana y festivos.")}</section>
+${claimsHtml}
+      <section class="related-box"><h2>Más convenios</h2><p><a href="/convenios">Ver el listado de convenios</a></p></section>
+    </article>
+  </main>
+  <footer class="site-footer"><div class="page-wrap footer-inner"><a href="/convenios">Volver al listado de convenios</a><a href="/privacy">Privacidad</a><a href="/?analytics=preferences">Preferencias de analítica</a></div></footer>
+  <script defer src="/src/js/app/play-twa-context.js"></script>
+  <script defer src="/src/js/firebase-public-config.js"></script>
+  <script defer src="/src/js/analytics.js"></script>
+</body>
+</html>
+`;
+}
+
 function renderListing(generatedEntries) {
   const groups = ["hosteleria", "alojamientos", "limpieza", "transporte"]
     .map((sector) => ({
@@ -837,8 +942,8 @@ function renderListing(generatedEntries) {
   const cards = groups.map((group) => {
     const items = group.items.map((entry) => `          <article class="listing-card">
             <p class="card-kicker">${escapeHtml(entry.provinciaDisplay)}</p>
-            <h3><a href="/convenios/${entry.slug}">${escapeHtml(entry.title)}</a></h3>
-            <p>${escapeHtml(isFound(entry.content.jornada_anual) ? entry.content.jornada_anual : "Resumen con vigencia, vacaciones, permisos, descansos y horas extra cuando el dato se ha extraido con fiabilidad.")}</p>
+            <h3><a href="/convenios/${entry.slug}">${escapeHtml(entry.claims ? buildMeta(entry).title.replace(" | Balance Laboral", "") : entry.title)}</a></h3>
+            <p>${escapeHtml(entry.claims ? buildMeta(entry).description : isFound(entry.content.jornada_anual) ? entry.content.jornada_anual : "Resumen con vigencia, vacaciones, permisos, descansos y horas extra cuando el dato se ha extraido con fiabilidad.")}</p>
           </article>`).join("\n");
     return `      <section id="sector-${group.sector}" aria-labelledby="grupo-${group.sector}">
         <h2 id="grupo-${group.sector}">${escapeHtml(group.label)}</h2>
@@ -851,7 +956,7 @@ ${items}
     const items = generatedEntries
       .filter((entry) => entry.provinciaDisplay === province)
       .sort((a, b) => a.sectorLabel.localeCompare(b.sectorLabel, "es"))
-      .map((entry) => `          <li><a href="/convenios/${entry.slug}">${escapeHtml(entry.title)}</a></li>`)
+      .map((entry) => `          <li><a href="/convenios/${entry.slug}">${escapeHtml(entry.claims ? buildMeta(entry).title.replace(" | Balance Laboral", "") : entry.title)}</a></li>`)
       .join("\n");
     return `      <section class="related-box" id="provincia-${slugify(province)}" aria-labelledby="titulo-provincia-${slugify(province)}">
         <h2 id="titulo-provincia-${slugify(province)}">Convenios de ${escapeHtml(province)}</h2>
@@ -883,7 +988,7 @@ ${items}
             "@type": "ListItem",
             position: index + 1,
             url: `${SITE_URL}/convenios/${entry.slug}`,
-            name: entry.title,
+            name: entry.claims ? buildMeta(entry).title.replace(" | Balance Laboral", "") : entry.title,
           })),
         },
       },
@@ -1430,6 +1535,31 @@ async function main() {
   const records = await buildRecords();
   const { selected, needsCorrections, doNotPublish } = chooseCandidates(records);
   const generatedEntries = selected.map((record) => record.entry);
+
+  if (process.argv.includes("--pilot")) {
+    const pilotEntries = generatedEntries.filter((item) => CLAIMS[item.slug]);
+    for (const entry of pilotEntries) {
+      await fsp.writeFile(path.join(SEO_DIR, `${entry.slug}.html`), renderPage(entry, generatedEntries));
+    }
+    const inventory = JSON.parse(await fsp.readFile(path.join(SEO_DATA_DIR, "convenios.generated.json"), "utf8"));
+    const bySlug = new Map(pilotEntries.map((entry) => [entry.slug, entry]));
+    const listingEntries = inventory.generated.map((entry) => bySlug.get(entry.slug) || entry);
+    inventory.generated = listingEntries.map((entry) => entry.claims ? (({ autoCandidates, content, faq, source, ...publishable }) => publishable)(entry) : entry);
+    inventory.sourceInventoryGeneratedAt ||= inventory.generatedAt;
+    delete inventory.generatedAt;
+    inventory.pilotVerifiedAt = new Date().toISOString().slice(0, 10);
+    inventory.summary = { listed: listingEntries.length, verifiedPilots: pilotEntries.length };
+    delete inventory.classificationCriteria;
+    delete inventory.contentReport;
+    delete inventory.duplicateRisks;
+    delete inventory.manualRecovery;
+    delete inventory.seoValidation;
+    delete inventory.improvements;
+    await fsp.writeFile(path.join(SEO_DIR, "convenios.html"), renderListing(listingEntries));
+    await fsp.writeFile(path.join(SEO_DATA_DIR, "convenios.generated.json"), `${JSON.stringify(inventory, null, 2)}\n`);
+    console.log("Piloto SEO generado: hosteleria-gipuzkoa, limpieza-barcelona.");
+    return;
+  }
 
   for (const entry of generatedEntries) {
     await fsp.writeFile(path.join(SEO_DIR, `${entry.slug}.html`), renderPage(entry, generatedEntries));

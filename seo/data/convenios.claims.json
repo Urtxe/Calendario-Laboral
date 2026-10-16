@@ -1,0 +1,769 @@
+{
+  "version": 1,
+  "convenios": {
+    "hosteleria-gipuzkoa": [
+      {
+        "id": "hg-ambito",
+        "materia": "ambito",
+        "texto": "Se aplica a empresas de restauración con centros de trabajo en Gipuzkoa, incluidos restaurantes, bares y servicios de comidas a colectividades. No es el convenio de alojamientos.",
+        "documentoOficial": {
+          "identificador": "GAO-I-2023-04299",
+          "titulo": "Convenio colectivo de empresas de restauración de Gipuzkoa",
+          "url": "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2023/06/19/c2304299.pdf",
+          "fechaPublicacion": "2023-06-19"
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": "arts. 2 y 3, p. 3",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado para 2023–2026",
+          "desde": "2023-06-20",
+          "hasta": "2026-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 4763e272d88ee6f4b39147e656f7249107ee611cb361721b356cba518608500e"
+        },
+        "evidenciaTextual": "Empresas y trabajadores del sector de la restauración; centros de trabajo en Gipuzkoa.",
+        "estado": "verificada"
+      },
+      {
+        "id": "hg-vigencia",
+        "materia": "vigencia",
+        "texto": "El texto principal entró en vigor el 20 de junio de 2023 y pactó duración hasta el 31 de diciembre de 2026; prevé continuidad hasta que se firme otro que lo sustituya.",
+        "documentoOficial": {
+          "identificador": "GAO-I-2023-04299",
+          "titulo": "Convenio colectivo de empresas de restauración de Gipuzkoa",
+          "url": "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2023/06/19/c2304299.pdf",
+          "fechaPublicacion": "2023-06-19"
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": "art. 5, p. 4",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado para 2023–2026",
+          "desde": "2023-06-20",
+          "hasta": "2026-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 4763e272d88ee6f4b39147e656f7249107ee611cb361721b356cba518608500e"
+        },
+        "evidenciaTextual": "Entrará en vigor al día siguiente de su publicación; hasta 31 de diciembre de 2026.",
+        "estado": "verificada"
+      },
+      {
+        "id": "hg-jornada",
+        "materia": "jornada_anual",
+        "texto": "La jornada ordinaria general es de 1.723 horas anuales durante la vigencia pactada. El subsector de colectividades tiene una jornada inferior específica.",
+        "documentoOficial": {
+          "identificador": "GAO-I-2023-04299",
+          "titulo": "Convenio colectivo de empresas de restauración de Gipuzkoa",
+          "url": "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2023/06/19/c2304299.pdf",
+          "fechaPublicacion": "2023-06-19"
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": "art. 28.1, p. 14",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado para 2023–2026",
+          "desde": "2023-06-20",
+          "hasta": "2026-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 4763e272d88ee6f4b39147e656f7249107ee611cb361721b356cba518608500e"
+        },
+        "evidenciaTextual": "La jornada anual ordinaria de trabajo será de 1.723 durante toda la vigencia.",
+        "estado": "verificada"
+      },
+      {
+        "id": "hg-colectividades",
+        "materia": "jornada_colectividades",
+        "texto": "En colectividades, la jornada anual pactada desciende por año: 1.708 horas en 2023, 1.693 en 2024, 1.668 en 2025 y 1.643 en 2026.",
+        "documentoOficial": {
+          "identificador": "GAO-I-2023-04299",
+          "titulo": "Convenio colectivo de empresas de restauración de Gipuzkoa",
+          "url": "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2023/06/19/c2304299.pdf",
+          "fechaPublicacion": "2023-06-19"
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": "art. 28.2, p. 14",
+        "periodoEfectos": {
+          "descripcion": "Escala anual específica del subsector de colectividades, 2023–2026",
+          "desde": "2023-06-20",
+          "hasta": "2026-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 4763e272d88ee6f4b39147e656f7249107ee611cb361721b356cba518608500e"
+        },
+        "evidenciaTextual": "Colectividades: 1.708 horas en 2023; 1.693 en 2024; 1.668 en 2025; 1.643 en 2026.",
+        "estado": "verificada"
+      },
+      {
+        "id": "hg-vacaciones",
+        "materia": "vacaciones",
+        "texto": "Las vacaciones anuales retribuidas son como mínimo 30 días naturales, de los cuales 26 son laborables. Las fechas se fijan de común acuerdo; la empresa puede señalar hasta tres meses sin vacaciones si lo comunica antes del 28 de febrero.",
+        "documentoOficial": {
+          "identificador": "GAO-I-2023-04299",
+          "titulo": "Convenio colectivo de empresas de restauración de Gipuzkoa",
+          "url": "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2023/06/19/c2304299.pdf",
+          "fechaPublicacion": "2023-06-19"
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": "art. 32, p. 16",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado para 2023–2026",
+          "desde": "2023-06-20",
+          "hasta": "2026-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 4763e272d88ee6f4b39147e656f7249107ee611cb361721b356cba518608500e"
+        },
+        "evidenciaTextual": "30 días naturales mínimos, de los cuales 26 serán laborables; comunicación antes del 28 de febrero.",
+        "estado": "verificada"
+      },
+      {
+        "id": "hg-descansos",
+        "materia": "descansos",
+        "texto": "El descanso semanal pactado es de día y medio efectivo e ininterrumpido. En jornada continuada de más de seis horas corresponden 15 minutos seguidos computados como trabajo efectivo.",
+        "documentoOficial": {
+          "identificador": "GAO-I-2023-04299",
+          "titulo": "Convenio colectivo de empresas de restauración de Gipuzkoa",
+          "url": "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2023/06/19/c2304299.pdf",
+          "fechaPublicacion": "2023-06-19"
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": "art. 28.1, p. 14",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado para 2023–2026",
+          "desde": "2023-06-20",
+          "hasta": "2026-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 4763e272d88ee6f4b39147e656f7249107ee611cb361721b356cba518608500e"
+        },
+        "evidenciaTextual": "El descanso semanal será de día y medio efectivo ininterrumpido; 15 minutos como trabajo efectivo.",
+        "estado": "verificada"
+      },
+      {
+        "id": "hg-festivos",
+        "materia": "festivos",
+        "texto": "Si se trabaja un festivo no recuperable, el convenio prevé salario ordinario incrementado un 75 % o descanso compensatorio aumentado un 50 %. Si no hay acuerdo, cada parte elige la opción para la mitad de los festivos trabajados.",
+        "documentoOficial": {
+          "identificador": "GAO-I-2023-04299",
+          "titulo": "Convenio colectivo de empresas de restauración de Gipuzkoa",
+          "url": "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2023/06/19/c2304299.pdf",
+          "fechaPublicacion": "2023-06-19"
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": "art. 17, pp. 9–10",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado para 2023–2026",
+          "desde": "2023-06-20",
+          "hasta": "2026-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 4763e272d88ee6f4b39147e656f7249107ee611cb361721b356cba518608500e"
+        },
+        "evidenciaTextual": "Incremento del 75 % o descanso con aumento del 50 %.",
+        "estado": "verificada"
+      },
+      {
+        "id": "hg-santa-marta",
+        "materia": "festividad_santa_marta",
+        "texto": "El 29 de julio, Santa Marta, figura como fiesta abonable en el convenio.",
+        "documentoOficial": {
+          "identificador": "GAO-I-2023-04299",
+          "titulo": "Convenio colectivo de empresas de restauración de Gipuzkoa",
+          "url": "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2023/06/19/c2304299.pdf",
+          "fechaPublicacion": "2023-06-19"
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": "art. 33, p. 17",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado para 2023–2026",
+          "desde": "2023-06-20",
+          "hasta": "2026-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 4763e272d88ee6f4b39147e656f7249107ee611cb361721b356cba518608500e"
+        },
+        "evidenciaTextual": "El día 29 de julio tendrá la consideración de fiesta abonable.",
+        "estado": "verificada"
+      },
+      {
+        "id": "hg-horas-extra",
+        "materia": "horas_extra",
+        "texto": "Las horas extraordinarias no son trabajo habitual: el art. 16 las reserva para fuerza mayor o necesidades excepcionales descritas allí. Su cuantía se acuerda en la empresa y se prefiere compensarlas con descanso.",
+        "documentoOficial": {
+          "identificador": "GAO-I-2023-04299",
+          "titulo": "Convenio colectivo de empresas de restauración de Gipuzkoa",
+          "url": "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2023/06/19/c2304299.pdf",
+          "fechaPublicacion": "2023-06-19"
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": "art. 16, p. 9",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado para 2023–2026",
+          "desde": "2023-06-20",
+          "hasta": "2026-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 4763e272d88ee6f4b39147e656f7249107ee611cb361721b356cba518608500e"
+        },
+        "evidenciaTextual": "No podrán efectuarse, como norma general; optándose preferentemente por su compensación en descanso.",
+        "estado": "verificada"
+      },
+      {
+        "id": "hg-nocturnidad",
+        "materia": "nocturnidad",
+        "texto": "El convenio considera que parte del trabajo de restauración es nocturno por naturaleza. Si una persona contratada solo para horario diurno pasa a horas nocturnas, el art. 18 prevé un 25 % sobre su salario ordinario por esas nuevas horas; también lo prevé para rotaciones impuestas exclusivamente por la empresa. El plus adicional del anexo es una figura distinta.",
+        "documentoOficial": {
+          "identificador": "GAO-I-2023-04299",
+          "titulo": "Convenio colectivo de empresas de restauración de Gipuzkoa",
+          "url": "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2023/06/19/c2304299.pdf",
+          "fechaPublicacion": "2023-06-19"
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": "art. 18, pp. 9–10",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado para 2023–2026",
+          "desde": "2023-06-20",
+          "hasta": "2026-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 4763e272d88ee6f4b39147e656f7249107ee611cb361721b356cba518608500e"
+        },
+        "evidenciaTextual": "Contratada para trabajos exclusivamente diurnos y trasladada a nocturnos: 25 % por nuevas horas nocturnas.",
+        "estado": "verificada"
+      },
+      {
+        "id": "hg-permiso-traslado",
+        "materia": "permiso_traslado",
+        "texto": "El art. 34 recoge un día retribuido por traslado del domicilio habitual, con preaviso y justificación.",
+        "documentoOficial": {
+          "identificador": "GAO-I-2023-04299",
+          "titulo": "Convenio colectivo de empresas de restauración de Gipuzkoa",
+          "url": "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2023/06/19/c2304299.pdf",
+          "fechaPublicacion": "2023-06-19"
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": "art. 34.1.d, p. 17",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado para 2023–2026",
+          "desde": "2023-06-20",
+          "hasta": "2026-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 4763e272d88ee6f4b39147e656f7249107ee611cb361721b356cba518608500e"
+        },
+        "evidenciaTextual": "Un día por traslado de domicilio habitual.",
+        "estado": "verificada"
+      },
+      {
+        "id": "hg-registro",
+        "materia": "registro_jornada",
+        "texto": "El art. 29 regula un registro horario digital, con excepciones para empresas de hasta cinco personas y determinados empleadores; incluso en esos casos debe existir registro conforme a la ley. La copia mensual se facilita a la representación o, si no la hay, a quien la pida.",
+        "documentoOficial": {
+          "identificador": "GAO-I-2023-04299",
+          "titulo": "Convenio colectivo de empresas de restauración de Gipuzkoa",
+          "url": "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2023/06/19/c2304299.pdf",
+          "fechaPublicacion": "2023-06-19"
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": "art. 29, p. 15",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado para 2023–2026",
+          "desde": "2023-06-20",
+          "hasta": "2026-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 4763e272d88ee6f4b39147e656f7249107ee611cb361721b356cba518608500e"
+        },
+        "evidenciaTextual": "Implantar un sistema de registro horarios digital; empresas de 5 o menos deben contar con registro horario.",
+        "estado": "verificada"
+      },
+      {
+        "id": "hg-revision-salarial-2026",
+        "materia": "revision_salarial",
+        "texto": "El BOG publicó la revisión salarial de 2026 del Convenio de Empresas de Restauración de Gipuzkoa, con tablas en los anexos III a VII.",
+        "documentoOficial": {
+          "identificador": "GAO-I-2026-00525",
+          "titulo": "Revisión salarial para 2026 del Convenio Colectivo de Empresas de Restauración de Gipuzkoa",
+          "url": "https://egoitza.gipuzkoa.eus/gao-bog/castell/bog/2026/02/13/c2600525.pdf",
+          "fechaPublicacion": "2026-02-13"
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": "Resolución y anexos III–VII, páginas 1–2",
+        "periodoEfectos": {
+          "descripcion": "Ejercicio salarial 2026; el anuncio no precisa aquí fechas de devengo",
+          "desde": null,
+          "hasta": null
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial, SHA-256 ddfff0b8ffa83356ba36509f8060b493f9a548b4fc6770b09e13de9a76df3529"
+        },
+        "estado": "verificada",
+        "evidenciaTextual": "La resolución publica las tablas salariales correspondientes al año 2026 en los anexos III a VII."
+      },
+      {
+        "id": "hg-plus-nocturno-pendiente",
+        "materia": "plus_nocturno_anexo",
+        "texto": "Cuantía y condiciones del plus extraordinario de nocturnidad del anexo pendientes de cotejo por categoría y año.",
+        "documentoOficial": {
+          "identificador": null,
+          "titulo": null,
+          "url": null,
+          "fechaPublicacion": null
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": null,
+        "periodoEfectos": {
+          "descripcion": null,
+          "desde": null,
+          "hasta": null
+        },
+        "procedencia": {
+          "tipo": "revision_pendiente",
+          "evidencia": "Requiere cotejo jurídico adicional"
+        },
+        "estado": "pendiente"
+      },
+      {
+        "id": "hg-permisos-familiares-pendiente",
+        "materia": "permisos_familiares",
+        "texto": "Las licencias familiares del art. 34 requieren contraste con legislación posterior antes de resumir su duración aplicable.",
+        "documentoOficial": {
+          "identificador": null,
+          "titulo": null,
+          "url": null,
+          "fechaPublicacion": null
+        },
+        "ambito": {
+          "funcional": "Empresas de restauración",
+          "territorial": "Gipuzkoa"
+        },
+        "referencia": null,
+        "periodoEfectos": {
+          "descripcion": null,
+          "desde": null,
+          "hasta": null
+        },
+        "procedencia": {
+          "tipo": "revision_pendiente",
+          "evidencia": "Requiere cotejo jurídico adicional"
+        },
+        "estado": "pendiente"
+      }
+    ],
+    "limpieza-barcelona": [
+      {
+        "id": "lb-ambito",
+        "materia": "ambito",
+        "texto": "El convenio es de ámbito catalán y cubre la limpieza e higienización de edificios y locales; Barcelona forma parte de ese ámbito, pero algunos complementos y festivos tienen reglas provinciales.",
+        "documentoOficial": {
+          "identificador": "CVE-DOGC-A-23139017-2023",
+          "titulo": "Convenio de limpieza de edificios y locales de Cataluña 2022–2025",
+          "url": "https://portaldogc.gencat.cat/utilsEADOP/AppJava/PdfProviderServlet?documentId=960937&type=01&language=ca_ES",
+          "fechaPublicacion": "2023-05-23"
+        },
+        "ambito": {
+          "funcional": "Limpieza de edificios y locales",
+          "territorial": "Cataluña, incluida Barcelona"
+        },
+        "referencia": "arts. 1 y 2, p. 2",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado en 2023; cotejado con el acuerdo parcial de 2026",
+          "desde": "2023-05-24",
+          "hasta": null
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 2b3f727ad4c27cc5864b5ad9f8576a3c78216a37797629811fdac556c6110dc0"
+        },
+        "evidenciaTextual": "Serveis en qualsevol lloc de la comunitat autònoma de Catalunya; activitat de neteja i higienització.",
+        "estado": "verificada"
+      },
+      {
+        "id": "lb-acuerdo-parcial-2026",
+        "materia": "periodo_acuerdo_parcial",
+        "texto": "El acuerdo parcial de limpieza de edificios y locales de Cataluña fija efectos desde el 1 de enero de 2026 y una duración pactada hasta el 31 de diciembre de 2030.",
+        "documentoOficial": {
+          "identificador": "CVE-DOGC-A-26050075-2026",
+          "titulo": "Resolució EMT/427/2026, acuerdo parcial de limpieza de edificios y locales de Cataluña",
+          "url": "https://portaldogc.gencat.cat/utilsEADOP/AppJava/PdfProviderServlet?documentId=1037935&type=01&language=ca_ES",
+          "fechaPublicacion": "2026-02-26"
+        },
+        "ambito": {
+          "funcional": "Limpieza de edificios y locales",
+          "territorial": "Cataluña, incluida Barcelona"
+        },
+        "referencia": "Anexo 1, apartado Primero, página 4",
+        "periodoEfectos": {
+          "descripcion": "Acuerdo parcial de 2026 a 2030",
+          "desde": "2026-01-01",
+          "hasta": "2030-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial, SHA-256 f091278fd24c989bd3f2ecccf2a0a79c1cd8daedd593508ebebc96e88fa32300; título corregido en DOGC CVE-DOGC-A-26082046-2026"
+        },
+        "estado": "verificada",
+        "evidenciaTextual": "El presente Acord entrarà en vigor a partir de l’1 de gener de 2026; durada fins al 31 de desembre de 2030.",
+        "correccionOficial": {
+          "identificador": "CVE-DOGC-A-26082046-2026",
+          "titulo": "DOGC: corrección de la denominación a acuerdo parcial 2026–2030",
+          "url": "https://portaldogc.gencat.cat/utilsEADOP/AppJava/PdfProviderServlet?documentId=1040564&type=01&language=ca_ES",
+          "fechaPublicacion": "2026-03-30",
+          "referencia": "apartado 1, páginas 1–2"
+        }
+      },
+      {
+        "id": "lb-jornada",
+        "materia": "jornada_anual",
+        "texto": "La jornada es de 40 horas semanales. El máximo de presencia anual pasó de 1.800 a 1.792 horas desde el 1 de enero de 2025; el art. 55 limita la jornada diaria a nueve horas y exige 12 horas entre jornadas.",
+        "documentoOficial": {
+          "identificador": "CVE-DOGC-A-23139017-2023",
+          "titulo": "Convenio de limpieza de edificios y locales de Cataluña 2022–2025",
+          "url": "https://portaldogc.gencat.cat/utilsEADOP/AppJava/PdfProviderServlet?documentId=960937&type=01&language=ca_ES",
+          "fechaPublicacion": "2023-05-23"
+        },
+        "ambito": {
+          "funcional": "Limpieza de edificios y locales",
+          "territorial": "Cataluña, incluida Barcelona"
+        },
+        "referencia": "art. 55, p. 22",
+        "periodoEfectos": {
+          "descripcion": "Jornada máxima anual reducida desde 01/01/2025; regla semanal y diaria del texto principal, mantenidas en el acuerdo parcial 2026",
+          "desde": "2025-01-01",
+          "hasta": null
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 2b3f727ad4c27cc5864b5ad9f8576a3c78216a37797629811fdac556c6110dc0"
+        },
+        "evidenciaTextual": "A partir de l’1 de gener de 2025, jornada màxima de presència de 1792 hores anuals.",
+        "estado": "verificada"
+      },
+      {
+        "id": "lb-vacaciones",
+        "materia": "vacaciones",
+        "texto": "El art. 61 fija 31 días naturales de vacaciones retribuidas. Deben planificarse con dos meses de antelación y no comenzar en un festivo de la persona trabajadora ni en su descanso semanal.",
+        "documentoOficial": {
+          "identificador": "CVE-DOGC-A-23139017-2023",
+          "titulo": "Convenio de limpieza de edificios y locales de Cataluña 2022–2025",
+          "url": "https://portaldogc.gencat.cat/utilsEADOP/AppJava/PdfProviderServlet?documentId=960937&type=01&language=ca_ES",
+          "fechaPublicacion": "2023-05-23"
+        },
+        "ambito": {
+          "funcional": "Limpieza de edificios y locales",
+          "territorial": "Cataluña, incluida Barcelona"
+        },
+        "referencia": "art. 61, pp. 23–24",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado en 2023; cotejado con el acuerdo parcial de 2026",
+          "desde": "2023-05-24",
+          "hasta": null
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 2b3f727ad4c27cc5864b5ad9f8576a3c78216a37797629811fdac556c6110dc0"
+        },
+        "evidenciaTextual": "31 dies naturals retribuïts; pla de vacances amb 2 mesos d’antelació.",
+        "estado": "verificada"
+      },
+      {
+        "id": "lb-descanso-semanal",
+        "materia": "descansos",
+        "texto": "El acuerdo parcial de 2026 mantiene un descanso semanal mínimo de día y medio continuado, preferentemente entre sábado tarde y domingo o entre domingo y lunes mañana. Exceptúa de esta regla a los contratos exclusivos de fines de semana y festivos del art. 41 bis.",
+        "documentoOficial": {
+          "identificador": "CVE-DOGC-A-26050075-2026",
+          "titulo": "Acuerdo parcial 2026 de limpieza de edificios y locales de Cataluña",
+          "url": "https://portaldogc.gencat.cat/utilsEADOP/AppJava/PdfProviderServlet?documentId=1037935&type=01&language=ca_ES",
+          "fechaPublicacion": "2026-02-26"
+        },
+        "ambito": {
+          "funcional": "Limpieza de edificios y locales",
+          "territorial": "Cataluña, incluida Barcelona"
+        },
+        "referencia": "anexo 1, art. 60 modificado, p. 9",
+        "periodoEfectos": {
+          "descripcion": "Acuerdo parcial con efectos 2026–2030",
+          "desde": "2026-01-01",
+          "hasta": "2030-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 f091278fd24c989bd3f2ecccf2a0a79c1cd8daedd593508ebebc96e88fa32300"
+        },
+        "evidenciaTextual": "Descans mínim setmanal d’un dia i mig continuat; exclusió del col·lectiu de l’article 41bis.",
+        "estado": "verificada"
+      },
+      {
+        "id": "lb-descanso-jornada",
+        "materia": "pausa_jornada",
+        "texto": "En Barcelona, una jornada completa continuada incluye 25 minutos de descanso; si se trabajan cinco horas seguidas o más en una jornada inferior, corresponden 20 minutos. Se computan como trabajo efectivo.",
+        "documentoOficial": {
+          "identificador": "CVE-DOGC-A-23139017-2023",
+          "titulo": "Convenio de limpieza de edificios y locales de Cataluña 2022–2025",
+          "url": "https://portaldogc.gencat.cat/utilsEADOP/AppJava/PdfProviderServlet?documentId=960937&type=01&language=ca_ES",
+          "fechaPublicacion": "2023-05-23"
+        },
+        "ambito": {
+          "funcional": "Limpieza de edificios y locales",
+          "territorial": "Cataluña, incluida Barcelona"
+        },
+        "referencia": "art. 59, p. 23",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado en 2023; cotejado con el acuerdo parcial de 2026",
+          "desde": "2023-05-24",
+          "hasta": null
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 2b3f727ad4c27cc5864b5ad9f8576a3c78216a37797629811fdac556c6110dc0"
+        },
+        "evidenciaTextual": "Jornada completa continuada: 25 minuts; 5 hores o més seguides: 20 minuts.",
+        "estado": "verificada"
+      },
+      {
+        "id": "lb-festivos",
+        "materia": "festivos",
+        "texto": "En Barcelona, quien trabaje un domingo o festivo ordinario obtiene un día compensatorio de descanso esa semana y el salario del día con el plus previsto en las tablas. La regla cambia para contratos exclusivos de fines de semana y festivos.",
+        "documentoOficial": {
+          "identificador": "CVE-DOGC-A-23139017-2023",
+          "titulo": "Convenio de limpieza de edificios y locales de Cataluña 2022–2025",
+          "url": "https://portaldogc.gencat.cat/utilsEADOP/AppJava/PdfProviderServlet?documentId=960937&type=01&language=ca_ES",
+          "fechaPublicacion": "2023-05-23"
+        },
+        "ambito": {
+          "funcional": "Limpieza de edificios y locales",
+          "territorial": "Cataluña, incluida Barcelona"
+        },
+        "referencia": "art. 41 (Barcelona y Girona), pp. 17–18",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado en 2023; cotejado con el acuerdo parcial de 2026",
+          "desde": "2023-05-24",
+          "hasta": null
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 2b3f727ad4c27cc5864b5ad9f8576a3c78216a37797629811fdac556c6110dc0"
+        },
+        "evidenciaTextual": "Gaudirà d’un dia de descans dins de la setmana; salari ordinari incrementat amb els imports de les taules.",
+        "estado": "verificada"
+      },
+      {
+        "id": "lb-festivos-exclusivos",
+        "materia": "festivos_contrato_exclusivo",
+        "texto": "Desde 2026, quien tenga contrato exclusivamente para fines de semana y festivos entra en la regla especial del art. 41 bis: una compensación por día efectivo, incompatible con la del art. 41. En 2026 son 20 € por una jornada de ocho horas, proporcionales a las horas trabajadas.",
+        "documentoOficial": {
+          "identificador": "CVE-DOGC-A-26050075-2026",
+          "titulo": "Acuerdo parcial 2026 de limpieza de edificios y locales de Cataluña",
+          "url": "https://portaldogc.gencat.cat/utilsEADOP/AppJava/PdfProviderServlet?documentId=1037935&type=01&language=ca_ES",
+          "fechaPublicacion": "2026-02-26"
+        },
+        "ambito": {
+          "funcional": "Limpieza de edificios y locales",
+          "territorial": "Cataluña, incluida Barcelona"
+        },
+        "referencia": "anexo 1, art. 41 bis, pp. 8–9",
+        "periodoEfectos": {
+          "descripcion": "Acuerdo parcial con efectos 2026–2030",
+          "desde": "2026-01-01",
+          "hasta": "2030-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 f091278fd24c989bd3f2ecccf2a0a79c1cd8daedd593508ebebc96e88fa32300"
+        },
+        "evidenciaTextual": "Retribució específica de 2026: 20 €; incompatible amb l’article 41.",
+        "estado": "verificada"
+      },
+      {
+        "id": "lb-horas-extra",
+        "materia": "horas_extra",
+        "texto": "En Barcelona, el art. 40 define como extraordinaria la hora que supera la jornada ordinaria; prevé un incremento del 75 % sobre la hora ordinaria y un límite de 80 horas anuales, salvo urgencias extraordinarias para prevenir o reparar daños.",
+        "documentoOficial": {
+          "identificador": "CVE-DOGC-A-23139017-2023",
+          "titulo": "Convenio de limpieza de edificios y locales de Cataluña 2022–2025",
+          "url": "https://portaldogc.gencat.cat/utilsEADOP/AppJava/PdfProviderServlet?documentId=960937&type=01&language=ca_ES",
+          "fechaPublicacion": "2023-05-23"
+        },
+        "ambito": {
+          "funcional": "Limpieza de edificios y locales",
+          "territorial": "Cataluña, incluida Barcelona"
+        },
+        "referencia": "art. 40 (Barcelona, Girona y Lleida), p. 17",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado en 2023; cotejado con el acuerdo parcial de 2026",
+          "desde": "2023-05-24",
+          "hasta": null
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 2b3f727ad4c27cc5864b5ad9f8576a3c78216a37797629811fdac556c6110dc0"
+        },
+        "evidenciaTextual": "Cada hora sobre jornada ordinària; increment del 75 %; no superior a 80 a l’any.",
+        "estado": "verificada"
+      },
+      {
+        "id": "lb-horario-nocturno",
+        "materia": "horario_nocturno",
+        "texto": "El convenio considera trabajo nocturno el realizado entre las 22:00 y las 06:00. Las reglas de pago están en el art. 44 modificado en 2026.",
+        "documentoOficial": {
+          "identificador": "CVE-DOGC-A-23139017-2023",
+          "titulo": "Convenio de limpieza de edificios y locales de Cataluña 2022–2025",
+          "url": "https://portaldogc.gencat.cat/utilsEADOP/AppJava/PdfProviderServlet?documentId=960937&type=01&language=ca_ES",
+          "fechaPublicacion": "2023-05-23"
+        },
+        "ambito": {
+          "funcional": "Limpieza de edificios y locales",
+          "territorial": "Cataluña, incluida Barcelona"
+        },
+        "referencia": "art. 58, p. 22",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado en 2023; art. 58 no modificado en el acuerdo parcial 2026",
+          "desde": "2023-05-24",
+          "hasta": null
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 2b3f727ad4c27cc5864b5ad9f8576a3c78216a37797629811fdac556c6110dc0"
+        },
+        "evidenciaTextual": "Es considera treball nocturn el comprès entre les 22 hores i les 6 hores.",
+        "estado": "verificada"
+      },
+      {
+        "id": "lb-nocturnidad",
+        "materia": "nocturnidad",
+        "texto": "El acuerdo parcial de 2026 mantiene un plus nocturno del 25 % del salario base del nivel, con prorrateo y reglas distintas según se trabajen menos de cuatro horas nocturnas o cuatro o más.",
+        "documentoOficial": {
+          "identificador": "CVE-DOGC-A-26050075-2026",
+          "titulo": "Acuerdo parcial 2026 de limpieza de edificios y locales de Cataluña",
+          "url": "https://portaldogc.gencat.cat/utilsEADOP/AppJava/PdfProviderServlet?documentId=1037935&type=01&language=ca_ES",
+          "fechaPublicacion": "2026-02-26"
+        },
+        "ambito": {
+          "funcional": "Limpieza de edificios y locales",
+          "territorial": "Cataluña, incluida Barcelona"
+        },
+        "referencia": "anexo 1, art. 44 modificado, pp. 6–7",
+        "periodoEfectos": {
+          "descripcion": "Acuerdo parcial con efectos 2026–2030",
+          "desde": "2026-01-01",
+          "hasta": "2030-12-31"
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 f091278fd24c989bd3f2ecccf2a0a79c1cd8daedd593508ebebc96e88fa32300"
+        },
+        "evidenciaTextual": "Plus equivalent al 25% del salari base; menys de 4 hores, només pel temps treballat.",
+        "estado": "verificada"
+      },
+      {
+        "id": "lb-permisos",
+        "materia": "permisos",
+        "texto": "En Barcelona, el art. 62 reconoce dos días retribuidos de asuntos propios por año completo, con preaviso escrito de al menos siete días; uno de ellos no puede acumularse a vacaciones ni usarse para hacer puente.",
+        "documentoOficial": {
+          "identificador": "CVE-DOGC-A-23139017-2023",
+          "titulo": "Convenio de limpieza de edificios y locales de Cataluña 2022–2025",
+          "url": "https://portaldogc.gencat.cat/utilsEADOP/AppJava/PdfProviderServlet?documentId=960937&type=01&language=ca_ES",
+          "fechaPublicacion": "2023-05-23"
+        },
+        "ambito": {
+          "funcional": "Limpieza de edificios y locales",
+          "territorial": "Cataluña, incluida Barcelona"
+        },
+        "referencia": "art. 62.3 (Barcelona y Girona), pp. 24–25",
+        "periodoEfectos": {
+          "descripcion": "Texto principal publicado en 2023; cotejado con el acuerdo parcial de 2026",
+          "desde": "2023-05-24",
+          "hasta": null
+        },
+        "procedencia": {
+          "tipo": "cotejo_manual",
+          "evidencia": "PDF oficial cotejado; SHA-256 2b3f727ad4c27cc5864b5ad9f8576a3c78216a37797629811fdac556c6110dc0"
+        },
+        "evidenciaTextual": "Dos dies retribuïts; preavís escrit de set dies; un dia no acumulable a vacances.",
+        "estado": "verificada"
+      },
+      {
+        "id": "lb-permisos-familiares-pendiente",
+        "materia": "permisos_familiares",
+        "texto": "Las licencias familiares del art. 62 requieren contraste con legislación posterior antes de resumir duraciones.",
+        "documentoOficial": {
+          "identificador": null,
+          "titulo": null,
+          "url": null,
+          "fechaPublicacion": null
+        },
+        "ambito": {
+          "funcional": "Limpieza de edificios y locales",
+          "territorial": "Cataluña, incluida Barcelona"
+        },
+        "referencia": null,
+        "periodoEfectos": {
+          "descripcion": null,
+          "desde": null,
+          "hasta": null
+        },
+        "procedencia": {
+          "tipo": "revision_pendiente",
+          "evidencia": "Requiere cotejo de normas posteriores y del supuesto concreto"
+        },
+        "estado": "pendiente"
+      }
+    ]
+  }
+}

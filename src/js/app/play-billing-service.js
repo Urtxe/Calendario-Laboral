@@ -92,6 +92,7 @@
       total: { label: "Total", amount: { currency: "EUR", value: "0" } },
     });
     try {
+      if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumCheckoutStarted("google_play");
       const response = await request.show();
       const result = await verifyPurchase(response.details && response.details.purchaseToken, productId, "purchase");
       await response.complete(result.premiumActive ? "success" : "fail");

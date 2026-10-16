@@ -48,6 +48,7 @@ function procesarClickDia(dia) {
 
     var tipo = modoSeleccionado || 'trabajado';
     const isNewRecord = !diasMarcados[key];
+    const previousWorkedCount = Object.values(diasMarcados).filter(day => day && day.tipo === 'trabajado').length;
     const wasAdded = !(diasMarcados[key] && diasMarcados[key].tipo === tipo);
     if (!wasAdded) {
         delete diasMarcados[key];
@@ -56,8 +57,8 @@ function procesarClickDia(dia) {
     }
     renderTodo();
     guardarTodoEnFirebase().then(function(guardado) {
-        if (guardado && wasAdded && isNewRecord && window.BalanceLaboralConversion) {
-            window.BalanceLaboralConversion.trackShiftAdded();
+        if (guardado && wasAdded && isNewRecord && tipo === 'trabajado' && window.BalanceLaboralConversion) {
+            window.BalanceLaboralConversion.trackShiftAdded({ previousWorkedCount });
         }
     });
 }

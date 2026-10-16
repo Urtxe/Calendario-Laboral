@@ -2,7 +2,6 @@ const { GoogleAuth } = require("google-auth-library");
 
 const MAX_CACHE_AGE_MS = 5 * 60 * 1000;
 const PERIODS = new Set(["7d", "30d", "90d", "current_month"]);
-const cache = new Map();
 
 function isoDate(date) {
     return date.toISOString().slice(0, 10);
@@ -94,7 +93,7 @@ function eventReport(dateRange, events) {
         dimensionFilter: {
             andGroup: { expressions: [
                 { filter: { fieldName: "eventName", inListFilter: { values: events } } },
-                { filter: { fieldName: "customEvent:event_revision", stringFilter: { value: "v2" } } },
+                { filter: { fieldName: "customEvent:event_revision", stringFilter: { value: "v3" } } },
             ] },
         },
         limit: 100,
@@ -119,7 +118,62 @@ async function optionalReportWithAvailability(client, request) {
     }
 }
 
+function buildActivationCohorts(report, range, completedThrough) {
+    const cohorts = new Map();
+    for (const row of parseMetricRows(report)) {
+        const [date, event, day, kind] = row.dimensions;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < range.startDate || date > range.endDate || date > completedThrough) continue;
+        if (!cohorts.has(date)) cohorts.set(date, { date, activated: 0, registered: 0, returns: {} });
+        const cohort = cohorts.get(date);
+        if (event === "first_shift_saved") cohort.activated = row.metrics[0];
+        if (event === "signup_completed") cohort.registered = row.metrics[0];
+        if (event === "cohort_return" && ["1", "7", "30"].includes(day) && ["open", "shift"].includes(kind)) cohort.returns[`${day}_${kind}`] = row.metrics[0];
+    }
+    return [...cohorts.values()].filter(c => c.activated > 0).sort((a, b) => a.date.localeCompare(b.date)).map(cohort => ({
+        date: cohort.date, activated: cohort.activated, registered: cohort.registered,
+        registrationRate: cohort.activated >= 5 && cohort.registered <= cohort.activated ? Math.round(cohort.registered / cohort.activated * 1000) / 10 : null,
+        retention: [1, 7, 30].map(day => {
+            const mature = Date.parse(cohort.date) + day * 86400000 <= Date.parse(completedThrough);
+            return { day, mature, opened: mature ? cohort.returns[`${day}_open`] || 0 : null, saved: mature ? cohort.returns[`${day}_shift`] || 0 : null,
+                openRate: mature && cohort.activated >= 5 && (cohort.returns[`${day}_open`] || 0) <= cohort.activated ? Math.round((cohort.returns[`${day}_open`] || 0) / cohort.activated * 1000) / 10 : null,
+                saveRate: mature && cohort.activated >= 5 && (cohort.returns[`${day}_shift`] || 0) <= cohort.activated ? Math.round((cohort.returns[`${day}_shift`] || 0) / cohort.activated * 1000) / 10 : null };
+        }),
+    }));
+}
+
+async function queryGrowthMetrics(client, dateRange) {
+    const events = ["convenio_cta_clicked", "calendar_configured", "first_shift_saved", "repeat_shift_saved", "signup_completed", "premium_prompt_shown", "premium_checkout_started", "premium_activation_confirmed"];
+    const request = eventReport(dateRange, events);
+    request.metrics = [{ name: "totalUsers" }, { name: "eventCount" }];
+    const completedThrough = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const cohortRequest = eventReport({ startDate: dateRange.startDate, endDate: completedThrough }, ["first_shift_saved", "signup_completed", "cohort_return"]);
+    cohortRequest.dimensions = [{ name: "customEvent:activation_cohort" }, { name: "eventName" }, { name: "customEvent:retention_day" }, { name: "customEvent:activity_kind" }];
+    cohortRequest.metrics = [{ name: "totalUsers" }];
+    cohortRequest.limit = 10000;
+    const [totals, origin, cohorts, landing, providers] = await Promise.all([
+        optionalReportWithAvailability(client, request),
+        optionalReportWithAvailability(client, { ...request, dimensions: [{ name: "customEvent:origin_page" }, { name: "eventName" }], limit: 500 }),
+        dateRange.startDate <= completedThrough ? optionalReportWithAvailability(client, cohortRequest) : Promise.resolve({ available: true, report: {} }),
+        optionalReportWithAvailability(client, { dateRanges: [dateRange], dimensions: [{ name: "landingPage" }, { name: "sessionDefaultChannelGroup" }], metrics: [{ name: "sessions" }], dimensionFilter: { filter: { fieldName: "landingPage", stringFilter: { matchType: "BEGINS_WITH", value: "/convenios/" } } }, limit: 100 }),
+        optionalReportWithAvailability(client, { ...request, dimensions: [{ name: "eventName" }, { name: "customEvent:provider" }], limit: 100 }),
+    ]);
+    const limited = cohorts.report.metadata?.subjectToThresholding || cohorts.report.metadata?.dataLossFromOtherRow;
+    return {
+        available: totals.available,
+        totals: parseMetricRows(totals.report).map(r => ({ event: r.dimensions[0], users: r.metrics[0], events: r.metrics[1] })),
+        originsAvailable: origin.available, origins: parseMetricRows(origin.report).filter(r => /^\/convenios\/[a-z0-9-]+$/.test(r.dimensions[0])).map(r => ({ page: r.dimensions[0], event: r.dimensions[1], users: r.metrics[0] })),
+        landingAvailable: landing.available, landing: parseMetricRows(landing.report).filter(r => /^\/convenios\/[a-z0-9-]+\/?$/.test(r.dimensions[0])).map(r => ({ page: r.dimensions[0], channel: r.dimensions[1], sessions: r.metrics[0] })),
+        providersAvailable: providers.available, providers: parseMetricRows(providers.report).filter(r => ["stripe", "google_play"].includes(r.dimensions[1])).map(r => ({ event: r.dimensions[0], provider: r.dimensions[1], users: r.metrics[0] })),
+        cohortsAvailable: cohorts.available && !limited,
+        cohorts: cohorts.available && !limited ? buildActivationCohorts(cohorts.report, dateRange, completedThrough) : [],
+        completedThrough,
+        definition: "Fuente: GA4, solo consentimiento y revisión v3. Usuarios por evento, no un embudo secuencial. Primera jornada: nuevo día trabajado persistido con cero jornadas conocidas. Cohortes por fecha UTC de activación; observadas hasta el último día completo. D1/D7/D30 son días exactos, no ventanas. Tasas ocultas con menos de 5 activaciones. Sin identificación entre dispositivos; borrar datos o retirar consentimiento rompe la continuidad. Las entradas por canal usan la atribución estándar de GA4; el origen CTA solo dura la sesión. Premium activo es un derecho verificado por proveedor, no ingreso cobrado. No se calculan tasas CTA ni Premium dividiendo eventos independientes.",
+        configuration: "Si un bloque no está disponible, revisar dimensiones de evento: event_revision, modo_acceso, auth_state, origin_page, activation_cohort, retention_day, activity_kind y provider. Cero filas significa datos insuficientes; no prueba ausencia de actividad.",
+    };
+}
+
 async function queryMetrics(client, dateRange) {
+    const growthPromise = queryGrowthMetrics(client, dateRange);
     const productEvents = ["calendar_configured", "shift_added", "balance_viewed", "ai_consultation_succeeded", "premium_checkout_started", "premium_activation_confirmed"];
     const funnelEvents = [
         "app_open",
@@ -170,7 +224,7 @@ async function queryMetrics(client, dateRange) {
             metrics: [{ name: "eventCount" }],
             dimensionFilter: { andGroup: { expressions: [
                 { filter: { fieldName: "eventName", inListFilter: { values: ["app_open", ...productEvents] } } },
-                { filter: { fieldName: "customEvent:event_revision", stringFilter: { value: "v2" } } },
+                { filter: { fieldName: "customEvent:event_revision", stringFilter: { value: "v3" } } },
             ] } },
             limit: 50,
         });
@@ -220,6 +274,7 @@ async function queryMetrics(client, dateRange) {
 
     const lastEventRow = parseMetricRows(lastEvent)[0];
     return {
+        growth: await growthPromise,
         overview: {
             activeUsers: overviewRow.metrics[0] || 0,
             sessions: overviewRow.metrics[1] || 0,
@@ -263,8 +318,12 @@ async function queryMetrics(client, dateRange) {
 }
 
 function createGa4MetricsHandler({ getPropertyId, createClient = createGa4Client, now = () => new Date() }) {
+    const cache = new Map();
+    const pending = new Map();
     return async (req, res) => {
         if (req.method !== "POST") return res.status(405).json({ error: "Método no permitido.", code: "method_not_allowed" });
+        if (req.rawBody && req.rawBody.length > 2048) return res.status(413).json({ error: "Solicitud demasiado grande.", code: "invalid_request" });
+        if (req.body != null && (typeof req.body !== "object" || Array.isArray(req.body) || Object.keys(req.body).some(key => key !== "period"))) return res.status(400).json({ error: "Solo se admite el periodo.", code: "invalid_request" });
 
         let range;
         try {
@@ -275,16 +334,20 @@ function createGa4MetricsHandler({ getPropertyId, createClient = createGa4Client
 
         const { period, ...dateRange } = range;
         const cacheKey = period;
+        const rangeKey = `${dateRange.startDate}:${dateRange.endDate}`;
         const cached = cache.get(cacheKey);
-        if (cached && now().getTime() - cached.createdAt < MAX_CACHE_AGE_MS) {
-            return res.json({ ...cached.value, cached: true, updatedAt: new Date(cached.createdAt).toISOString() });
+        if (cached && cached.rangeKey === rangeKey && now().getTime() - cached.createdAt < (cached.status === 200 ? MAX_CACHE_AGE_MS : 30000)) {
+            return res.status(cached.status).json({ ...cached.value, cached: true, updatedAt: new Date(cached.createdAt).toISOString(), range });
         }
 
-        try {
-            const value = await queryMetrics(createClient({ propertyId: getPropertyId() }), dateRange);
-            cache.set(cacheKey, { createdAt: now().getTime(), value });
-            return res.json({ ...value, cached: false, updatedAt: now().toISOString(), range });
-        } catch (error) {
+        const pendingKey = `${period}:${rangeKey}`;
+        const shared = pending.has(pendingKey);
+        // Four fixed periods, one shared read per period; cache failures briefly
+        // too, so an unavailable GA4 property cannot trigger a retry storm.
+        if (!shared) pending.set(pendingKey, (async () => {
+          try {
+            return { status: 200, value: await queryMetrics(createClient({ propertyId: getPropertyId() }), dateRange) };
+          } catch (error) {
             const details = gaErrorDetails(error);
             // This log deliberately excludes the property ID, credentials and response data.
             console.error("metricasGa4: Analytics Data API error", {
@@ -292,13 +355,20 @@ function createGa4MetricsHandler({ getPropertyId, createClient = createGa4Client
                 apiStatus: details.apiStatus || null,
                 message: details.message || null,
             });
-            return res.status(details.status).json({
+            return { status: details.status, value: {
                 error: "No se pudieron consultar las métricas de GA4.",
                 code: details.code,
                 measurement: { status: details.code, message: details.clientMessage },
-            });
+            } };
+          }
+        })());
+        const result = await pending.get(pendingKey);
+        if (!shared) {
+            cache.set(cacheKey, { ...result, rangeKey, createdAt: now().getTime() });
+            pending.delete(pendingKey);
         }
+        return res.status(result.status).json({ ...result.value, cached: shared, updatedAt: now().toISOString(), range });
     };
 }
 
-module.exports = { MAX_CACHE_AGE_MS, createGa4Client, createGa4MetricsHandler, gaErrorDetails, queryMetrics, resolvePeriod };
+module.exports = { MAX_CACHE_AGE_MS, createGa4Client, createGa4MetricsHandler, gaErrorDetails, queryMetrics, resolvePeriod, buildActivationCohorts };

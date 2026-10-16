@@ -2022,7 +2022,7 @@ function getGa4PropertyId() {
     return value;
 }
 
-exports.metricasGa4 = onRequest({ timeoutSeconds: 60, memory: "256MiB", secrets: [ga4PropertyId] }, createGa4MetricsHandler({
+exports.metricasGa4 = onRequest({ timeoutSeconds: 60, memory: "256MiB", maxInstances: 1, concurrency: 20, secrets: [ga4PropertyId] }, createGa4MetricsHandler({
     // Secret Manager injects this value in the runtime environment. Reading the
     // environment variable keeps the value server-side and avoids an unavailable
     // Params accessor being mistaken for an invalid GA4 query.

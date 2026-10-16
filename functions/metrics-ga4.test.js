@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { createGa4Client, createGa4MetricsHandler, gaErrorDetails, queryMetrics, resolvePeriod } = require("./metrics-ga4");
+const { createGa4Client, createGa4MetricsHandler, gaErrorDetails, queryMetrics, resolvePeriod, buildActivationCohorts } = require("./metrics-ga4");
 
 function response() {
     return { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; return this; } };
@@ -22,7 +22,7 @@ test("el endpoint público no requiere token", async () => {
     assert.equal(result.statusCode, 200);
     assert(reports.every((request) => (request.dateRanges || []).every((dateRange) => !Object.hasOwn(dateRange, "period"))));
     assert(reports.some((request) => (request.dimensions || []).some((dimension) => dimension.name === "newVsReturning")), "el panel usa la dimensión GA4 nuevo/recurrente");
-    assert(reports.some((request) => JSON.stringify(request.dimensionFilter || {}).includes("customEvent:event_revision") && JSON.stringify(request.dimensionFilter).includes("v2")), "los eventos del panel excluyen el histórico no fiable");
+    assert(reports.some((request) => JSON.stringify(request.dimensionFilter || {}).includes("customEvent:event_revision") && JSON.stringify(request.dimensionFilter).includes("v3")), "los eventos del panel excluyen el histórico no fiable");
 });
 
 test("acepta un ID de propiedad de GA4 con salto de línea final", () => {
@@ -122,4 +122,67 @@ test("oculta los eventos de producto hasta registrar event_revision", async () =
     assert.match(value.product.unavailableReason, /event_revision/);
     assert.equal(value.funnelAvailable, false);
     assert.equal(value.overview.activeUsers, 0, "standard GA4 metrics remain available");
+});
+
+test("las cohortes respetan fecha de activación, periodo y madurez por día exacto", () => {
+    const row = (date, event, count, day = "(not set)", kind = "(not set)") => ({ dimensionValues: [date, event, day, kind].map(value => ({ value })), metricValues: [{ value: String(count) }] });
+    const result = buildActivationCohorts({ rows: [
+        row("2026-09-01", "first_shift_saved", 10), row("2026-09-01", "signup_completed", 3),
+        row("2026-09-01", "cohort_return", 4, "1", "open"), row("2026-09-01", "cohort_return", 2, "1", "shift"),
+        row("2026-09-20", "first_shift_saved", 2), row("2026-08-31", "first_shift_saved", 99),
+        row("2026-10-01", "first_shift_saved", 99), row("2026-09-02", "cohort_return", 1, "7", "open"),
+    ] }, { startDate: "2026-09-01", endDate: "2026-09-30" }, "2026-09-21");
+    assert.equal(result.length, 2, "no se mezclan cohortes de otro periodo o sin denominador");
+    assert.equal(result[0].registrationRate, 30);
+    assert.equal(result[0].retention[0].openRate, 40);
+    assert.equal(result[0].retention[0].saveRate, 20);
+    assert.equal(result[0].retention[2].mature, false);
+    assert.equal(result[0].retention[2].opened, null, "una cohorte inmadura no es retención cero");
+    assert.equal(result[1].registrationRate, null, "no se presentan tasas con muestras menores a 5");
+});
+
+test("dimensiones de crecimiento ausentes no se presentan como ceros válidos", async () => {
+    const result = await queryMetrics({ runReport: async request => {
+        if ((request.dimensions || []).some(d => /activation_cohort|origin_page|provider/.test(d.name))) throw new Error("not registered");
+        return { rows: [] };
+    } }, { startDate: "2026-09-01", endDate: "2026-09-30" });
+    assert.equal(result.growth.cohortsAvailable, false);
+    assert.equal(result.growth.originsAvailable, false);
+    assert.equal(result.growth.providersAvailable, false);
+});
+
+test("el panel público limita solicitudes y comparte consultas simultáneas", async () => {
+    let clients = 0;
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    const handler = createGa4MetricsHandler({ getPropertyId: () => "123", createClient: () => {
+        clients++;
+        return { runReport: async () => { await gate; return { rows: [] }; } };
+    } });
+    for (const req of [
+        { method: "GET" }, { method: "POST", body: { period: "365d" } },
+        { method: "POST", body: { period: "7d", dimensions: ["userId"] } },
+        { method: "POST", body: [] }, { method: "POST", body: {}, rawBody: Buffer.alloc(2049) },
+    ]) {
+        const res = response(); await handler(req, res);
+        assert(res.statusCode >= 400);
+    }
+    assert.equal(clients, 0, "solicitudes arbitrarias no consultan GA4");
+    const first = response(), second = response();
+    const reads = [handler({ method: "POST", body: { period: "7d" } }, first), handler({ method: "POST", body: { period: "7d" } }, second)];
+    assert.equal(clients, 1);
+    release(); await Promise.all(reads);
+    const third = response(); await handler({ method: "POST", body: { period: "7d" } }, third);
+    assert.equal(clients, 1);
+    assert.equal(third.body.cached, true);
+});
+
+test("los errores se cachean y el cambio de fecha invalida el periodo", async () => {
+    let clock = new Date("2026-10-16T23:59:00Z"), calls = 0;
+    const handler = createGa4MetricsHandler({ now: () => clock, getPropertyId: () => { calls++; return ""; } });
+    for (let i = 0; i < 2; i++) { const res = response(); await handler({ method: "POST", body: {} }, res); assert.equal(res.statusCode, 503); }
+    assert.equal(calls, 1);
+    clock = new Date("2026-10-17T00:00:00Z");
+    await handler({ method: "POST", body: {} }, response());
+    assert.equal(calls, 2);
 });

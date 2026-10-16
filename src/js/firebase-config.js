@@ -233,7 +233,8 @@ window.autenticar = () => {
         : auth.signInWithEmailAndPassword(email, password);
     
     promise.then(() => {
-        if (isRegister && window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackSignupCompleted();
+        if (isRegister && window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackSignupCompleted("email", auth.currentUser?.uid);
+        if (!isRegister) window.analytics?.logEvent("login", { method: "email" });
         window.cerrarModal();
         btn.disabled = false;
         // LÓGICA DE CONVERSIÓN: Si se acaba de registrar y eligió Premium
@@ -255,8 +256,10 @@ window.autenticar = () => {
 window.autenticarConGoogle = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     let esNuevoUsuario = false;
+    let altaAuthConfirmada = false;
 
     auth.signInWithPopup(provider).then((result) => {
+        altaAuthConfirmada = result.additionalUserInfo?.isNewUser === true;
         const user = result.user;
         const userRef = db.collection('usuarios').doc(user.uid);
 
@@ -277,7 +280,8 @@ window.autenticarConGoogle = () => {
             }
         });
     }).then(() => {
-        if (esNuevoUsuario && window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackSignupCompleted();
+        if (altaAuthConfirmada && window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackSignupCompleted("google", auth.currentUser?.uid);
+        if (!altaAuthConfirmada) window.analytics?.logEvent("login", { method: "google" });
         // 1. Cerramos el modal de login
         window.cerrarModal();
 

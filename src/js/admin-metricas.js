@@ -25,6 +25,18 @@
   }
 
   function render(data) {
+    const growth = data.growth;
+    const labels = { convenio_cta_clicked: "CTA de convenio", calendar_configured: "Configuración guardada", first_shift_saved: "Primera jornada guardada", repeat_shift_saved: "Varias jornadas", signup_completed: "Registro confirmado", premium_prompt_shown: "Modal Premium", premium_checkout_started: "Checkout iniciado", premium_activation_confirmed: "Derecho Premium activo" };
+    const label = event => labels[event] || event;
+    const unavailable = "No disponible: revisar dimensiones GA4 y acumular datos consentidos.";
+    if (growth) {
+      document.getElementById("growth").innerHTML = `<p class="muted">Periodo: ${esc(data.range?.startDate)} a ${esc(data.range?.endDate)}. Cohortes observadas hasta ${esc(growth.completedThrough)}.</p><p class="muted">${esc(growth.definition)}</p><div class="breakdowns">` +
+        breakdown("Usuarios consentidos por acción", growth.totals.map(r => ({ label: label(r.event), value: r.users })), growth.available ? "" : unavailable) +
+        breakdown("Entradas SEO por canal (sesiones)", growth.landing.map(r => ({ label: `${r.page} · ${r.channel}`, value: r.sessions })), growth.landingAvailable ? "" : unavailable) +
+        breakdown("Origen CTA conservado (usuarios por acción)", growth.origins.map(r => ({ label: `${r.page} · ${label(r.event)}`, value: r.users })), growth.originsAvailable ? "" : unavailable) +
+        breakdown("Premium por proveedor (usuarios por acción)", growth.providers.map(r => ({ label: `${r.provider} · ${label(r.event)}`, value: r.users })), growth.providersAvailable ? "" : unavailable) + `</div><p class="muted">${esc(growth.configuration)}</p>` +
+        (growth.cohortsAvailable ? growth.cohorts.map(c => `<article class="panel"><h3>Cohorte ${esc(c.date)}</h3><p>${number.format(c.activated)} activaciones · ${number.format(c.registered)} registros posteriores observados${c.registrationRate == null ? " · Muestra insuficiente para tasa" : ` · ${c.registrationRate}%`}</p><ul>${c.retention.map(r => `<li>D${r.day}: ${r.mature ? `${r.opened} regresan / ${r.saved} guardan otra jornada${r.openRate == null ? " (muestra insuficiente para tasas)" : ` · ${r.openRate}% / ${r.saveRate}%`}` : "cohorte aún no madura"}</li>`).join("")}</ul></article>`).join("") || '<p class="muted">Sin cohortes observadas; no hay retención histórica recuperable.</p>' : `<p class="muted">${unavailable} GA4 también puede aplicar umbrales.</p>`);
+    } else document.getElementById("growth").textContent = "El servidor aún no ofrece la medición v3.";
     cards(document.getElementById("overview"), [
       { label: "Usuarios activos", value: number.format(data.overview.activeUsers) },
       { label: "Sesiones", value: number.format(data.overview.sessions) },

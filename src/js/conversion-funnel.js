@@ -1,11 +1,12 @@
 // Product conversion analytics and anonymous registration prompts.
-// The installation identifier deliberately stays in localStorage: it is never
-// sent to Analytics or Firestore and is never associated with a Firebase user.
+// Product prompts remain functional without Analytics. Cohort markers require
+// consent and contain dates/flags only, never account IDs or calendar details.
 (function (root) {
   "use strict";
 
   const FUNNEL_KEY = "bl_conversion_funnel_state_v1";
   const SESSION_KEY = "bl_conversion_session_v1";
+  const COHORT_KEY = "bl_activation_cohort_v3";
   const PROMPT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
   function readJson(storage, key, fallback) {
@@ -34,9 +35,10 @@
   function analyticsAllowed() { return !root.APP_CONFIG || root.APP_CONFIG.analyticsEnabled !== false; }
   function hasAnalyticsConsent() { return typeof root.tieneConsentimientoAnalitica === "function" && root.tieneConsentimientoAnalitica(); }
   function logEvent(name, params) {
-    if (!analyticsAllowed()) return;
+    if (!analyticsAllowed() || !hasAnalyticsConsent()) return;
     try {
-      if (root.analytics && typeof root.analytics.logEvent === "function") root.analytics.logEvent(name, params);
+      const cohort = cohortState().activated;
+      if (root.analytics && typeof root.analytics.logEvent === "function") root.analytics.logEvent(name, { ...(cohort ? { activation_cohort: cohort } : {}), ...params });
     } catch (_) { /* Analytics must not affect the calendar. */ }
   }
   function accessMode() { return root.usuarioActual && root.usuarioActual.uid ? "authenticated" : "anonymous"; }
@@ -106,9 +108,37 @@
     logEvent("calendar_configured", {});
     maybeShowRegistrationPrompt();
   }
-  function trackShiftAdded() {
+  function cohortState() { return readJson(root.localStorage, COHORT_KEY, {}); }
+  function today() { return new Date().toISOString().slice(0, 10); }
+  function trackReturn(kind) {
+    if (!hasAnalyticsConsent() || !["open", "shift"].includes(kind)) return;
+    const state = cohortState();
+    if (!state.activated) return;
+    const day = Math.floor((Date.parse(today()) - Date.parse(state.activated)) / 86400000);
+    const key = `${day}_${kind}`;
+    if (![1, 7, 30].includes(day) || (state.returns || []).includes(key)) return;
+    logEvent("cohort_return", { activation_cohort: state.activated, retention_day: String(day), activity_kind: kind });
+    state.returns = [...(state.returns || []), key];
+    writeJson(root.localStorage, COHORT_KEY, state);
+  }
+  function trackShiftAdded(context = {}) {
     markActiveDay();
-    logEvent("shift_added", {});
+    const state = hasAnalyticsConsent() ? cohortState() : {};
+    const params = state.activated ? { activation_cohort: state.activated } : {};
+    logEvent("shift_added", params);
+    if (hasAnalyticsConsent()) {
+      if (!state.activated && !state.existing && context.previousWorkedCount === 0) {
+        state.activated = today();
+        writeJson(root.localStorage, COHORT_KEY, state);
+        logEvent("first_shift_saved", { activation_cohort: state.activated });
+      } else if (!state.activated) state.existing = true;
+      if (context.previousWorkedCount >= 1 && !state.multiple) {
+        state.multiple = true;
+        logEvent("repeat_shift_saved", state.activated ? { activation_cohort: state.activated } : {});
+      }
+      writeJson(root.localStorage, COHORT_KEY, state);
+      trackReturn("shift");
+    }
     maybeShowRegistrationPrompt(getShiftCount() >= 3 ? "shifts_3" : null);
   }
   function trackBalanceViewed(balanceState) {
@@ -128,7 +158,15 @@
     updateSession({ registration_prompt_handled: true });
     logEvent("signup_started", { source: funnelState().signup_source });
   }
-  function trackSignupCompleted() { logEvent("signup_completed", { source: funnelState().signup_source || "other" }); updateSession({ registration_prompt_handled: true }); }
+  const confirmedRegistrations = new Set();
+  function trackSignupCompleted(method = "email", confirmationKey = "current") {
+    // In-memory deduplication only; the Auth key is never stored or logged.
+    if (confirmedRegistrations.has(confirmationKey)) return;
+    confirmedRegistrations.add(confirmationKey);
+    const cohort = hasAnalyticsConsent() ? cohortState().activated : null;
+    logEvent("signup_completed", { source: funnelState().signup_source || "other", method, ...(cohort ? { activation_cohort: cohort } : {}) });
+    updateSession({ registration_prompt_handled: true });
+  }
   function trackPremiumPrompt(trigger) {
     const valid = ["annual_history", "pdf_export", "advanced_overtime", "other"];
     const safeTrigger = valid.includes(trigger) ? trigger : "other";
@@ -136,23 +174,31 @@
     if (hasAnalyticsConsent()) updateSession({ premium_trigger: safeTrigger });
     logEvent("premium_prompt_shown", { trigger: safeTrigger });
   }
-  function trackPremiumCheckoutStarted() {
-    if (!hasAnalyticsConsent()) return;
+  function trackPremiumCheckoutStarted(provider = "stripe") {
+    if (!hasAnalyticsConsent() || !["stripe", "google_play"].includes(provider)) return;
     const trigger = sessionState().premium_trigger || "other";
-    updateSession({ premium_checkout_started: true, premium_activated_recorded: false });
-    logEvent("premium_checkout_started", { trigger: trigger });
+    updateSession({ premium_checkout_started: true, premium_provider: provider, premium_was_active: root.esPremium === true, premium_activated_recorded: false });
+    logEvent("premium_checkout_started", { trigger: trigger, provider });
   }
-  function trackPremiumActivationConfirmed(isPremium) {
+  function trackPremiumActivationConfirmed(isPremium, userData = {}) {
     const session = sessionState();
-    if (!hasAnalyticsConsent() || !isPremium || !session.premium_checkout_started || session.premium_activated_recorded) return;
+    if (!hasAnalyticsConsent() || !isPremium || !session.premium_checkout_started || session.premium_activated_recorded || session.premium_was_active) return;
+    const provider = session.premium_provider;
+    const entitlement = userData.billing && userData.billing[provider === "google_play" ? "googlePlay" : "stripe"];
+    // tipoCuenta alone is not provider-verified entitlement or proof of payment.
+    if (!entitlement || entitlement.active !== true || entitlement.source !== provider) return;
+    if (entitlement.expiresAt && !(Date.parse(entitlement.expiresAt) > Date.now())) return;
     updateSession({ premium_activated_recorded: true, premium_checkout_started: false });
-    logEvent("premium_activation_confirmed", {});
+    logEvent("premium_activation_confirmed", { provider });
   }
   function trackAIConsultationSucceeded() { logEvent("ai_consultation_succeeded", {}); }
   function clearAnalyticsAttribution() {
+    try { root.localStorage.removeItem(COHORT_KEY); root.sessionStorage.removeItem("bl_seo_origin_v1"); root.sessionStorage.removeItem("bl_seo_pending_cta_v3"); } catch (_) { /* Optional storage. */ }
     const session = sessionState();
     const hadSessionAttribution = Object.prototype.hasOwnProperty.call(session, "premium_trigger") || Object.prototype.hasOwnProperty.call(session, "premium_checkout_started") || Object.prototype.hasOwnProperty.call(session, "premium_activated_recorded");
     delete session.premium_trigger;
+    delete session.premium_provider;
+    delete session.premium_was_active;
     delete session.premium_checkout_started;
     delete session.premium_activated_recorded;
     if (hadSessionAttribution) {
@@ -167,7 +213,7 @@
       writeJson(root.localStorage, FUNNEL_KEY, funnel);
     }
   }
-  root.BalanceLaboralConversion = { trackCalendarConfigured, trackShiftAdded, trackBalanceViewed, showRegistrationPrompt, closeRegistrationPrompt, trackSignupStarted, trackSignupCompleted, trackPremiumPrompt, trackPremiumCheckoutStarted, trackPremiumActivationConfirmed, trackAIConsultationSucceeded, clearAnalyticsAttribution, canShowRegistrationPrompt };
+  root.BalanceLaboralConversion = { trackCalendarConfigured, trackShiftAdded, trackBalanceViewed, showRegistrationPrompt, closeRegistrationPrompt, trackSignupStarted, trackSignupCompleted, trackPremiumPrompt, trackPremiumCheckoutStarted, trackPremiumActivationConfirmed, trackAIConsultationSucceeded, clearAnalyticsAttribution, canShowRegistrationPrompt, trackReturn };
   root.cerrarAvisoRegistro = function () { closeRegistrationPrompt("dismiss"); };
   root.aceptarAvisoRegistro = function () { closeRegistrationPrompt("click"); if (typeof root.mostrarRegistro === "function") root.mostrarRegistro("registration_prompt"); };
 })(window);

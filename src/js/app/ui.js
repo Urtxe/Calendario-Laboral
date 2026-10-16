@@ -345,7 +345,7 @@ function verificarNivelPremium(uid) {
       const premiumActivo = doc.exists && doc.data().tipoCuenta === "premium";
       sincronizarEstadoPremium(premiumActivo);
       actualizarInterfazPremium(premiumActivo);
-      if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumActivationConfirmed(premiumActivo);
+      if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumActivationConfirmed(premiumActivo, doc.exists ? doc.data() : {});
     })
     .catch((e) => {
       console.error("Error verificando premium:", e);
@@ -1210,7 +1210,6 @@ window.seleccionarPlan = function (tipo) {
       mostrarAvisoComercioPremiumNoDisponible();
       return;
     }
-    if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumCheckoutStarted();
     window.PlayBillingService.purchase(productId)
       .then(() => window.verificarNivelPremium && window.verificarNivelPremium(window.usuarioActual.uid))
       .catch(() => mostrarAvisoComercioPremiumNoDisponible());
@@ -1275,7 +1274,7 @@ window.mostrarLegal = function (tipo) {
             <p>• <b>Pagos:</b> Cookies de Stripe necesarias para prevenir el fraude y procesar transacciones seguras.</p>
             <p>• <b>Preferencias:</b> Almacenamiento local de su configuración básica de jornada.</p>
             <h4>2. Analítica opcional</h4>
-            <p>Solo tras tu aceptación expresa cargamos Google Analytics mediante Firebase Analytics para medir uso agregado. No enviamos email, UID de Firebase ni identificadores locales propios. No usamos fingerprinting ni publicidad personalizada.</p>
+            <p>Solo tras tu aceptación expresa usamos Google Analytics mediante Firebase Analytics para medir visitas, clics desde convenios, uso, registro, Premium y regresos D1/D7/D30. Guardamos localmente el origen de la sesión y una fecha de activación con marcas de deduplicación; se eliminan al retirar el consentimiento. No enviamos email, UID de Firebase ni el contenido de jornadas o consultas. No usamos fingerprinting ni publicidad personalizada.</p>
             <p>Puedes aceptar, rechazar o retirar el consentimiento en cualquier momento.</p>
             <button type="button" onclick="abrirPreferenciasAnalitica()">Gestionar analítica</button>
         `,

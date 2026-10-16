@@ -75,19 +75,83 @@ assert.strictEqual(authenticated.window.BalanceLaboralConversion.showRegistratio
 authenticated.window.BalanceLaboralConversion.trackPremiumPrompt("pdf_export");
 authenticated.window.BalanceLaboralConversion.trackPremiumCheckoutStarted();
 authenticated.window.BalanceLaboralConversion.trackPremiumActivationConfirmed(true);
+assert(!authenticated.window.analytics.events.some(e => e.name === "premium_activation_confirmed"), "tipoCuenta alone does not verify an entitlement");
+authenticated.window.BalanceLaboralConversion.trackPremiumActivationConfirmed(true, { billing: { stripe: { active: true, source: "stripe" } } });
+authenticated.window.BalanceLaboralConversion.trackPremiumActivationConfirmed(true, { billing: { stripe: { active: true, source: "stripe" } } });
 authenticated.window.BalanceLaboralConversion.trackAIConsultationSucceeded();
 assert.deepStrictEqual(Array.from(authenticated.window.analytics.events, (event) => event.name), [
   "premium_prompt_shown", "premium_checkout_started", "premium_activation_confirmed", "ai_consultation_succeeded",
 ]);
 assert(!JSON.stringify(authenticated.window.analytics.events).includes("not-sent-to-analytics"), "Analytics events must not contain user IDs");
+const play = createWindow({ user: { uid: "not-transmitted" } });
+play.window.BalanceLaboralConversion.trackPremiumCheckoutStarted("google_play");
+play.window.BalanceLaboralConversion.trackPremiumActivationConfirmed(true, { billing: { stripe: { active: true, source: "stripe" } } });
+assert.equal(play.window.analytics.events.length, 1, "a Stripe entitlement does not confirm a Play checkout");
+play.window.BalanceLaboralConversion.trackPremiumActivationConfirmed(true, { billing: { googlePlay: { active: true, source: "google_play", expiresAt: "2000-01-01" } } });
+assert.equal(play.window.analytics.events.length, 1, "expired rights do not confirm activation");
+play.window.BalanceLaboralConversion.trackPremiumActivationConfirmed(true, { billing: { googlePlay: { active: true, source: "google_play" } } });
+assert.equal(play.window.analytics.events.at(-1).params.provider, "google_play");
 
 const withoutConsent = createWindow({ user: { uid: "private-user" }, analyticsConsent: false });
 withoutConsent.window.BalanceLaboralConversion.trackPremiumCheckoutStarted();
 assert.strictEqual(withoutConsent.window.sessionStorage.getItem("bl_conversion_session_v1"), null, "checkout attribution is not stored before consent");
+withoutConsent.window.BalanceLaboralConversion.trackShiftAdded({ previousWorkedCount: 0 });
+withoutConsent.window.BalanceLaboralConversion.trackSignupCompleted();
+assert.strictEqual(withoutConsent.window.analytics.events.length, 0);
+assert.strictEqual(withoutConsent.window.localStorage.getItem("bl_activation_cohort_v3"), null);
+
+const activated = createWindow();
+activated.window.BalanceLaboralConversion.trackShiftAdded({ previousWorkedCount: 0 });
+activated.window.BalanceLaboralConversion.trackShiftAdded({ previousWorkedCount: 1 });
+activated.window.BalanceLaboralConversion.trackShiftAdded({ previousWorkedCount: 0 });
+activated.window.BalanceLaboralConversion.trackSignupCompleted("google", "local-dedupe-only");
+activated.window.BalanceLaboralConversion.trackSignupCompleted("google", "local-dedupe-only");
+assert.equal(activated.window.analytics.events.filter(e => e.name === "first_shift_saved").length, 1);
+assert.equal(activated.window.analytics.events.filter(e => e.name === "repeat_shift_saved").length, 1);
+assert.equal(activated.window.analytics.events.filter(e => e.name === "signup_completed").length, 1);
+assert(!JSON.stringify(activated.window.analytics.events).includes("local-dedupe-only"));
+const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+activated.window.localStorage.setItem("bl_activation_cohort_v3", JSON.stringify({ activated: yesterday }));
+activated.window.BalanceLaboralConversion.trackReturn("open");
+activated.window.BalanceLaboralConversion.trackReturn("open");
+activated.window.BalanceLaboralConversion.trackReturn("shift");
+const returns = activated.window.analytics.events.filter(e => e.name === "cohort_return");
+assert.equal(returns.length, 2);
+assert.equal(returns[0].params.retention_day, "1");
+assert.equal(returns[1].params.activity_kind, "shift");
+activated.window.BalanceLaboralConversion.clearAnalyticsAttribution();
+assert.equal(activated.window.localStorage.getItem("bl_activation_cohort_v3"), null);
+const existing = createWindow();
+existing.window.BalanceLaboralConversion.trackShiftAdded({ previousWorkedCount: 4 });
+assert(!existing.window.analytics.events.some(e => e.name === "first_shift_saved"), "existing calendars do not invent a historical activation");
 
 const premium = createWindow({ user: { uid: "premium-user" } });
 premium.window.esPremium = true;
 premium.window.BalanceLaboralConversion.trackPremiumPrompt("pdf_export");
 assert.strictEqual(premium.window.analytics.events.length, 0, "Premium users do not receive Premium prompts");
 
-console.log("conversion funnel checks passed");
+// Exercise the real Auth completion handlers with resolved/rejected providers.
+const authSource = fs.readFileSync(path.join(__dirname, "..", "src/js/firebase-config.js"), "utf8");
+async function authScenario({ register = false, google = false, isNewUser = false, profileExists = true, failSave = false } = {}) {
+  const events = [];
+  const nodes = { email: { value: "private@example.test" }, password: { value: "private-password" }, "btn-auth": {}, "error-message": { style: {} } };
+  const window = { authMode: register ? "register" : "login", cerrarModal() {}, analytics: { logEvent(name) { events.push(name); } }, BalanceLaboralConversion: { trackSignupCompleted() { events.push("signup_completed"); }, trackSignupStarted() {} } };
+  const user = { uid: "private-user", email: "private@example.test" };
+  const context = { window, document: { getElementById: id => nodes[id] }, auth: {
+    currentUser: user, createUserWithEmailAndPassword: async () => ({ user }), signInWithEmailAndPassword: async () => ({ user }),
+    signInWithPopup: async () => ({ user, additionalUserInfo: { isNewUser } }),
+  }, db: { collection: () => ({ doc: () => ({ get: async () => ({ exists: profileExists }), set: async () => { if (failSave) throw new Error("test-save-failed"); } }) }) },
+  firebase: { auth: { GoogleAuthProvider: function() {} } }, planSeleccionado: "free", console: { error() {} }, mostrarErrorAuth() {}, traducirErrorGoogle() {}, setTimeout() {} };
+  vm.runInNewContext(authSource.slice(authSource.indexOf("window.autenticar ="), authSource.indexOf("window.cerrarSesion =")), context);
+  if (google) window.autenticarConGoogle(); else window.autenticar();
+  await new Promise(resolve => setImmediate(resolve));
+  return events;
+}
+(async () => {
+  assert.deepEqual(await authScenario({ register: true }), ["signup_completed"]);
+  assert.deepEqual(await authScenario({ register: true, failSave: true }), []);
+  assert.deepEqual(await authScenario(), ["login"]);
+  assert.deepEqual(await authScenario({ google: true, isNewUser: true, profileExists: false }), ["signup_completed"]);
+  assert.deepEqual(await authScenario({ google: true, isNewUser: false, profileExists: false }), ["login"], "crear un perfil ausente no implica un alta nueva en Auth");
+  console.log("conversion funnel checks passed");
+})().catch(error => { console.error(error); process.exitCode = 1; });

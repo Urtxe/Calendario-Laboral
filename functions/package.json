@@ -5,7 +5,9 @@
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",
     "start": "npm run shell",
-    "deploy": "firebase deploy --only functions",
+    "deploy": "npm run deploy:node24 && npm run deploy:legacy",
+    "deploy:node24": "firebase deploy --only functions:consultarConvenio,functions:deleteAccount,functions:googlePlayRtdn,functions:metricasGa4,functions:processConvenioDocument,functions:reviewConvenioSources,functions:stripeWebhook,functions:syncOfficialHolidays,functions:verifyGooglePlayPurchase",
+    "deploy:legacy": "firebase deploy --config ../firebase.legacy.json --only functions:limpiarDatosAlBorrarUsuario",
     "logs": "firebase functions:log",
     "test:security": "node ../scripts/security-checks.js",
     "ingest:convenios": "node ingest-conventios.js",
@@ -18,7 +20,7 @@
     "test:convenio-monitor": "node --test convenio-monitor.test.js"
   },
   "engines": {
-    "node": "22"
+    "node": "24.22.1"
   },
   "main": "index.js",
   "dependencies": {

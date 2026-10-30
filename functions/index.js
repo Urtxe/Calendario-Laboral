@@ -56,9 +56,11 @@ const {
 } = require("./quota-reservation-policy");
 const {
     deleteAccountSafely,
-    deleteFirestoreAccountTree,
+    cleanupDeletedAccount,
     verifyRecentAuthenticatedUser,
 } = require("./account-deletion");
+const { hasAccountDeletionBarrier } = require("./account-lifecycle");
+const { createAIReportsHandler, cleanupExpiredAIReports } = require("./ai-reports");
 const { createGa4MetricsHandler } = require("./metrics-ga4");
 const { runScheduledHolidaySync } = require("./holidays-scheduler");
 const { runMonthlyConvenioReview } = require("./convenio-monitor");
@@ -110,6 +112,15 @@ if (admin.apps.length === 0) {
 const db = admin.firestore();
 exports.syncOfficialHolidays = onSchedule({ schedule: "0 4 * * 0", timeZone: "Europe/Madrid", region: "europe-west1", maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "1GiB" }, async () => runScheduledHolidaySync(db));
 exports.reviewConvenioSources = onSchedule({ schedule: "0 5 1 * *", timeZone: "Europe/Madrid", region: "europe-west1", serviceAccount: "convenio-monitor@calendario-laboral-252b1.iam.gserviceaccount.com", maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "512MiB", retryCount: 0 }, async () => runMonthlyConvenioReview(db));
+exports.cleanupAIReports = onSchedule({ schedule: "30 4 * * *", timeZone: "Europe/Madrid", serviceAccount: `ai-reports-cleanup@${projectId}.iam.gserviceaccount.com`, maxInstances: 1, concurrency: 1, timeoutSeconds: 120, memory: "256MiB" }, async () => {
+    let result;
+    // Bound each invocation; remaining expired records are removed next day.
+    for (let page = 0; page < 10; page += 1) {
+        result = await cleanupExpiredAIReports({ db });
+        if (!result.hasMore) break;
+    }
+    if (result.hasMore) console.warn("ai_reports_cleanup_backlog");
+});
 exports.processConvenioDocument = onDocumentUpdated({ document: "convenio_monitor_state/{agreementId}", region: "europe-west1", serviceAccount: "convenio-ingestor@calendario-laboral-252b1.iam.gserviceaccount.com", secrets: [geminiSecret], maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "1GiB", retry: false }, async (event) => {
     const { processPendingDocument } = require("./convenio-document-processor");
     return processPendingDocument(db, event.params.agreementId);
@@ -537,13 +548,14 @@ async function reservarCuotaConsultaIA(uid) {
     const expiresAt = new Date(nowMs + AI_QUOTA_RESERVATION_TTL_MS);
 
     return db.runTransaction(async (transaction) => {
-        const [userSnap, usageSnap, pendingReservationsSnap] = await Promise.all([
+        const [userSnap, usageSnap, pendingReservationsSnap, accountDeleted] = await Promise.all([
             transaction.get(userRef),
             transaction.get(usageRef),
             transaction.get(reservationsRef.where("state", "==", "reserved")),
+            hasAccountDeletionBarrier({ db, uid, transaction }),
         ]);
 
-        if (!userSnap.exists) {
+        if (!userSnap.exists || accountDeleted) {
             throw new QuotaError({
                 status: 403,
                 code: "user_profile_not_found",
@@ -687,6 +699,7 @@ async function liquidarReservaCuotaIA(quotaInfo, { consume }) {
     if (!quotaInfo || !quotaInfo.reservationRef) return false;
 
     return db.runTransaction(async (transaction) => {
+        if (await hasAccountDeletionBarrier({ db, uid: quotaInfo.userRef.id, transaction })) return false;
         const reservationSnap = await transaction.get(quotaInfo.reservationRef);
         if (!reservationSnap.exists) {
             return false;
@@ -1429,8 +1442,10 @@ async function findUserRefForStripe({ uid, customerId, subscriptionId }) {
 
 async function updatePremiumEntitlements(userRef, provider, entitlement, legacyFields = {}) {
     return db.runTransaction(async (transaction) => {
+        const accountDeleted = await hasAccountDeletionBarrier({ db, uid: userRef.id, transaction });
         const userSnap = await transaction.get(userRef);
-        const userData = userSnap.exists ? userSnap.data() : {};
+        if (accountDeleted || !userSnap.exists) return false;
+        const userData = userSnap.data();
         const billing = { ...(userData.billing || {}) };
         billing[provider] = entitlement;
         const premiumActive = userHasPremiumEntitlement(userData, billing);
@@ -1769,12 +1784,19 @@ async function persistVerifiedGooglePlayPurchase({ uid, purchaseToken, normalize
     });
 
     return db.runTransaction(async (transaction) => {
-        const [purchaseSnap, userSnap] = await Promise.all([
+        const [purchaseSnap, userSnap, accountDeleted] = await Promise.all([
             transaction.get(purchaseRef),
             transaction.get(userRef),
+            hasAccountDeletionBarrier({ db, uid, transaction }),
         ]);
+        // A notification may have read its UID before deletion began. Re-check
+        // inside this transaction so the deletion barrier conflicts with it.
+        if (accountDeleted || !userSnap.exists) {
+            if (source === "rtdn") return null;
+            throw playBillingError("account_unavailable", "La cuenta no está disponible para vincular compras.", 409);
+        }
         const purchaseData = purchaseSnap.exists ? purchaseSnap.data() : null;
-        if (purchaseData && purchaseData.uid && purchaseData.uid !== uid) {
+        if (purchaseData && (purchaseData.accountDeleted || (purchaseData.uid && purchaseData.uid !== uid))) {
             throw playBillingError(
                 "purchase_already_linked",
                 "Esta compra ya está vinculada a otra cuenta de Balance Laboral.",
@@ -1830,6 +1852,8 @@ async function verifyAndPersistGooglePlayPurchase({ uid, purchaseToken, requeste
         normalizedPurchase,
         source,
     });
+
+    if (premiumActive === null) return { premiumActive: false, normalizedPurchase, ignored: true };
 
     if (normalizedPurchase.acknowledgementPending && normalizedPurchase.entitled) {
         try {
@@ -1939,8 +1963,22 @@ exports.googlePlayRtdn = onRequest(PLAY_BILLING_FUNCTION_OPTIONS, async (req, re
     }
 });
 
+const aiReportsHandler = createAIReportsHandler({ auth: admin.auth(), db });
+exports.reportAIResponse = onRequest({ serviceAccount: `ai-reports-writer@${projectId}.iam.gserviceaccount.com`, maxInstances: 2, concurrency: 20, timeoutSeconds: 30, memory: "256MiB" }, async (req, res) => {
+    const corsResult = setCorsHeaders(req, res);
+    if (!corsResult.ok) return res.status(403).json({ code: "origin_not_allowed" });
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    res.set("Cache-Control", "no-store");
+    if (APP_CHECK_ENFORCEMENT) {
+        const appCheckResult = await verificarAppCheckConsulta(req);
+        if (!appCheckResult.ok) return res.status(401).json({ code: "invalid_app_check" });
+    }
+    return aiReportsHandler(req, res);
+});
+
 // BORRADO DE CUENTA: requiere una sesión reciente y solo opera sobre el UID del token.
-// La suscripción activa se cancela antes de borrar datos; las facturas no se alteran.
+// Stripe se cancela antes de borrar datos. Play se gestiona por el usuario;
+// borrar la cuenta no cancela, revoca ni reembolsa su suscripción Play.
 exports.deleteAccount = onRequest({ timeoutSeconds: 120, memory: "512MiB", secrets: [stripeSecret] }, async (req, res) => {
     const corsResult = setCorsHeaders(req, res);
 
@@ -3277,8 +3315,8 @@ async function consultarConvenioLegacy(req, res) {
 }
 
 // 2. LIMPIEZA AL BORRAR USUARIO (Usando la ruta V1 explícita)
-exports.limpiarDatosAlBorrarUsuario = functionsV1.auth.user().onDelete(async (user) => {
+exports.limpiarDatosAlBorrarUsuario = functionsV1.runWith({ failurePolicy: true }).auth.user().onDelete(async (user) => {
     const uid = user.uid;
-    await deleteFirestoreAccountTree({ db, uid });
+    await cleanupDeletedAccount({ db, uid });
     console.log("Datos de Firestore del usuario eliminados tras el borrado de Auth.");
 });

@@ -1,5 +1,13 @@
 # Balance Laboral - Trusted Web Activity (TWA)
 
+## Artefacto de publicación comprobado (30-10-2026)
+
+La configuración actual y el AAB `android/twa/app/build/outputs/bundle/release/app-release.aab` corresponden a **1.0.5 / versionCode 6**, API 36, minSdk 23 y Billing 8.3.0. Los archivos `android/twa/app-release-bundle.aab` y `android/twa/app-release-signed.apk` corresponden a **1.0.4 / code 5**, sin Billing: no seleccionarlos para publicar la configuración actual. Se conservan como artefactos históricos; no se han recompilado ni eliminado.
+
+Antes de cualquier envío, seleccionar expresamente el AAB de `app/build/outputs/bundle/release/` y cotejar su versión/permisos/Billing en el Explorador de app bundles. El nombre del archivo y la configuración Gradle no prueban el contenido de un binario. No usar búsquedas automáticas que elijan el primer `*.aab` del árbol. La versión realmente publicada solo puede confirmarse en Play Console; los apuntes históricos de versiones inferiores que siguen no sustituyen esta comprobación.
+
+Las correcciones web de Premium/denuncias y las protecciones Functions/reglas no requieren generar un AAB. Si la versión distribuida carece de la integración Billing 1.0.5, sí habrá que publicar un Android compatible tras autorización, comprobando antes que el versionCode no haya sido utilizado.
+
 Esta guia prepara la publicacion Android de Balance Laboral con Trusted Web Activity y Bubblewrap, manteniendo una unica base web desplegada en Firebase Hosting.
 
 ## Estado de la PWA

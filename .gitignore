@@ -108,3 +108,10 @@ google-play-service-account*.json
 **/captures/
 
 android/twa/balancelaboral-release.jks
+
+# Informes de auditoria locales (PDF, Markdown y previsualizaciones)
+/docs/auditorias-locales/
+
+# Local browser verification artifacts
+/output/playwright/
+/.playwright-cli/

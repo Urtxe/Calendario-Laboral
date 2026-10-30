@@ -59,6 +59,17 @@ const revoked = normalizeSubscriptionPurchase(purchase({
 }));
 assert.strictEqual(revoked.entitled, false);
 
+for (const [state, expiryTime, entitled] of [
+    ["SUBSCRIPTION_STATE_CANCELED", future, true],
+    ["SUBSCRIPTION_STATE_CANCELED", expired, false],
+    ["SUBSCRIPTION_STATE_ACTIVE", expired, false],
+    ["SUBSCRIPTION_STATE_PAUSED", future, false],
+    ["SUBSCRIPTION_STATE_ON_HOLD", future, false],
+    ["SUBSCRIPTION_STATE_PENDING_PURCHASE_CANCELED", future, false],
+]) {
+    assert.strictEqual(normalizeSubscriptionPurchase(purchase({ state, expiryTime })).entitled, entitled, state);
+}
+
 const playEntitlement = buildGooglePlayEntitlement({
     normalizedPurchase: active,
     purchaseToken: "a-valid-play-token",

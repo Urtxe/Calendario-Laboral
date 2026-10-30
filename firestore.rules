@@ -6,6 +6,11 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
+    function cuentaActiva(uid) {
+      return esUsuario(uid)
+        && !exists(/databases/$(database)/documents/accountDeletions/$(uid));
+    }
+
     function camposEditablesUsuario() {
       return [
         "email",
@@ -86,13 +91,13 @@ service cloud.firestore {
 
     // 2. REGLA PARA USUARIOS (PRIVADA)
     match /usuarios/{userId} {
-      allow read: if esUsuario(userId);
+      allow read: if cuentaActiva(userId);
 
-      allow create: if esUsuario(userId)
+      allow create: if cuentaActiva(userId)
         && request.resource.data.keys().hasOnly(camposEditablesUsuario())
         && camposEditablesValidos(request.resource.data);
 
-      allow update: if esUsuario(userId)
+      allow update: if cuentaActiva(userId)
         && request.resource.data.keys().hasOnly(camposPermitidosDocumentoUsuario())
         && camposReservadosSinCambios()
         && camposEditablesValidos(request.resource.data);
@@ -100,15 +105,15 @@ service cloud.firestore {
       allow delete: if false;
 
       match /years/{yearId} {
-        allow read, write: if esUsuario(userId);
+        allow read, write: if cuentaActiva(userId);
       }
 
       match /visitas/{visitId} {
-        allow read, write: if esUsuario(userId);
+        allow read, write: if cuentaActiva(userId);
       }
 
       match /usage/{usageDoc} {
-        allow read: if esUsuario(userId);
+        allow read: if cuentaActiva(userId);
         allow write: if false;
       }
 
@@ -120,6 +125,12 @@ service cloud.firestore {
     // 3. Colección heredada: GA4 es la fuente de analítica y el cliente ya no
     // puede crear ni actualizar documentos de visitas individuales.
     match /visitasAnonimas/{docId} {
+      allow read, write: if false;
+    }
+
+    // El marcador solo lo administra el backend; denegar acceso directo evita
+    // exponer el tombstone pseudónimo o permitir que el cliente lo altere.
+    match /accountDeletions/{uid} {
       allow read, write: if false;
     }
 

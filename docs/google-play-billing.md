@@ -1,5 +1,33 @@
 # Google Play Billing para la TWA
 
+## Correcciones de cumplimiento y borrado (30-10-2026)
+
+Los controles de cuenta muestran gestión Google Play solo ante una compra Play conocida; Stripe se conserva en web/PWA y permanece bloqueado en la TWA. Antes de borrar una cuenta con Play se ofrece el enlace oficial y se advierte que borrar no cancela renovaciones ni solicita reembolso. El selector mantiene precios de catálogo y explica período, renovación, cancelación y vencimiento del acceso pagado.
+
+El borrado mantiene `accountDeletions/{uid}` como barrera privada. Tras completar la preparación Stripe, se crea transaccionalmente guardando solo su resultado mínimo; un fallo posterior permite reintentar sin perder esa información. Los escritores Play, Stripe y de reservas IA leen la barrera dentro de sus transacciones. Las reglas bloquean también clientes con tokens antiguos. Las compras vinculadas se sustituyen por `{accountDeleted:true}` en su documento hash, sin UID ni metadatos; así se impide transferir la misma compra a otra cuenta. El marcador y los hashes se conservan como registros pseudónimos de seguridad, sin correo o datos laborales. No existe migración global ni se cancelan compras Play al borrar.
+
+El trigger Auth ejecuta la misma limpieza idempotente y habilita reintentos. No revertir las barreras, las reglas o las protecciones de escritores si ya existen marcadores: una reversión parcial podría reabrir la recreación. Reintentar una limpieza pendiente es preferible a retirar la barrera.
+
+Las denuncias IA se reciben en `/aiReports` mediante `reportAIResponse`: autenticación Firebase con comprobación de revocación, CORS permitido, App Check según la configuración actual, payload acotado y transacción de límites (5/día y 1/minuto). No se envían preguntas ni UID/correo explícitos. La respuesta puede contener información personal: el cliente pide confirmación y limita el texto a 8.000 caracteres. Los clientes no pueden leer ni escribir las colecciones de denuncias directamente. `cleanupAIReports` purga diariamente reportes caducados (90 días) y contadores pseudónimos (2 días), con límite de 5.000 documentos por ejecución y aviso de backlog. No requiere habilitar TTL aparte. Para moderar, el titular o personal autorizado debe revisar `aiReports` desde Firebase/Cloud con IAM restringido; no se ha creado un panel público ni se envían mensajes automáticos. Revisar los avisos y registrar la respuesta operativa, eliminándolos antes cuando ya no sean necesarios.
+
+### Verificación local y despliegue
+
+El despliegue del 30-10-2026 está completado. El estado publicado, las pruebas y sus límites se recogen en [el cierre de la intervención](cierre-google-play-2026-10-30.md).
+
+- `npm test`: regresión existente y tests nuevos de interfaz, borrado, barreras y denuncias; sin servicios de pago.
+- `npm run test:firestore-emulator`: requiere Firestore Emulator en `127.0.0.1:8088`, proyecto `demo-balance-play`, con las reglas actuales cargadas. El script rechaza hosts no locales y nunca selecciona el proyecto real.
+- `scripts/google-play-visual-checks.js`: servir el repo en `127.0.0.1:8765` y ejecutar con `playwright-cli run-code --filename scripts/google-play-visual-checks.js`. Usa HTML/CSS/JS locales, bloquea red externa y simula catálogo y envío de avisos. Capturas en `output/playwright/` ignoradas por Git. No sustituye la prueba del salto a Play Store en un dispositivo TWA instalado.
+
+Orden recomendado, solo después de autorización:
+
+1. Revisar los diffs y las métricas/configuración reales, confirmar permisos IAM, recursos de la limpieza programada y planificar una ventana controlada. No ejecutar el script global de deploy sin revisar el alcance.
+2. Desplegar primero los escritores protegidos `verifyGooglePlayPurchase`, `googlePlayRtdn`, `stripeWebhook`, `consultarConvenio` y las reglas Firestore. Esperar a que no queden solicitudes antiguas en vuelo antes de activar el nuevo borrado. Durante el despliegue escalonado no se puede asumir la garantía completa de barrera hasta actualizar todos los escritores.
+3. Desplegar `deleteAccount` y el trigger legacy `limpiarDatosAlBorrarUsuario` con la limpieza idempotente. Desplegar `reportAIResponse` y `cleanupAIReports`; confirmar que el job está activo y el receptor de denuncias es accesible.
+4. Desplegar Hosting (UI, política, rewrite y revisión de caché PWA). Comprobar en pista de prueba con cuentas de licencia y sin compras reales que el enlace HTTPS de gestión abre Play Store/navegador y que Stripe permanece bloqueado en TWA.
+5. Revisar errores, RTDN y limpieza, y actualizar Data Safety si procede.
+
+Reversión: se puede volver a la versión Hosting anterior si es necesario, aunque reaparecerían sus carencias de interfaz. Conservar backend y reglas que respetan la barrera; no borrar marcadores ni restaurar datos de cuentas eliminadas. Para un fallo backend, detener nuevas operaciones de borrado durante la intervención y corregir o restablecer una versión que mantenga las mismas garantías. No hay deshacer automático de una cancelación Stripe o una eliminación de cuenta.
+
 La app Android `es.balancelaboral.app` vende `premium_monthly` y `premium_yearly` solo mediante Google Play Billing. Stripe sigue siendo el único cobro de la web/PWA normal. La TWA nunca redirige a Stripe: si Digital Goods API o Payment Request no están disponibles, muestra un aviso temporal y no abre ningún flujo alternativo.
 
 ## Arquitectura

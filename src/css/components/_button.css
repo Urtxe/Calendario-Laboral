@@ -153,3 +153,26 @@ button {
 .btn-flotante:hover {
     transform: scale(1.1);
 }
+.ai-report-button {
+  display: block;
+  margin-top: 0.65rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted, #64748b);
+  font: inherit;
+  font-size: 0.78rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ai-report-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+.ai-report-status {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+}

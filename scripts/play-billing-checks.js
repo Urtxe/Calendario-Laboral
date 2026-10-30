@@ -23,9 +23,10 @@ function button() {
   };
 }
 
-function billingWindow({ inTwa = true, service, paymentResponse, fetchResponse } = {}) {
+function billingWindow({ inTwa = true, service, paymentResponse, paymentError, fetchResponse, premiumSnapshot } = {}) {
   const plans = { children: [], appendChild(child) { this.children.push(child); } };
   const status = { textContent: "" };
+  const existing = { textContent: "" };
   const close = button();
   const restore = button();
   const restoreLabel = { textContent: "Restaurar compras" };
@@ -38,9 +39,12 @@ function billingWindow({ inTwa = true, service, paymentResponse, fetchResponse }
 
   function PaymentRequest(methods, details) {
     requests.push({ methods, details });
-    this.show = async () => paymentResponse || {
+    this.show = async () => {
+      if (paymentError) throw paymentError;
+      return paymentResponse || {
       details: { purchaseToken: "purchase-token-for-test" },
       complete: async (result) => completions.push(result),
+      };
     };
   }
 
@@ -53,6 +57,7 @@ function billingWindow({ inTwa = true, service, paymentResponse, fetchResponse }
       element.querySelector = (selector) => ({
         ".pricing-plans": plans,
         ".play-billing-status": status,
+        ".play-billing-existing": existing,
         ".close-btn": close,
         ".play-restore": restore,
       })[selector] || null;
@@ -65,6 +70,7 @@ function billingWindow({ inTwa = true, service, paymentResponse, fetchResponse }
     PaymentRequest,
     getDigitalGoodsService: async () => service,
     usuarioActual: { uid: "test-user", getIdToken: async () => "firebase-id-token" },
+    datosCuentaPremium: premiumSnapshot,
     alert: (message) => alerts.push(message),
     console: { warn: (_message, details) => warnings.push(details) },
     fetch: async () => fetchResponse || { ok: true, json: async () => ({ premiumActive: true }) },
@@ -76,7 +82,7 @@ function billingWindow({ inTwa = true, service, paymentResponse, fetchResponse }
     Intl,
     navigator: { language: "es-ES" },
   });
-  return { window, plans, status, alerts, warnings, requests, completions, restore, restoreLabel, get modal() { return modal; } };
+  return { window, plans, status, existing, alerts, warnings, requests, completions, restore, restoreLabel, get modal() { return modal; } };
 }
 
 async function availability({ inTwa, paymentRequest, digitalGoods }) {
@@ -95,8 +101,8 @@ async function availability({ inTwa, paymentRequest, digitalGoods }) {
   assert.strictEqual(await availability({ inTwa: true, paymentRequest: false, digitalGoods: true }), false);
 
   const products = [
-    { itemId: "premium_monthly", title: "Mensual", price: { currency: "EUR", value: "2.99" } },
-    { itemId: "premium_yearly", title: "Anual", price: { currency: "EUR", value: "29.99" } },
+    { itemId: "premium_monthly", title: "Mensual", type: "subscription", subscriptionPeriod: "P1M", price: { currency: "EUR", value: "2.99" } },
+    { itemId: "premium_yearly", title: "Anual", type: "subscription", subscriptionPeriod: "P1Y", price: { currency: "EUR", value: "29.99" } },
   ];
   const loaded = billingWindow({ service: { getDetails: async (ids) => {
     assert.deepStrictEqual(Array.from(ids), ["premium_monthly", "premium_yearly"]);
@@ -106,6 +112,11 @@ async function availability({ inTwa, paymentRequest, digitalGoods }) {
   assert(loaded.modal.className.includes("modal-overlay"), "el selector debe usar el overlay visible de la aplicación");
   assert.strictEqual(loaded.status.textContent, "Elige un plan para continuar con Google Play.");
   assert.strictEqual(loaded.plans.children.length, 2, "debe renderizar ambos productos de Play");
+  assert.match(loaded.plans.children[0].innerHTML, /2,99 € <small>por mes<\/small>/);
+  assert.match(loaded.plans.children[0].innerHTML, /Se renueva automáticamente por mes/);
+  assert.match(loaded.plans.children[1].innerHTML, /29,99 € <small>por año<\/small>/);
+  assert.match(loaded.modal.innerHTML, /Más consultas de IA[\s\S]*Historial anual[\s\S]*Exportación a PDF/);
+  assert.match(loaded.modal.innerHTML, /mantienes Premium hasta que venza el período pagado/);
 
   // This is the callback registered on each rendered plan. It must create the
   // official Payment Request with the Play method, then verify its token.
@@ -122,6 +133,47 @@ async function availability({ inTwa, paymentRequest, digitalGoods }) {
   assert.strictEqual(loaded.restore.disabled, false);
   assert.strictEqual(loaded.restoreLabel.textContent, "Restaurar compras");
   assert.strictEqual(loaded.status.textContent, "No hay compras activas para restaurar.");
+
+  const restored = billingWindow({
+    service: {
+      getDetails: async () => products,
+      listPurchases: async () => [{ itemId: "premium_yearly", purchaseToken: "restored-purchase-token" }],
+    },
+  });
+  await restored.window.PlayBillingService.openPremiumModal();
+  await restored.restore.listeners.click();
+  assert.strictEqual(restored.status.textContent, "Compra restaurada y Premium activado.");
+
+  const premium = billingWindow({
+    premiumSnapshot: { billing: { googlePlay: { active: true, autoRenewEnabled: false, expiresAt: "2030-06-01T00:00:00.000Z" } } },
+    service: { getDetails: async () => products, listPurchases: async () => [] },
+  });
+  await premium.window.PlayBillingService.openPremiumModal();
+  assert.match(premium.existing.textContent, /cancelado y seguirá activo hasta el/);
+
+  const renewing = billingWindow({
+    premiumSnapshot: { billing: { googlePlay: { active: true, autoRenewEnabled: true } } },
+    service: { getDetails: async () => products, listPurchases: async () => [] },
+  });
+  await renewing.window.PlayBillingService.openPremiumModal();
+  assert.match(renewing.existing.textContent, /se renueva automáticamente/);
+
+  const pending = billingWindow({
+    service: { getDetails: async () => products },
+    fetchResponse: { ok: true, json: async () => ({ premiumActive: false }) },
+  });
+  await pending.window.PlayBillingService.openPremiumModal();
+  await pending.plans.children[0].listeners.click();
+  assert.deepStrictEqual(pending.completions, ["fail"]);
+  assert.strictEqual(pending.status.textContent, "La compra está pendiente de confirmación.");
+
+  const cancelled = billingWindow({
+    service: { getDetails: async () => products },
+    paymentError: Object.assign(new Error("cancelled"), { name: "AbortError" }),
+  });
+  await cancelled.window.PlayBillingService.openPremiumModal();
+  await cancelled.plans.children[0].listeners.click();
+  assert.strictEqual(cancelled.status.textContent, "Compra cancelada.");
 
   const unavailable = billingWindow({ service: { getDetails: async () => { throw new Error("products_unavailable"); } } });
   await unavailable.window.PlayBillingService.openPremiumModal();

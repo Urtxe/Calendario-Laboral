@@ -54,6 +54,82 @@ function mostrarAvisoComercioPremiumNoDisponible() {
   );
 }
 
+const PLAY_SUBSCRIPTIONS_URL = "https://play.google.com/store/account/subscriptions";
+let datosCuentaPremium = {};
+
+function suscripcionGooglePlayConocida(datos = datosCuentaPremium) {
+  const play = datos && datos.billing && datos.billing.googlePlay;
+  return !!play && ["premium_monthly", "premium_yearly"].includes(play.productId);
+}
+
+function actualizarEnlaceGestionGooglePlay(datos = datosCuentaPremium) {
+  const conocida = suscripcionGooglePlayConocida(datos);
+  document.querySelectorAll("[data-account-delete-action]").forEach((action) => {
+    let link = action.parentNode && action.parentNode.querySelector("[data-google-play-manage]");
+    if (conocida && !link) {
+      link = document.createElement("a");
+      link.dataset.googlePlayManage = "true";
+      link.href = PLAY_SUBSCRIPTIONS_URL;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "Gestionar suscripción en Google Play";
+      action.parentNode.insertBefore(link, action.nextSibling);
+    }
+    if (link) link.style.display = conocida ? "inline" : "none";
+  });
+}
+
+function ofrecerGestionGooglePlayAntesDeBorrar() {
+  return new Promise((resolve) => {
+    const returnFocus = document.activeElement;
+    const modal = document.createElement("div");
+    modal.id = "account-delete-play-modal";
+    modal.className = "modal-overlay play-billing-modal account-delete-play-modal";
+    modal.style.display = "flex";
+    modal.innerHTML = `<section class="modal-content account-delete-play-dialog" role="dialog" aria-modal="true" aria-labelledby="account-delete-play-title">
+      <h2 id="account-delete-play-title">Antes de eliminar tu cuenta</h2>
+      <p>Eliminar la cuenta no cancela tu suscripción de Google Play ni detiene sus renovaciones. Cancélala en Google Play para evitar futuros cobros; podrías perder el acceso Premium pagado y no se reembolsará el tiempo restante.</p>
+      <a href="${PLAY_SUBSCRIPTIONS_URL}" target="_blank" rel="noopener noreferrer">Gestionar suscripción en Google Play</a>
+      <div class="account-delete-play-actions">
+        <button type="button" class="btn-secondary" data-play-delete-cancel>Cancelar</button>
+        <button type="button" class="btn-primary" data-play-delete-continue>Continuar borrado</button>
+      </div>
+    </section>`;
+    document.body.appendChild(modal);
+    const finish = (continueDeletion) => {
+      modal.remove();
+      if (returnFocus && typeof returnFocus.focus === "function") returnFocus.focus();
+      resolve(continueDeletion);
+    };
+    modal.querySelector("[data-play-delete-cancel]").addEventListener("click", () => finish(false));
+    modal.querySelector("[data-play-delete-continue]").addEventListener("click", () => finish(true));
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) finish(false);
+    });
+    modal.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") { event.preventDefault(); finish(false); }
+      if (event.key !== "Tab") return;
+      const controls = Array.from(modal.querySelectorAll("a[href], button"));
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    });
+    modal.querySelector("[data-play-delete-cancel]").focus();
+  });
+}
+
+async function refrescarSnapshotPremiumAntesDeBorrar(uid) {
+  try {
+    const doc = await db.collection("usuarios").doc(uid).get();
+    datosCuentaPremium = doc.exists ? doc.data() : {};
+    window.datosCuentaPremium = datosCuentaPremium;
+    actualizarEnlaceGestionGooglePlay(datosCuentaPremium);
+  } catch (_) {
+    // Best-effort only: deletion retries may be unable to read the document after its marker is set.
+  }
+}
+
 function aplicarRestriccionComercioPremiumTwa() {
   if (!comercioPremiumBloqueadoEnTwa()) return;
 
@@ -342,10 +418,12 @@ function verificarNivelPremium(uid) {
     .doc(uid)
     .get()
     .then(function (doc) {
-      const premiumActivo = doc.exists && doc.data().tipoCuenta === "premium";
+      datosCuentaPremium = doc.exists ? doc.data() : {};
+      window.datosCuentaPremium = datosCuentaPremium;
+      const premiumActivo = datosCuentaPremium.tipoCuenta === "premium";
       sincronizarEstadoPremium(premiumActivo);
-      actualizarInterfazPremium(premiumActivo);
-      if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumActivationConfirmed(premiumActivo, doc.exists ? doc.data() : {});
+      actualizarInterfazPremium(premiumActivo, datosCuentaPremium);
+      if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumActivationConfirmed(premiumActivo, datosCuentaPremium);
     })
     .catch((e) => {
       console.error("Error verificando premium:", e);
@@ -354,7 +432,7 @@ function verificarNivelPremium(uid) {
     });
 }
 
-function actualizarInterfazPremium(activar) {
+function actualizarInterfazPremium(activar, datos = datosCuentaPremium) {
   const sE = document.getElementById("seccion-horas-extra");
   const sH = document.getElementById("seccion-historial");
   const sP = document.getElementById("seccion-pdf");
@@ -362,6 +440,11 @@ function actualizarInterfazPremium(activar) {
   const emailContenedor = document.querySelector(".user-profile-info");
   const btnUpgrade = document.getElementById("btn-upgrade");
   const linksCancel = document.querySelectorAll(".link-cancelar-sub");
+  const stripe = datos && datos.billing && datos.billing.stripe;
+  const tieneStripe = !!(stripe && stripe.active === true) || !!(
+    datos && datos.stripeSubscriptionId && datos.subscriptionStatus === "active"
+  );
+  actualizarEnlaceGestionGooglePlay(datos);
   const oldBadge = document.querySelector(".pro-badge-email");
   if (oldBadge) oldBadge.remove();
 
@@ -369,7 +452,7 @@ function actualizarInterfazPremium(activar) {
     document.body.classList.add("is-premium");
     if (btnUpgrade) btnUpgrade.style.display = "none";
     linksCancel.forEach((link) => {
-      link.style.display = comercioPremiumBloqueadoEnTwa() ? "none" : "inline";
+      link.style.display = tieneStripe && !comercioPremiumBloqueadoEnTwa() ? "inline" : "none";
     });
     if (sE) sE.classList.remove("premium-locked");
     if (sH) sH.classList.remove("premium-locked");
@@ -1029,6 +1112,7 @@ async function enviarConsultaLegal() {
     }
 
     const mensajeRespuesta = crearMensajeLegal(respuesta, "assistant");
+    if (window.LegalAIReports) window.LegalAIReports.attach(mensajeRespuesta, respuesta);
     if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackAIConsultationSucceeded();
     anadirProcedenciaRespuestaLegal(mensajeRespuesta, data);
     ultimaPreguntaLegal = pregunta.length <= LIMITE_PREGUNTA_ANTERIOR_IA ? pregunta : "";
@@ -1423,8 +1507,19 @@ window.eliminarCuentaTotalmente = async function () {
     return;
   }
 
+  await refrescarSnapshotPremiumAntesDeBorrar(user.uid);
+  if (suscripcionGooglePlayConocida() && !(await ofrecerGestionGooglePlayAntesDeBorrar())) return;
+
+  const avisosSuscripcion = [];
+  avisosSuscripcion.push("Si tienes una suscripción de Google Play, eliminar la cuenta no la cancela ni detiene sus renovaciones. Cancélala en Google Play para evitar futuros cobros; podrías perder el acceso Premium pagado y no se reembolsará el tiempo restante.");
+  const stripe = datosCuentaPremium.billing && datosCuentaPremium.billing.stripe;
+  if (stripe && stripe.active === true || (
+    datosCuentaPremium.stripeSubscriptionId && datosCuentaPremium.subscriptionStatus === "active"
+  )) {
+    avisosSuscripcion.push("Tu suscripción de Stripe se cancelará y perderás el acceso Premium. Stripe puede conservar facturas o registros conforme a sus obligaciones.");
+  }
   const confirmed = confirm(
-    "Vas a eliminar tu cuenta y los datos de jornada guardados. Si tienes una suscripción Premium activa, se cancelará inmediatamente y perderás el acceso Premium. Las facturas o registros que Stripe deba conservar pueden mantenerse conforme a sus obligaciones. ¿Quieres continuar?",
+    `Vas a eliminar tu cuenta y los datos de jornada guardados.${avisosSuscripcion.length ? ` ${avisosSuscripcion.join(" ")}` : ""} ¿Quieres continuar?`,
   );
   if (!confirmed) return;
 

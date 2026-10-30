@@ -47,6 +47,35 @@
     }).format(price.value);
   }
 
+  function displayPeriod(period, itemId) {
+    const normalized = String(period || "").toUpperCase();
+    const match = /^P(\d+)?([YMWD])$/.exec(normalized);
+    const amount = match ? Number(match[1] || 1) : 0;
+    const units = {
+      Y: ["año", "años"],
+      M: ["mes", "meses"],
+      W: ["semana", "semanas"],
+      D: ["día", "días"],
+    };
+    const unit = match && units[match[2]];
+    if (unit && amount === 1) return `por ${unit[0]}`;
+    if (unit) return `cada ${amount} ${unit[1]}`;
+    return itemId === "premium_yearly" ? "por año" : "por mes";
+  }
+
+  function premiumStatusCopy() {
+    const play = window.datosCuentaPremium && window.datosCuentaPremium.billing && window.datosCuentaPremium.billing.googlePlay;
+    if (!play || play.active !== true) return "";
+    const expiration = play.expiresAt ? new Date(play.expiresAt) : null;
+    const date = expiration && !Number.isNaN(expiration.getTime())
+      ? new Intl.DateTimeFormat(navigator.language, { dateStyle: "long" }).format(expiration)
+      : "";
+    if (play.autoRenewEnabled === false) {
+      return `Tu Premium de Google Play está cancelado${date ? ` y seguirá activo hasta el ${date}` : ""}.`;
+    }
+    return `Tu Premium de Google Play está activo${date ? ` hasta el ${date}` : ""} y se renueva automáticamente.`;
+  }
+
   async function getProducts() {
     const service = await getService();
     const details = await service.getDetails(PRODUCTS);
@@ -156,7 +185,10 @@
         <p class="play-billing-subtitle">Elige tu suscripción</p>
         <p class="play-billing-price-note">Precios gestionados por Google Play</p>
       </header>
+      <p class="play-billing-existing" role="status"></p>
+      <ul class="play-billing-benefits"><li>Más consultas de IA</li><li>Historial anual</li><li>Exportación a PDF</li></ul>
       <div class="pricing-plans"></div>
+      <p class="play-billing-terms">Puedes cancelar la renovación cuando quieras. Al cancelarla, mantienes Premium hasta que venza el período pagado, salvo los supuestos de reembolso o revocación aplicables.</p>
       <button type="button" class="btn-secondary play-restore">
         <i data-lucide="rotate-ccw" aria-hidden="true"></i><span>Restaurar compras</span>
       </button>
@@ -178,6 +210,8 @@
     const modal = createPremiumModal();
     const content = modal.querySelector(".pricing-plans");
     const status = modal.querySelector(".play-billing-status");
+    const existing = modal.querySelector(".play-billing-existing");
+    existing.textContent = premiumStatusCopy();
     modal.querySelector(".close-btn").addEventListener("click", closeModal);
     try {
       const products = await getProducts();
@@ -188,8 +222,10 @@
         const planName = isYearly ? "Premium anual" : "Premium mensual";
         button.type = "button";
         button.className = `plan-card play-billing-plan${isYearly ? " play-billing-plan-recommended" : ""}`;
-        button.setAttribute("aria-label", `Elegir ${planName}, ${displayPrice(product.price)}`);
-        button.innerHTML = `${isYearly ? '<span class="play-billing-plan-badge">Recomendado</span>' : ""}<strong>${planName}</strong><span class="play-billing-plan-price">${displayPrice(product.price)}</span>`;
+        const period = displayPeriod(product.subscriptionPeriod, product.itemId);
+        const renewalCopy = `Se renueva automáticamente ${period}; cancela cuando quieras desde Google Play.`;
+        button.setAttribute("aria-label", `Elegir ${planName}, ${displayPrice(product.price)} ${period}`);
+        button.innerHTML = `${isYearly ? '<span class="play-billing-plan-badge">Recomendado</span>' : ""}<strong>${planName}</strong><span class="play-billing-plan-price">${displayPrice(product.price)} <small>${period}</small></span><span class="play-billing-plan-renewal">${renewalCopy}</span>`;
         button.addEventListener("click", async () => {
           button.disabled = true;
           status.textContent = "Abriendo Google Play…";

@@ -9,6 +9,8 @@
       "firebase.json",
       ".git/**",
       ".firebase/**",
+      ".playwright-cli/**",
+      "output/playwright/**",
       ".tmp.driveupload/**",
       ".tmp.drivedownload/**",
       ".gitignore",
@@ -43,6 +45,10 @@
       {
         "source": "/deleteAccount",
         "function": "deleteAccount"
+      },
+      {
+        "source": "/aiReports",
+        "function": "reportAIResponse"
       },
       {
         "source": "/playBilling/verify",

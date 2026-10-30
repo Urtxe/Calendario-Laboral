@@ -5,6 +5,13 @@ const TERMINAL_SUBSCRIPTION_STATUSES = new Set([
     "canceled",
     "incomplete_expired",
 ]);
+const {
+    createAccountDeletionBarrier,
+    ensureAccountDeletionBarrier,
+    neutralizePlayBillingPurchases,
+    readAccountDeletionBarrier,
+    sanitizeBillingResult,
+} = require("./account-lifecycle");
 
 function createAccountDeletionError(code, message, status = 500) {
     const error = new Error(message);
@@ -153,6 +160,12 @@ async function deleteFirestoreAccountTree({ db, uid }) {
     await db.recursiveDelete(userRef);
 }
 
+async function cleanupDeletedAccount({ db, uid }) {
+    await ensureAccountDeletionBarrier(db, uid);
+    await neutralizePlayBillingPurchases(db, uid);
+    await deleteFirestoreAccountTree({ db, uid });
+}
+
 async function prepareStripeAccountDeletion({ stripe, stripeConfigured, userData, uid }) {
     const data = userData || {};
     const subscriptionId = typeof data.stripeSubscriptionId === "string"
@@ -191,20 +204,29 @@ async function prepareStripeAccountDeletion({ stripe, stripeConfigured, userData
 }
 
 async function deleteAccountSafely({ db, auth, stripe, stripeConfigured, uid }) {
-    const userRef = db.collection("usuarios").doc(uid);
-    const userSnap = await userRef.get();
-    const billing = await prepareStripeAccountDeletion({
-        stripe,
-        stripeConfigured,
-        userData: userSnap.exists ? userSnap.data() : {},
-        uid,
-    });
+    const existingBarrier = await readAccountDeletionBarrier(db, uid);
+    let billing;
+    if (existingBarrier) {
+        billing = sanitizeBillingResult(existingBarrier);
+    } else {
+        const userRef = db.collection("usuarios").doc(uid);
+        const userSnap = await userRef.get();
+        billing = await prepareStripeAccountDeletion({
+            stripe,
+            stripeConfigured,
+            userData: userSnap.exists ? userSnap.data() : {},
+            uid,
+        });
+        const barrier = await createAccountDeletionBarrier(db, uid, billing);
+        billing = sanitizeBillingResult(barrier);
+    }
 
-    await deleteFirestoreAccountTree({ db, uid });
+    await cleanupDeletedAccount({ db, uid });
 
     try {
         await auth.deleteUser(uid);
     } catch (error) {
+        if (error && error.code === "auth/user-not-found") return billing;
         throw createAccountDeletionError(
             "auth_delete_failed",
             "Tus datos de la aplicación se han eliminado, pero no se pudo cerrar la cuenta. Contacta con soporte.",
@@ -218,10 +240,13 @@ async function deleteAccountSafely({ db, auth, stripe, stripeConfigured, uid }) 
 module.exports = {
     RECENT_AUTH_MAX_AGE_SECONDS,
     cancelStripeSubscriptionForAccountDeletion,
+    cleanupDeletedAccount,
     createAccountDeletionError,
     deleteAccountSafely,
     deleteFirestoreAccountTree,
     prepareStripeAccountDeletion,
     removeStripeCustomerWhenPossible,
+    ensureAccountDeletionBarrier,
+    neutralizePlayBillingPurchases,
     verifyRecentAuthenticatedUser,
 };

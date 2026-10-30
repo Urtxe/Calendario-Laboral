@@ -1,7 +1,7 @@
 // Si cambia un asset crítico, scripts/service-worker-checks.js obliga a
 // actualizar esta huella y, con ella, el nombre de las cachés cache-first.
-const CRITICAL_ASSET_REVISION = 'c562e6f9c23ece82b9f003313308447c54a0658bc1f1730fd13b66899337d48f';
-const CACHE_VERSION = 'v2.0.19-analytics-c562e6f9c23e';
+const CRITICAL_ASSET_REVISION = '7a70d9399d700cd9cc3736a9b869b99f5b4b7be6c5dc0d575f655941294fa42d';
+const CACHE_VERSION = 'v2.0.20-play-compliance-7a70d9399d70';
 const SHELL_CACHE = `balance-laboral-shell-${CACHE_VERSION}`;
 const STATIC_CACHE = `balance-laboral-static-${CACHE_VERSION}`;
 const APP_BASE = new URL('./', self.location);
@@ -27,6 +27,7 @@ const APP_SHELL_URLS = [
   'src/js/firebase-public-config.js',
   'src/js/app/play-twa-context.js',
   'src/js/app/play-billing-service.js',
+  'src/js/app/ai-report-service.js',
   'src/js/app/state.js',
   'src/js/app/calendar.js',
   'src/js/app/sync.js',
@@ -45,6 +46,7 @@ const APP_SHELL_URLS = [
 
 const DYNAMIC_PATHS = new Set([
   '/consultarConvenio',
+  '/aiReports',
   '/webhook'
 ]);
 

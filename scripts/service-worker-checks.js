@@ -10,6 +10,8 @@ const serviceWorker = fs.readFileSync(path.join(repoRoot, "service-worker.js"), 
 const firebaseConfig = JSON.parse(fs.readFileSync(path.join(repoRoot, "firebase.json"), "utf8"));
 const criticalAssets = [
   "index.html",
+  "src/css/components/_button.css",
+  "src/css/components/_modal.css",
   "src/js/analytics.js",
   "src/js/conversion-funnel.js",
   "src/js/app/calendar.js",
@@ -19,6 +21,7 @@ const criticalAssets = [
   "src/js/app/pdf.js",
   "src/js/app/play-twa-context.js",
   "src/js/app/play-billing-service.js",
+  "src/js/app/ai-report-service.js",
   "src/js/firebase-config.js",
   "src/js/firebase-public-config.js",
 ];

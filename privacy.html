@@ -245,7 +245,7 @@
         <article class="policy-shell">
             <div class="meta">
                 <span class="tag">Balance Laboral</span>
-                <span>Ultima actualizacion: 16 de octubre de 2026</span>
+                <span>Ultima actualizacion: 30 de octubre de 2026</span>
             </div>
 
             <p>
@@ -308,10 +308,16 @@
 
             <h2>7. Pagos y funciones premium</h2>
             <p>
-                Algunas funciones pueden ser premium o requerir pago. La contratacion de Premium se ofrece en la web ordinaria mediante Stripe; no se muestra como compra dentro de la version TWA distribuida por Google Play. Cuando se utiliza Stripe, el tratamiento de los datos de pago se realiza en su plataforma. Balance Laboral no necesita almacenar el numero completo de tarjeta bancaria, aunque puede guardar identificadores tecnicos de cliente o suscripcion para activar y gestionar Premium.
+                Algunas funciones pueden ser premium o requerir pago. La contratacion de Premium se ofrece en la web y PWA mediante Stripe, y en la aplicacion Android distribuida por Google Play mediante Google Play Billing. Los precios y el periodo de facturacion se muestran antes de contratar. Las suscripciones de renovacion automatica se renuevan hasta su cancelacion. Puedes gestionarlas con el proveedor correspondiente desde los controles de tu cuenta. Balance Laboral no almacena numeros completos de tarjeta; conserva los identificadores tecnicos y el estado necesarios para verificar el acceso Premium. Los tokens de compra de Play no se guardan: se utiliza una huella SHA-256.
             </p>
 
             <h2>8. Conservacion de los datos</h2>
+            <p>
+                Para impedir que notificaciones de pago tardias vuelvan a crear una cuenta eliminada, conservamos un marcador de eliminacion vinculado solo a su identificador tecnico Firebase y los estados minimos del borrado. De las compras Play vinculadas se conserva unicamente la huella del token y una marca de cuenta eliminada, sin correo, UID, producto ni historial de facturacion. Estos registros de seguridad se conservan mientras sean necesarios para impedir la recreacion y la reutilizacion de compras; no conceden Premium ni se usan para publicidad. No se borran automaticamente, porque una notificacion tardia o el intento de reutilizar una compra puede llegar despues del borrado.
+            </p>
+            <p>
+                Puedes denunciar una respuesta del asesor desde la propia aplicacion. Solo se envia la respuesta seleccionada (hasta 8.000 caracteres) y el motivo del aviso, sin adjuntar la pregunta, el correo ni el UID. El texto puede contener datos que aparezcan en la respuesta: revisa la confirmacion antes de enviarlo. Los avisos se destinan a revision de seguridad y calidad y se programan para eliminarse a los 90 dias mediante limpieza diaria. Para limitar abusos, se mantiene un contador asociado a una huella del UID, con caducidad de dos dias y la misma limpieza. No se realizan nuevas consultas de IA para tramitar avisos.
+            </p>
             <p>
                 Los datos se conservaran mientras la cuenta permanezca activa o mientras sean necesarios para prestar el servicio solicitado. Al eliminar la cuenta se eliminan los datos de cuenta y jornada almacenados bajo ella en Firebase, incluidos los registros por ano y contadores de uso de IA. Los datos de Analytics se someten a la configuracion de retencion de la propiedad de Google Analytics y no se guardan como visitas individuales en Firestore. Algunos datos pueden conservarse durante plazos adicionales cuando exista una obligacion legal, una incidencia pendiente, una necesidad de seguridad o una relacion contractual que lo justifique.
             </p>
@@ -332,6 +338,9 @@
             </p>
 
             <h2 id="eliminar-cuenta">12. Eliminar cuenta y datos</h2>
+            <p>
+                Eliminar la cuenta no cancela, revoca ni reembolsa una suscripcion de Google Play. Si no deseas futuros cobros, cancela su renovacion en <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener noreferrer">las suscripciones de Google Play</a> antes de borrar la cuenta. Cancelar la renovacion normalmente mantiene el acceso hasta el vencimiento del periodo pagado; borrar la cuenta elimina tu acceso a Balance Laboral aunque ese periodo no haya terminado. El borrado no solicita un reembolso a Play.
+            </p>
             <p>
                 Puedes eliminar la cuenta desde el enlace <b>Eliminar cuenta</b> disponible en el footer de la aplicacion tras iniciar sesion. Por seguridad, se puede solicitar una confirmacion reciente de identidad con el mismo metodo de acceso utilizado. Antes de borrar los datos, si existe una suscripcion Premium activa identificada en Stripe, se solicita su cancelacion inmediata; el acceso Premium deja de estar disponible en ese momento.
             </p>

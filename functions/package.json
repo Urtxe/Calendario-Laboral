@@ -6,7 +6,7 @@
     "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "npm run deploy:node24 && npm run deploy:legacy",
-    "deploy:node24": "firebase deploy --only functions:consultarConvenio,functions:deleteAccount,functions:googlePlayRtdn,functions:metricasGa4,functions:processConvenioDocument,functions:reviewConvenioSources,functions:stripeWebhook,functions:syncOfficialHolidays,functions:verifyGooglePlayPurchase",
+    "deploy:node24": "firebase deploy --only functions:consultarConvenio,functions:deleteAccount,functions:googlePlayRtdn,functions:metricasGa4,functions:processConvenioDocument,functions:reviewConvenioSources,functions:stripeWebhook,functions:syncOfficialHolidays,functions:verifyGooglePlayPurchase,functions:reportAIResponse,functions:cleanupAIReports",
     "deploy:legacy": "firebase deploy --config ../firebase.legacy.json --only functions:limpiarDatosAlBorrarUsuario",
     "logs": "firebase functions:log",
     "test:security": "node ../scripts/security-checks.js",

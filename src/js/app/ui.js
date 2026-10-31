@@ -234,7 +234,8 @@ function inicializarNavegacionDashboard() {
     ) {
       if (typeof abrirModalPremium === "function") {
         const trigger = targetId === "seccion-pdf" ? "pdf_export" : targetId === "seccion-historial" ? "annual_history" : "advanced_overtime";
-        abrirModalPremium(trigger);
+        if (window.PremiumUpsell) window.PremiumUpsell.show(trigger);
+        else abrirModalPremium(trigger);
       }
       return;
     }
@@ -403,9 +404,17 @@ window.abrirModalPremium = function (trigger) {
   }
 
   if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumPrompt(trigger || "other");
-  alert("Esta función es Premium. Hazte Premium para utilizarla.");
   const modal = document.getElementById("modal-pricing");
-  if (modal) modal.style.display = "flex";
+  if (modal) {
+    const trial = window.APP_CONFIG && window.APP_CONFIG.stripeTrialEnabled === true;
+    const trialCopy = modal.querySelector("[data-premium-trial]");
+    if (trialCopy) {
+      trialCopy.hidden = !trial;
+      trialCopy.textContent = "7 días de prueba para nuevas suscripciones elegibles. Después se cobrará el plan elegido salvo cancelación. Stripe confirma la oferta antes de contratar.";
+    }
+    modal.querySelectorAll(".btn-plan-yellow").forEach(button => { button.textContent = trial ? "Ver prueba de 7 días" : "Elegir plan"; });
+    modal.style.display = "flex";
+  }
 };
 
 window.cerrarModalPricing = function () {
@@ -414,23 +423,61 @@ window.cerrarModalPricing = function () {
 };
 
 function verificarNivelPremium(uid) {
-  db.collection("usuarios")
+  return db.collection("usuarios")
     .doc(uid)
     .get()
     .then(function (doc) {
+      if (!window.usuarioActual || window.usuarioActual.uid !== uid) return;
       datosCuentaPremium = doc.exists ? doc.data() : {};
       window.datosCuentaPremium = datosCuentaPremium;
-      const premiumActivo = datosCuentaPremium.tipoCuenta === "premium";
+      const premiumActivo = window.PremiumAccess
+        ? window.PremiumAccess.isPremium(datosCuentaPremium)
+        : datosCuentaPremium.tipoCuenta === "premium";
       sincronizarEstadoPremium(premiumActivo);
       actualizarInterfazPremium(premiumActivo, datosCuentaPremium);
+      programarCaducidadPremium();
+      window.BALANCE_LABORAL_PREMIUM_STATUS = { uid, premium: premiumActivo, ready: true };
+      window.dispatchEvent(new CustomEvent("balance-premium-status", { detail: window.BALANCE_LABORAL_PREMIUM_STATUS }));
       if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackPremiumActivationConfirmed(premiumActivo, datosCuentaPremium);
     })
     .catch((e) => {
+      if (!window.usuarioActual || window.usuarioActual.uid !== uid) return;
       console.error("Error verificando premium:", e);
       sincronizarEstadoPremium(false);
       actualizarInterfazPremium(false);
+      window.BALANCE_LABORAL_PREMIUM_STATUS = { uid, premium: false, ready: false };
+      window.dispatchEvent(new CustomEvent("balance-premium-status", { detail: window.BALANCE_LABORAL_PREMIUM_STATUS }));
     });
 }
+
+let premiumExpiryTimer;
+function programarCaducidadPremium() {
+  window.clearTimeout(premiumExpiryTimer);
+  if (!window.PremiumAccess) return;
+  const snapshotUid = window.usuarioActual && window.usuarioActual.uid;
+  const billing = datosCuentaPremium.billing || {};
+  const expirations = [billing.stripe && billing.stripe.expiresAt, billing.googlePlay && billing.googlePlay.expiresAt, datosCuentaPremium.stripeCurrentPeriodEnd]
+    .map(window.PremiumAccess.expiryMillis).filter(value => Number.isFinite(value) && value > Date.now());
+  if (!expirations.length) return;
+  premiumExpiryTimer = window.setTimeout(() => {
+    if (!window.usuarioActual || window.usuarioActual.uid !== snapshotUid) return;
+    const active = window.PremiumAccess.isPremium(datosCuentaPremium);
+    sincronizarEstadoPremium(active);
+    actualizarInterfazPremium(active, datosCuentaPremium);
+    programarCaducidadPremium();
+    verificarNivelPremium(snapshotUid);
+  }, Math.min(2147480000, Math.max(1, Math.min(...expirations) - Date.now() + 50)));
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !window.usuarioActual) return;
+  if (window.PremiumAccess) {
+    const active = window.PremiumAccess.isPremium(datosCuentaPremium);
+    sincronizarEstadoPremium(active);
+    actualizarInterfazPremium(active, datosCuentaPremium);
+  }
+  verificarNivelPremium(window.usuarioActual.uid);
+});
 
 function actualizarInterfazPremium(activar, datos = datosCuentaPremium) {
   const sE = document.getElementById("seccion-horas-extra");
@@ -442,7 +489,7 @@ function actualizarInterfazPremium(activar, datos = datosCuentaPremium) {
   const linksCancel = document.querySelectorAll(".link-cancelar-sub");
   const stripe = datos && datos.billing && datos.billing.stripe;
   const tieneStripe = !!(stripe && stripe.active === true) || !!(
-    datos && datos.stripeSubscriptionId && datos.subscriptionStatus === "active"
+    datos && datos.stripeSubscriptionId && ["active", "trialing"].includes(datos.subscriptionStatus)
   );
   actualizarEnlaceGestionGooglePlay(datos);
   const oldBadge = document.querySelector(".pro-badge-email");
@@ -478,6 +525,7 @@ function actualizarInterfazPremium(activar, datos = datosCuentaPremium) {
     if (sE) sE.classList.add("premium-locked");
     if (sH) sH.classList.add("premium-locked");
     if (sP) sP.classList.add("premium-locked");
+    [sE, sH, sP].forEach(section => { if (section) section.classList.remove("active"); });
     if (btnP) {
       btnP.classList.add("bloqueado");
       btnP.innerText = "📄 Exportar Informe Mensual (Premium 🔒)";
@@ -511,9 +559,9 @@ function actualizarTarjetaAsesorLegal(activar) {
   if (paragraphs[0]) {
     if (isPremiumUser) {
       paragraphs[0].textContent =
-        "Preguntale a la IA sobre jornada, vacaciones, pluses o salario.";
+        "Pregúntale a la IA sobre jornada, vacaciones, pluses o salario.";
     } else if (usuarioTieneSesion()) {
-      paragraphs[0].textContent = "Tienes 50 consultas gratuitas al día.";
+      paragraphs[0].textContent = "Tienes 5 consultas gratuitas al mes.";
     } else {
       paragraphs[0].textContent = "Preguntale a la IA sobre tu convenio.";
     }
@@ -522,7 +570,7 @@ function actualizarTarjetaAsesorLegal(activar) {
 
   if (paragraphs[1]) {
     if (isPremiumUser) {
-      paragraphs[1].textContent = "Hasta 200 consultas IA al día.";
+      paragraphs[1].textContent = "Sin cuota mensual de consultas; uso personal, con protección antiabuso.";
       paragraphs[1].style.display = "";
     } else if (usuarioTieneSesion()) {
       paragraphs[1].textContent = "";
@@ -556,40 +604,118 @@ function actualizarTarjetaAsesorLegal(activar) {
 // 8.2 ASESOR LEGAL IA (RAG)
 // ============================================
 
-const LIMITE_CONSULTAS_GRATIS = 50;
+const LIMITE_CONSULTAS_GRATIS = 5;
 const LIMITE_CARACTERES_PREGUNTA_IA = 1200;
 const ASESOR_LEGAL_STORAGE_PREFIX = "balance_laboral_asesor_legal_";
+const ASESOR_LEGAL_QUOTA_PERIOD = "month";
 const LIMITE_PREGUNTA_ANTERIOR_IA = 300;
 let ultimaPreguntaLegal = "";
 let contextoLaboralSesion = null;
+let cuotaLegalMes = "";
+let cuotaLegalUsadas = 0;
+let cuotaLegalResetAt = null;
+let cuotaLegalUid = "";
+let cuotaLegalRevision = 0;
 
 function getModoAsesorLegal() {
-  if (window.esPremium) return "premium";
+  const premiumActivo = typeof usuarioPuedeUsarPremium === "function"
+    ? usuarioPuedeUsarPremium()
+    : window.esPremium;
+  if (premiumActivo) return "premium";
   if (usuarioTieneSesion()) return "free";
   return "anonimo";
 }
 
-function getAsesorLegalStorageKey() {
-  const dayKey = new Date().toISOString().slice(0, 10);
-  if (window.usuarioActual && window.usuarioActual.uid) {
-    return ASESOR_LEGAL_STORAGE_PREFIX + window.usuarioActual.uid + "_" + dayKey;
+function getMesCuotaLegal(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid", year: "numeric", month: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}`;
+}
+
+function getAsesorLegalStorageKey(month = getMesCuotaLegal()) {
+  const uid = window.usuarioActual && window.usuarioActual.uid;
+  return uid ? `${ASESOR_LEGAL_STORAGE_PREFIX}${uid}_${month}` : null;
+}
+
+function getConsultasUsadas(month = getMesCuotaLegal()) {
+  const uid = window.usuarioActual && window.usuarioActual.uid;
+  if (uid && cuotaLegalUid === uid && cuotaLegalMes === month) return cuotaLegalUsadas;
+  const key = getAsesorLegalStorageKey(month);
+  if (!key) return 0;
+  try {
+    const cached = JSON.parse(localStorage.getItem(key) || "null");
+    return cached && cached.month === month && Number.isFinite(cached.used)
+      ? Math.max(0, Math.min(LIMITE_CONSULTAS_GRATIS, cached.used))
+      : 0;
+  } catch (_) {
+    return 0;
   }
-
-  return ASESOR_LEGAL_STORAGE_PREFIX + "anonimo_" + dayKey;
 }
 
-function getConsultasUsadas() {
-  const raw = localStorage.getItem(getAsesorLegalStorageKey());
-  const value = parseInt(raw, 10);
-  return Number.isFinite(value) && value > 0 ? value : 0;
+function setConsultasUsadas(valor, resetAt = null) {
+  const month = getMesCuotaLegal();
+  const used = Math.max(0, Math.min(LIMITE_CONSULTAS_GRATIS, Number(valor) || 0));
+  cuotaLegalMes = month;
+  cuotaLegalUsadas = used;
+  cuotaLegalResetAt = resetAt || null;
+  cuotaLegalUid = window.usuarioActual && window.usuarioActual.uid || "";
+  cuotaLegalRevision += 1;
+  const key = getAsesorLegalStorageKey();
+  if (!key) return;
+  try { localStorage.setItem(key, JSON.stringify({ month, used })); } catch (_) { /* The backend remains the quota authority. */ }
 }
 
-function setConsultasUsadas(valor) {
-  localStorage.setItem(getAsesorLegalStorageKey(), String(Math.max(0, valor)));
+function setCuotaLegalDesdeRespuesta(quota) {
+  if (!quota || quota.plan !== "free" || quota.period !== ASESOR_LEGAL_QUOTA_PERIOD) return false;
+  if (quota.resetAt && Date.parse(quota.resetAt) <= Date.now()) return false;
+  const used = Number.isFinite(quota.used)
+    ? quota.used
+    : Number.isFinite(quota.limit) && Number.isFinite(quota.remaining)
+      ? quota.limit - quota.remaining
+      : null;
+  if (used === null) return false;
+  setConsultasUsadas(used, quota.resetAt);
+  return true;
+}
+
+function obtenerResetCuotaLegal(month = getMesCuotaLegal()) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const utc = new Date(Date.UTC(year, monthNumber, 1));
+  const offsetHours = Number(new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Madrid", hour: "2-digit", hourCycle: "h23",
+  }).format(utc));
+  return new Date(utc.getTime() - offsetHours * 3600000).toISOString();
+}
+
+function formatearResetCuotaLegal() {
+  const resetAt = cuotaLegalMes === getMesCuotaLegal() && cuotaLegalResetAt
+    ? new Date(cuotaLegalResetAt)
+    : new Date(obtenerResetCuotaLegal());
+  return new Intl.DateTimeFormat("es-ES", {
+    timeZone: "Europe/Madrid", day: "numeric", month: "long",
+  }).format(resetAt);
+}
+
+async function sincronizarCuotaLegalDesdeFirestore(uid) {
+  if (!uid || typeof db === "undefined") return;
+  const month = getMesCuotaLegal();
+  const revision = cuotaLegalRevision;
+  try {
+    const snapshot = await db.collection("usuarios").doc(uid).collection("usage").doc("ai").get();
+    if (!window.usuarioActual || window.usuarioActual.uid !== uid || getMesCuotaLegal() !== month || cuotaLegalRevision !== revision) return;
+    const usage = snapshot.exists ? snapshot.data() || {} : {};
+    const used = usage.freeMonthlyKey === month ? usage.freeMonthlyCount : 0;
+    setConsultasUsadas(used, obtenerResetCuotaLegal(month));
+    actualizarTextoEstadoLegal();
+  } catch (_) {
+    // Quota enforcement stays on the server when the optional display read fails.
+  }
 }
 
 function getConsultasRestantes() {
-  if (window.esPremium) return Infinity;
+  if (getModoAsesorLegal() === "premium") return Infinity;
   return Math.max(0, LIMITE_CONSULTAS_GRATIS - getConsultasUsadas());
 }
 
@@ -625,12 +751,7 @@ function crearMensajeBienvenidaLegal() {
         "assistant",
       );
     } else {
-      crearMensajeLegal(
-        comercioPremiumBloqueadoEnTwa()
-          ? "Has agotado tus 50 consultas gratuitas de hoy en esta versión de Android."
-          : "Ya has agotado tus 50 consultas gratuitas de hoy. Vuelve mañana o hazte Premium para disponer de 200 consultas diarias.",
-        "assistant",
-      );
+      crearMensajeLegal(`Has usado tus ${LIMITE_CONSULTAS_GRATIS} consultas gratuitas de este mes. Se renuevan el ${formatearResetCuotaLegal()}.`, "assistant");
     }
     return;
   }
@@ -903,8 +1024,10 @@ function actualizarTextoEstadoLegal() {
   const restantes = getConsultasRestantes();
 
   if (modo === "premium") {
-    status.style.display = "none";
-    note.style.display = "none";
+    status.style.display = "block";
+    note.style.display = "block";
+    status.textContent = "Sin cuota mensual de consultas.";
+    note.textContent = "Uso personal, con protección antiabuso.";
     sendBtn.disabled = false;
     input.disabled = false;
   } else if (modo === "anonimo") {
@@ -919,21 +1042,18 @@ function actualizarTextoEstadoLegal() {
   } else if (restantes > 0) {
     status.style.display = "block";
     note.style.display = "block";
-    status.textContent = `Modo gratuito: te quedan ${restantes} de ${LIMITE_CONSULTAS_GRATIS} consultas.`;
-    note.textContent = comercioPremiumBloqueadoEnTwa()
-      ? "El límite gratuito se aplica a esta versión de Android."
-      : "Cuando llegues a 0, tendrás que hacerte Premium para seguir consultando.";
+    status.textContent = `Te quedan ${restantes} de ${LIMITE_CONSULTAS_GRATIS} consultas gratuitas este mes.`;
+    note.textContent = `Se renuevan el ${formatearResetCuotaLegal()}.`;
     sendBtn.disabled = false;
     input.disabled = false;
   } else {
     status.style.display = "block";
     note.style.display = "block";
-    status.textContent = `Has agotado tus ${LIMITE_CONSULTAS_GRATIS} consultas gratuitas de hoy.`;
-    note.textContent = comercioPremiumBloqueadoEnTwa()
-      ? "La cuota gratuita diaria se ha agotado en esta versión de Android."
-      : "Vuelve mañana o hazte Premium para disponer de 200 consultas IA al día.";
-    sendBtn.disabled = true;
-    input.disabled = true;
+    status.textContent = `Has usado tus ${LIMITE_CONSULTAS_GRATIS} consultas gratuitas este mes.`;
+    note.textContent = `Se renuevan el ${formatearResetCuotaLegal()}.`;
+    // Cached counts only inform the display; the server decides whether to accept a request.
+    sendBtn.disabled = false;
+    input.disabled = false;
   }
 }
 
@@ -962,17 +1082,6 @@ async function enviarConsultaLegal() {
     actualizarTextoEstadoLegal();
     crearMensajeLegal(
       "Necesitas registrarte o iniciar sesión para utilizar las consultas IA.",
-      "assistant",
-    );
-    return;
-  }
-
-  if (!window.esPremium && getConsultasRestantes() <= 0) {
-    actualizarTextoEstadoLegal();
-    crearMensajeLegal(
-      comercioPremiumBloqueadoEnTwa()
-        ? "Has agotado las 50 consultas gratuitas de hoy en esta versión de Android."
-        : "Has agotado las 50 consultas gratuitas de hoy. Vuelve mañana o hazte Premium para disponer de 200 consultas IA al día.",
       "assistant",
     );
     return;
@@ -1072,12 +1181,15 @@ async function enviarConsultaLegal() {
       }
 
       if (response.status === 429) {
-        const quotaPlan = data && data.quota ? data.quota.plan : "";
-        throw new Error(
-          quotaPlan === "premium"
-            ? "Has alcanzado temporalmente el límite de uso razonable. Inténtalo más tarde."
-            : "Has alcanzado el límite diario gratuito de consultas IA. Inténtalo mañana.",
-        );
+        const code = data && data.code;
+        if (code === "free_monthly_quota_exceeded") {
+          setCuotaLegalDesdeRespuesta(data.quota);
+          throw new Error(`Has usado tus ${LIMITE_CONSULTAS_GRATIS} consultas gratuitas este mes. Se renuevan el ${formatearResetCuotaLegal()}.`);
+        }
+        if (code === "request_in_progress") throw new Error("Ya tienes una consulta en curso. Espera a que termine antes de iniciar otra.");
+        if (code === "rate_limited") throw new Error("Espera un momento antes de iniciar otra consulta IA.");
+        if (data && data.quota && data.quota.plan === "premium") throw new Error("Has alcanzado temporalmente el límite de uso razonable. Inténtalo más tarde.");
+        throw new Error(data && data.error ? data.error : "No se pudo iniciar la consulta. Inténtalo de nuevo.");
       }
 
       if (response.status === 400) {
@@ -1112,6 +1224,7 @@ async function enviarConsultaLegal() {
     }
 
     const mensajeRespuesta = crearMensajeLegal(respuesta, "assistant");
+    setCuotaLegalDesdeRespuesta(data.quota);
     if (window.LegalAIReports) window.LegalAIReports.attach(mensajeRespuesta, respuesta);
     if (window.BalanceLaboralConversion) window.BalanceLaboralConversion.trackAIConsultationSucceeded();
     anadirProcedenciaRespuestaLegal(mensajeRespuesta, data);
@@ -1133,17 +1246,7 @@ async function enviarConsultaLegal() {
       crearHtmlLegal(searchEntryPoint, "assistant");
     }
 
-    if (!window.esPremium) {
-      if (
-        data.quota &&
-        data.quota.plan === "free" &&
-        typeof data.quota.limit === "number" &&
-        typeof data.quota.remaining === "number"
-      ) {
-        setConsultasUsadas(data.quota.limit - data.quota.remaining);
-      } else if (!data.requiereAclaracion) {
-        setConsultasUsadas(getConsultasUsadas() + 1);
-      }
+    if (getModoAsesorLegal() !== "premium") {
       actualizarTarjetaAsesorLegal(false);
     }
   } catch (error) {
@@ -1240,6 +1343,9 @@ window.abrirAsesorLegal = function () {
   limpiarMensajesLegales();
   actualizarTextoEstadoLegal();
   crearMensajeBienvenidaLegal();
+  if (window.usuarioActual && window.usuarioActual.uid) {
+    sincronizarCuotaLegalDesdeFirestore(window.usuarioActual.uid);
+  }
 
   if (!usuarioTieneSesion() && typeof mostrarLogin === "function") {
     setTimeout(function () {
@@ -1309,6 +1415,8 @@ window.seleccionarPlan = function (tipo) {
     return;
   }
 
+  // Reusable Payment Links preserve this checkout. Enforcing one trial per
+  // Firebase UID would require server-created Checkout sessions and a ledger.
   const links = {
     mensual: "https://buy.stripe.com/9B6dR9fyC4Vb8hY1lngbm01",
     anual: "https://buy.stripe.com/00w9AT9aecnDeGm7JLgbm00",
@@ -1489,7 +1597,10 @@ async function solicitarBorradoCuentaBackend(user, permitirReautenticacion = tru
 
 function limpiarDatosLocalesTrasBorrado(uid) {
   try {
-    if (uid) localStorage.removeItem(ASESOR_LEGAL_STORAGE_PREFIX + uid);
+    if (uid) {
+      const prefix = ASESOR_LEGAL_STORAGE_PREFIX + uid;
+      Object.keys(localStorage).filter(key => key === prefix || key.startsWith(prefix + "_")).forEach(key => localStorage.removeItem(key));
+    }
     localStorage.removeItem("esPremium");
   } catch (error) {
     console.warn("No se pudieron limpiar todas las preferencias locales de la cuenta:", error);
@@ -1514,7 +1625,7 @@ window.eliminarCuentaTotalmente = async function () {
   avisosSuscripcion.push("Si tienes una suscripción de Google Play, eliminar la cuenta no la cancela ni detiene sus renovaciones. Cancélala en Google Play para evitar futuros cobros; podrías perder el acceso Premium pagado y no se reembolsará el tiempo restante.");
   const stripe = datosCuentaPremium.billing && datosCuentaPremium.billing.stripe;
   if (stripe && stripe.active === true || (
-    datosCuentaPremium.stripeSubscriptionId && datosCuentaPremium.subscriptionStatus === "active"
+    datosCuentaPremium.stripeSubscriptionId && ["active", "trialing"].includes(datosCuentaPremium.subscriptionStatus)
   )) {
     avisosSuscripcion.push("Tu suscripción de Stripe se cancelará y perderás el acceso Premium. Stripe puede conservar facturas o registros conforme a sus obligaciones.");
   }

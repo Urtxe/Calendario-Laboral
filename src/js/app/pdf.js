@@ -1,6 +1,7 @@
 async function generarInformePDF() {
     if (!usuarioPuedeUsarPremium()) {
-        if (typeof abrirModalPremium === 'function') abrirModalPremium('pdf_export');
+        if (window.PremiumUpsell) window.PremiumUpsell.show('pdf_export');
+        else if (typeof abrirModalPremium === 'function') abrirModalPremium('pdf_export');
         return;
     }
 

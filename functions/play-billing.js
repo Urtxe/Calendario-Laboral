@@ -55,7 +55,24 @@ function normalizeSubscriptionPurchase(purchase) {
 }
 
 function isActiveProviderEntitlement(entitlement) {
-    return Boolean(entitlement && entitlement.active === true);
+    if (!entitlement || entitlement.active !== true) return false;
+
+    const status = String(entitlement.status || "").toLowerCase();
+    const expiresAt = entitlement.expiresAt;
+    if (!expiresAt) return status !== "trialing";
+
+    let expiryMs;
+    if (typeof expiresAt === "number") {
+        expiryMs = expiresAt < 1e12 ? expiresAt * 1000 : expiresAt;
+    } else if (expiresAt && typeof expiresAt.toMillis === "function") {
+        expiryMs = expiresAt.toMillis();
+    } else if (expiresAt instanceof Date) {
+        expiryMs = expiresAt.getTime();
+    } else {
+        expiryMs = Date.parse(expiresAt);
+    }
+
+    return Number.isFinite(expiryMs) && expiryMs > Date.now();
 }
 
 function hasLegacyStripeEntitlement(userData) {
@@ -66,10 +83,30 @@ function hasLegacyStripeEntitlement(userData) {
 function userHasPremiumEntitlement(userData, nextBilling = null) {
     const billing = nextBilling || userData && userData.billing || {};
     const stripe = billing.stripe;
-    const stripeActive = stripe
-        ? isActiveProviderEntitlement(stripe)
-        : hasLegacyStripeEntitlement(userData);
-    return stripeActive || isActiveProviderEntitlement(billing.googlePlay);
+    const hasProviderRecord = Boolean(stripe || billing.googlePlay);
+    const hasLegacySubscriptionData = Boolean(userData && (
+        userData.stripeSubscriptionId || userData.subscriptionStatus || userData.stripeCurrentPeriodEnd
+    ));
+
+    if (hasProviderRecord) {
+        const legacyStripe = !stripe && hasLegacyStripeEntitlement(userData) && isActiveProviderEntitlement({
+            active: true,
+            status: userData.subscriptionStatus,
+            expiresAt: userData.stripeCurrentPeriodEnd,
+        });
+        return isActiveProviderEntitlement(stripe) || legacyStripe ||
+            isActiveProviderEntitlement(billing.googlePlay);
+    }
+
+    if (hasLegacySubscriptionData) {
+        return hasLegacyStripeEntitlement(userData) && isActiveProviderEntitlement({
+            active: true,
+            status: userData.subscriptionStatus,
+            expiresAt: userData.stripeCurrentPeriodEnd,
+        });
+    }
+
+    return Boolean(userData && userData.tipoCuenta === "premium");
 }
 
 function buildGooglePlayEntitlement({ normalizedPurchase, purchaseToken, source }) {

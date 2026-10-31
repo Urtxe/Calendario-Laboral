@@ -140,6 +140,7 @@
       trackReturn("shift");
     }
     maybeShowRegistrationPrompt(getShiftCount() >= 3 ? "shifts_3" : null);
+    if (getShiftCount() >= 3 && root.PremiumUpsell) root.PremiumUpsell.maybeNudge("shifts_3");
   }
   function trackBalanceViewed(balanceState) {
     markActiveDay();
@@ -148,6 +149,7 @@
     updateFunnel({ balance_views: balanceViews });
     logEvent("balance_viewed", {});
     maybeShowRegistrationPrompt(balanceViews >= 2 ? "balance_views_2" : null);
+    if (balanceViews >= 2 && root.PremiumUpsell) root.PremiumUpsell.maybeNudge("balance_views_2");
   }
   function setSignupSource(source) {
     const valid = ["registration_prompt", "header", "settings", "other"];
@@ -187,7 +189,9 @@
     const entitlement = userData.billing && userData.billing[provider === "google_play" ? "googlePlay" : "stripe"];
     // tipoCuenta alone is not provider-verified entitlement or proof of payment.
     if (!entitlement || entitlement.active !== true || entitlement.source !== provider) return;
-    if (entitlement.expiresAt && !(Date.parse(entitlement.expiresAt) > Date.now())) return;
+    const expiry = root.PremiumAccess ? root.PremiumAccess.expiryMillis(entitlement.expiresAt) :
+      typeof entitlement.expiresAt === "number" ? entitlement.expiresAt * (entitlement.expiresAt < 1e12 ? 1000 : 1) : Date.parse(entitlement.expiresAt);
+    if (entitlement.expiresAt && !(expiry > Date.now())) return;
     updateSession({ premium_activated_recorded: true, premium_checkout_started: false });
     logEvent("premium_activation_confirmed", { provider });
   }

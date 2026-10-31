@@ -45,14 +45,18 @@ const {
     hasSemanticEvidence,
 } = require("./rag-evidence");
 const {
-    FREE_AI_DAILY_LIMIT,
-    PREMIUM_AI_DAILY_LIMIT,
+    FREE_AI_MONTHLY_LIMIT,
+    obtenerMesCuota,
+    obtenerResetCuota,
+    interrequestWindowActive,
 } = require("./quota-policy");
 const {
     AI_QUOTA_RESERVATION_TTL_MS,
     isReservationExpired,
     liquidarEstadoReserva,
     resumirReservasCaducadas,
+    contarReservasActivas,
+    obtenerUsoFreeMensual,
 } = require("./quota-reservation-policy");
 const {
     deleteAccountSafely,
@@ -510,9 +514,7 @@ class QuotaError extends Error {
     }
 }
 
-function obtenerDiaCuota(date = new Date()) {
-    return date.toISOString().slice(0, 10);
-}
+const AI_INTERREQUEST_WINDOW_MS = 2 * 1000;
 
 function normalizarContador(value) {
     const numberValue = Number(value || 0);
@@ -522,12 +524,24 @@ function normalizarContador(value) {
 function construirQuotaPublica(quotaInfo) {
     if (!quotaInfo) return null;
 
+    if (quotaInfo.plan === "premium") {
+        return {
+            plan: "premium",
+            limit: null,
+            used: null,
+            remaining: null,
+            period: "unlimited",
+            unlimited: true,
+        };
+    }
+
     return {
         plan: quotaInfo.plan,
         limit: quotaInfo.limit,
         used: quotaInfo.used,
         remaining: Math.max(0, quotaInfo.limit - quotaInfo.used),
         period: quotaInfo.period,
+        resetAt: quotaInfo.resetAt,
     };
 }
 
@@ -543,7 +557,9 @@ async function reservarCuotaConsultaIA(uid) {
     const reservationRef = userRef
         .collection(AI_QUOTA_RESERVATIONS_COLLECTION)
         .doc(randomUUID());
-    const today = obtenerDiaCuota();
+    const nowDate = new Date();
+    const monthKey = obtenerMesCuota(nowDate);
+    const resetAt = obtenerResetCuota(nowDate);
     const nowMs = Date.now();
     const expiresAt = new Date(nowMs + AI_QUOTA_RESERVATION_TTL_MS);
 
@@ -564,7 +580,7 @@ async function reservarCuotaConsultaIA(uid) {
         }
 
         const userData = userSnap.data() || {};
-        const isPremium = userData.tipoCuenta === "premium";
+        const isPremium = userHasPremiumEntitlement(userData);
         const usageData = usageSnap.exists ? usageSnap.data() || {} : {};
         const now = FieldValue.serverTimestamp();
         const pendingReservations = pendingReservationsSnap.docs.map((doc) => ({
@@ -574,7 +590,7 @@ async function reservarCuotaConsultaIA(uid) {
         }));
         const { expiredReservations, expiredByPlan } = resumirReservasCaducadas(
             pendingReservations,
-            { today, nowMs },
+            { monthKey, nowMs },
         );
 
         expiredReservations.forEach((reservation) => {
@@ -584,110 +600,103 @@ async function reservarCuotaConsultaIA(uid) {
             });
         });
 
-        const currentPremiumDailyCount = usageData.premiumDailyKey === today
-            ? Math.max(0, normalizarContador(usageData.premiumDailyCount) - expiredByPlan.premium)
-            : 0;
-        const currentFreeDailyCount = usageData.freeDailyKey === today
-            ? Math.max(0, normalizarContador(usageData.freeDailyCount) - expiredByPlan.free)
-            : 0;
+        if (contarReservasActivas(pendingReservations, expiredReservations) > 0) {
+            throw new QuotaError({
+                status: 429,
+                code: "request_in_progress",
+                message: "Ya tienes una consulta IA en curso. Espera a que termine antes de iniciar otra.",
+            });
+        }
+        if (interrequestWindowActive(usageData.lastRequestAt, nowMs, AI_INTERREQUEST_WINDOW_MS)) {
+            throw new QuotaError({
+                status: 429,
+                code: "rate_limited",
+                message: "Espera un momento antes de iniciar otra consulta IA.",
+            });
+        }
+
+        const currentFreeMonthlyCount = obtenerUsoFreeMensual(usageData, monthKey, expiredByPlan);
         const expiryUsageUpdate = { updatedAt: now };
         if (expiredReservations.length) {
             expiryUsageUpdate.totalExpired = FieldValue.increment(expiredReservations.length);
         }
 
-        if (usageData.premiumDailyKey === today && expiredByPlan.premium) {
-            expiryUsageUpdate.premiumDailyCount = currentPremiumDailyCount;
-        }
-        if (usageData.freeDailyKey === today && expiredByPlan.free) {
-            expiryUsageUpdate.freeDailyCount = currentFreeDailyCount;
+        if (usageData.freeMonthlyKey === monthKey && expiredByPlan.free) {
+            expiryUsageUpdate.freeMonthlyCount = currentFreeMonthlyCount;
         }
 
         if (isPremium) {
-            if (currentPremiumDailyCount >= PREMIUM_AI_DAILY_LIMIT) {
-                throw new QuotaError({
-                    status: 429,
-                    code: "premium_daily_quota_exceeded",
-                    message: "Has alcanzado temporalmente el límite de uso razonable. Inténtalo más tarde.",
-                    quota: {
-                        plan: "premium",
-                        limit: PREMIUM_AI_DAILY_LIMIT,
-                        used: currentPremiumDailyCount,
-                        period: "day",
-                    },
-                });
-            }
-
-            const nextDailyCount = currentPremiumDailyCount + 1;
             transaction.set(usageRef, {
                 ...expiryUsageUpdate,
                 plan: "premium",
-                premiumDailyKey: today,
-                premiumDailyCount: nextDailyCount,
-                premiumDailyLimit: PREMIUM_AI_DAILY_LIMIT,
                 totalReserved: FieldValue.increment(1),
+                lastRequestAt: new Date(nowMs),
                 updatedAt: now,
             }, { merge: true });
             transaction.set(reservationRef, {
                 state: "reserved",
                 plan: "premium",
-                dayKey: today,
+                monthKey,
                 createdAt: now,
                 expiresAt,
             });
 
             return {
                 plan: "premium",
-                limit: PREMIUM_AI_DAILY_LIMIT,
-                used: nextDailyCount,
-                period: "day",
+                limit: null,
+                used: null,
+                period: "unlimited",
                 reservationRef,
                 reservationId: reservationRef.id,
                 userRef,
-                dayKey: today,
+                monthKey,
             };
         }
 
-        if (currentFreeDailyCount >= FREE_AI_DAILY_LIMIT) {
+        if (currentFreeMonthlyCount >= FREE_AI_MONTHLY_LIMIT) {
             throw new QuotaError({
                 status: 429,
-                code: "free_daily_quota_exceeded",
-                message: "Has alcanzado el límite diario gratuito de consultas IA. Inténtalo mañana.",
+                code: "free_monthly_quota_exceeded",
+                message: "Has alcanzado las 5 consultas IA gratuitas de este mes. Podrás volver a consultar al inicio del próximo mes.",
                 quota: {
                     plan: "free",
-                    limit: FREE_AI_DAILY_LIMIT,
-                    used: currentFreeDailyCount,
-                    period: "day",
+                    limit: FREE_AI_MONTHLY_LIMIT,
+                    used: currentFreeMonthlyCount,
+                    period: "month",
+                    resetAt,
                 },
             });
         }
 
-        const nextFreeDailyCount = currentFreeDailyCount + 1;
+        const nextFreeMonthlyCount = currentFreeMonthlyCount + 1;
         transaction.set(usageRef, {
             ...expiryUsageUpdate,
             plan: "free",
-            freeDailyKey: today,
-            freeDailyCount: nextFreeDailyCount,
-            freeDailyLimit: FREE_AI_DAILY_LIMIT,
+            freeMonthlyKey: monthKey,
+            freeMonthlyCount: nextFreeMonthlyCount,
+            freeMonthlyLimit: FREE_AI_MONTHLY_LIMIT,
             totalReserved: FieldValue.increment(1),
+            lastRequestAt: new Date(nowMs),
             updatedAt: now,
         }, { merge: true });
         transaction.set(reservationRef, {
             state: "reserved",
             plan: "free",
-            dayKey: today,
+            monthKey,
             createdAt: now,
             expiresAt,
         });
 
         return {
             plan: "free",
-            limit: FREE_AI_DAILY_LIMIT,
-            used: nextFreeDailyCount,
-            period: "day",
+            limit: FREE_AI_MONTHLY_LIMIT,
+            used: nextFreeMonthlyCount,
+            period: "month",
+            resetAt,
             reservationRef,
             reservationId: reservationRef.id,
             userRef,
-            dayKey: today,
+            monthKey,
         };
     });
 }
@@ -717,14 +726,13 @@ async function liquidarReservaCuotaIA(quotaInfo, { consume }) {
 
         const devolverContador = (reason) => {
             const plan = reservation.plan || quotaInfo.plan;
-            const dayKey = reservation.dayKey || quotaInfo.dayKey;
-            const isSameDay = plan === "premium"
-                ? usageData.premiumDailyKey === dayKey
-                : usageData.freeDailyKey === dayKey;
-            const counterField = plan === "premium" ? "premiumDailyCount" : "freeDailyCount";
+            const reservationMonthKey = reservation.monthKey || quotaInfo.monthKey;
+            const isSameMonth = plan === "free" &&
+                usageData.freeMonthlyKey === reservationMonthKey;
+            const counterField = "freeMonthlyCount";
             const current = normalizarContador(usageData[counterField]);
             transaction.set(usageRef, {
-                ...(isSameDay ? { [counterField]: Math.max(0, current - 1) } : {}),
+                ...(isSameMonth ? { [counterField]: Math.max(0, current - 1) } : {}),
                 [reason === "expired" ? "totalExpired" : "totalRefunded"]: FieldValue.increment(1),
                 updatedAt: now,
             }, { merge: true });
@@ -1461,7 +1469,33 @@ async function updatePremiumEntitlements(userRef, provider, entitlement, legacyF
     });
 }
 
+function normalizeStripeExpiry(currentPeriodEnd) {
+    if (typeof currentPeriodEnd !== "number" || !Number.isFinite(currentPeriodEnd)) return null;
+    const expiry = new Date(currentPeriodEnd * 1000);
+    return Number.isNaN(expiry.getTime()) ? null : expiry.toISOString();
+}
+
+function getPremiumSubscriptionPeriodEnd(subscription, premiumMatch) {
+    if (subscription.status === "trialing") return subscription.trial_end || null;
+    const premiumItem = getSubscriptionItems(subscription).find((item) => {
+        const price = item.price || {};
+        return getStripeId(price) === premiumMatch.priceId &&
+            getStripeProductId(price) === premiumMatch.productId;
+    });
+    return premiumItem && premiumItem.current_period_end || subscription.current_period_end || null;
+}
+
 async function activatePremiumFromStripe({ uid, customerId, subscriptionId, priceId, productId, subscriptionStatus, currentPeriodEnd, cancelAtPeriodEnd }) {
+    const normalizedExpiry = normalizeStripeExpiry(currentPeriodEnd);
+    if (String(subscriptionStatus || "").toLowerCase() === "trialing" &&
+        (!normalizedExpiry || Date.parse(normalizedExpiry) <= Date.now())) {
+        stripeWarn("stripe_trial_missing_or_expired_end", {
+            hasUid: Boolean(uid),
+            hasSubscriptionId: Boolean(subscriptionId),
+        });
+        return false;
+    }
+
     const userMatch = await findUserRefForStripe({ uid, customerId, subscriptionId });
 
     if (!userMatch) {
@@ -1477,7 +1511,7 @@ async function activatePremiumFromStripe({ uid, customerId, subscriptionId, pric
         active: true,
         source: "stripe",
         status: subscriptionStatus || "active",
-        expiresAt: currentPeriodEnd || null,
+        expiresAt: normalizedExpiry,
         cancelAtPeriodEnd: Boolean(cancelAtPeriodEnd),
     }, {
         stripeCustomerId: customerId || null,
@@ -1576,7 +1610,7 @@ async function handleCheckoutSessionCompleted(session) {
     if (mode === "subscription") {
         const subscription = await getExpandedSubscription(subscriptionId);
 
-        if (!subscription || subscription.status !== "active") {
+        if (!subscription || !["active", "trialing"].includes(subscription.status)) {
             stripeWarn("stripe_checkout_subscription_not_active", {
                 uid,
                 status: subscription ? subscription.status : null,
@@ -1603,7 +1637,7 @@ async function handleCheckoutSessionCompleted(session) {
             priceId: premiumMatch.priceId,
             productId: premiumMatch.productId,
             subscriptionStatus: subscription.status,
-            currentPeriodEnd: subscription.current_period_end || null,
+            currentPeriodEnd: getPremiumSubscriptionPeriodEnd(subscription, premiumMatch),
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
         });
         return;
@@ -1668,7 +1702,7 @@ async function handleSubscriptionUpdated(subscription) {
         return;
     }
 
-    if (subscription.status === "active") {
+    if (["active", "trialing"].includes(subscription.status)) {
         await activatePremiumFromStripe({
             uid,
             customerId,
@@ -1676,7 +1710,7 @@ async function handleSubscriptionUpdated(subscription) {
             priceId: premiumMatch.priceId,
             productId: premiumMatch.productId,
             subscriptionStatus: subscription.status,
-            currentPeriodEnd: subscription.current_period_end || null,
+            currentPeriodEnd: getPremiumSubscriptionPeriodEnd(subscription, premiumMatch),
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
         });
         return;
@@ -1931,7 +1965,7 @@ async function verifyRtdnOidcToken(req) {
 }
 
 // Google Cloud Pub/Sub push endpoint. Each notification is re-verified against Play before state changes.
-exports.googlePlayRtdn = onRequest(PLAY_BILLING_FUNCTION_OPTIONS, async (req, res) => {
+exports.googlePlayRtdn = onRequest({ ...PLAY_BILLING_FUNCTION_OPTIONS, invoker: `google-play-rtdn-push@${projectId}.iam.gserviceaccount.com` }, async (req, res) => {
     if (req.method !== "POST") return res.status(405).send("Method not allowed");
     try {
         await verifyRtdnOidcToken(req);

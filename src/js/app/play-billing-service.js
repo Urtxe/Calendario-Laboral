@@ -65,7 +65,7 @@
 
   function premiumStatusCopy() {
     const play = window.datosCuentaPremium && window.datosCuentaPremium.billing && window.datosCuentaPremium.billing.googlePlay;
-    if (!play || play.active !== true) return "";
+    if (!play || play.active !== true || (window.PremiumAccess && !window.PremiumAccess.active(play))) return "";
     const expiration = play.expiresAt ? new Date(play.expiresAt) : null;
     const date = expiration && !Number.isNaN(expiration.getTime())
       ? new Intl.DateTimeFormat(navigator.language, { dateStyle: "long" }).format(expiration)
@@ -186,7 +186,7 @@
         <p class="play-billing-price-note">Precios gestionados por Google Play</p>
       </header>
       <p class="play-billing-existing" role="status"></p>
-      <ul class="play-billing-benefits"><li>Más consultas de IA</li><li>Historial anual</li><li>Exportación a PDF</li></ul>
+      <ul class="play-billing-benefits"><li>IA sin cuota de consultas</li><li>Historial anual</li><li>Exportación a PDF</li></ul>
       <div class="pricing-plans"></div>
       <p class="play-billing-terms">Puedes cancelar la renovación cuando quieras. Al cancelarla, mantienes Premium hasta que venza el período pagado, salvo los supuestos de reembolso o revocación aplicables.</p>
       <button type="button" class="btn-secondary play-restore">
@@ -223,8 +223,9 @@
         button.type = "button";
         button.className = `plan-card play-billing-plan${isYearly ? " play-billing-plan-recommended" : ""}`;
         const period = displayPeriod(product.subscriptionPeriod, product.itemId);
-        const renewalCopy = `Se renueva automáticamente ${period}; cancela cuando quieras desde Google Play.`;
-        button.setAttribute("aria-label", `Elegir ${planName}, ${displayPrice(product.price)} ${period}`);
+        const trial = ["P7D", "P1W"].includes(String(product.freeTrialPeriod || "").toUpperCase());
+        const renewalCopy = `${trial ? `7 días gratis para cuentas elegibles; Google Play confirma la oferta. Después: ${displayPrice(product.price)} ${period}. ` : ""}Se renueva automáticamente ${period}; cancela cuando quieras desde Google Play.`;
+        button.setAttribute("aria-label", `${trial ? "Ver prueba de 7 días de" : "Elegir"} ${planName}, ${trial ? "después " : ""}${displayPrice(product.price)} ${period}`);
         button.innerHTML = `${isYearly ? '<span class="play-billing-plan-badge">Recomendado</span>' : ""}<strong>${planName}</strong><span class="play-billing-plan-price">${displayPrice(product.price)} <small>${period}</small></span><span class="play-billing-plan-renewal">${renewalCopy}</span>`;
         button.addEventListener("click", async () => {
           button.disabled = true;
@@ -265,11 +266,22 @@
     }
   }
 
+  async function getTrialAvailability() {
+    if (!isPlayTwa()) return false;
+    try {
+      const products = await getProducts();
+      return products.some(product => ["P7D", "P1W"].includes(String(product.freeTrialPeriod || "").toUpperCase()));
+    } catch (_) {
+      return false;
+    }
+  }
+
   window.PlayBillingService = Object.freeze({
     isAvailable: async () => {
       try { await getService(); return true; } catch (_) { return false; }
     },
     getProducts,
+    getTrialAvailability,
     purchase,
     restore,
     openPremiumModal,

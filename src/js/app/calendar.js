@@ -65,7 +65,8 @@ function procesarClickDia(dia) {
 
 window.seleccionarModo = function(tipo) {
     if (tipo === 'horasExtra' && !usuarioPuedeUsarPremium()) {
-        abrirModalPremium('advanced_overtime');
+        if (window.PremiumUpsell) window.PremiumUpsell.show('advanced_overtime');
+        else abrirModalPremium('advanced_overtime');
         return;
     }
 
@@ -203,7 +204,8 @@ window.toggleCard = function(headerElement) {
 
     if (card.classList.contains('premium-locked') && !usuarioPuedeUsarPremium()) {
         const trigger = card.id === 'seccion-pdf' ? 'pdf_export' : card.id === 'seccion-historial' ? 'annual_history' : 'advanced_overtime';
-        abrirModalPremium(trigger);
+        if (window.PremiumUpsell) window.PremiumUpsell.show(trigger);
+        else abrirModalPremium(trigger);
         return; 
     }
 

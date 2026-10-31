@@ -20,6 +20,8 @@ const criticalAssets = [
   "src/js/app/ui.js",
   "src/js/app/pdf.js",
   "src/js/app/play-twa-context.js",
+  "src/js/app/premium-access.js",
+  "src/js/app/premium-upsell.js",
   "src/js/app/play-billing-service.js",
   "src/js/app/ai-report-service.js",
   "src/js/firebase-config.js",

@@ -88,5 +88,10 @@ assert.strictEqual(userHasPremiumEntitlement({
 assert.strictEqual(userHasPremiumEntitlement({
     billing: { googlePlay: { active: false }, stripe: { active: false } },
 }), false);
+assert.strictEqual(userHasPremiumEntitlement({
+    stripeSubscriptionId: "legacy-subscription",
+    subscriptionStatus: "active",
+}), true, "legacy non-trial subscriptions without expiry remain supported");
+assert.strictEqual(userHasPremiumEntitlement({ tipoCuenta: "premium" }), true);
 
 console.log("Play Billing backend checks passed.");

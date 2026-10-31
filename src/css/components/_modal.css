@@ -45,6 +45,150 @@
     font-size: 1rem;
 }
 
+#app-container .premium-locked .card-body { display: none !important; }
+
+.premium-upsell-eyebrow {
+    color: #7c5b00;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+}
+
+.premium-upsell-cta,
+.premium-upsell-nudge-cta {
+    border: 0;
+    border-radius: 10px;
+    padding: 11px 16px;
+    background: var(--bg-dark);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.premium-upsell-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, .68);
+}
+
+.premium-upsell-dialog {
+    position: relative;
+    width: min(100%, 440px);
+    padding: 32px 24px 24px;
+    border-radius: 20px;
+    background: #fff;
+    color: var(--text-main);
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, .28);
+}
+
+.premium-upsell-dialog h2 { margin: 10px 0; color: var(--bg-dark); }
+.premium-upsell-copy { color: var(--text-muted); line-height: 1.5; }
+.premium-upsell-close { position: absolute; top: 10px; right: 12px; border: 0; background: transparent; font-size: 1.6rem; cursor: pointer; }
+.premium-upsell-actions { display: grid; gap: 10px; margin-top: 22px; }
+.premium-upsell-later { padding: 10px; border: 0; background: transparent; color: var(--text-muted); font: inherit; cursor: pointer; }
+
+.premium-welcome-dialog {
+    width: min(100%, 520px);
+    padding: 0 28px 24px;
+    border: 1px solid rgba(250, 204, 21, .35);
+    background: #fff;
+    text-align: left;
+}
+.premium-welcome-dialog .premium-upsell-close { color: #fff; }
+body.dark-mode .premium-welcome-crown,
+body.dark-mode .premium-welcome-badge { color: #17283f !important; }
+
+.premium-welcome-hero {
+    margin: 0 -28px 18px;
+    padding: 30px 32px 24px;
+    border-radius: 20px 20px 0 0;
+    background: linear-gradient(135deg, #17283f 0%, #263e5a 100%);
+    color: #fff;
+}
+
+.premium-welcome-crown {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    margin-bottom: 12px;
+    border-radius: 14px;
+    background: #facc15;
+    color: #17283f;
+    font-size: 1.5rem;
+}
+
+.premium-welcome-badge {
+    display: inline-flex;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #facc15;
+    color: #17283f;
+    font-size: .7rem;
+    font-weight: 900;
+    letter-spacing: .08em;
+}
+
+.premium-welcome-hero h2 { margin: 12px 0 8px; color: #fff; font-size: clamp(1.55rem, 6vw, 2rem); line-height: 1.12; }
+.premium-welcome-lead { margin: 0; color: #e2e8f0; line-height: 1.45; }
+.premium-welcome-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.premium-welcome-comparison section { padding: 15px; border: 1px solid #e2e8f0; border-radius: 14px; background: #f8fafc; }
+.premium-welcome-comparison h3 { margin: 0 0 8px; color: var(--bg-dark); font-size: .95rem; }
+.premium-welcome-comparison ul { display: grid; gap: 7px; margin: 0; padding-left: 18px; color: var(--text-muted); font-size: .82rem; line-height: 1.35; }
+.premium-welcome-comparison .premium-welcome-premium { border-color: #e8c338; background: #fffbeb; }
+.premium-welcome-premium h3 { color: #8a6500; }
+.premium-welcome-terms { margin: 14px 0 0; color: var(--text-muted); font-size: .76rem; line-height: 1.45; }
+.premium-welcome-actions { margin-top: 12px; }
+.premium-welcome-cta { width: 100%; padding: 14px 18px; background: #facc15; color: #17283f; }
+.premium-welcome-cta:hover { background: #f2bd00; }
+.premium-welcome-actions .premium-upsell-later { width: 100%; }
+
+.premium-upsell-nudge {
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: calc(100vw - 32px);
+    padding: 12px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, .16);
+    font-size: .9rem;
+}
+
+.premium-upsell-nudge-close { border: 0; background: transparent; color: var(--text-muted); font-size: 1.2rem; cursor: pointer; }
+
+body.dark-mode .premium-upsell-dialog,
+body.dark-mode .premium-upsell-nudge { background: #111827; color: #f8fafc; border-color: #334155; }
+body.dark-mode .premium-upsell-close,
+body.dark-mode .premium-upsell-later,
+body.dark-mode .premium-upsell-nudge-close { color: #f8fafc; }
+body.dark-mode .premium-welcome-dialog { background: #111827; }
+body.dark-mode .premium-welcome-comparison section { background: #1f2937; border-color: #475569; }
+body.dark-mode .premium-welcome-comparison h3 { color: #f8fafc; }
+body.dark-mode .premium-welcome-comparison ul { color: #cbd5e1; }
+body.dark-mode .premium-welcome-comparison .premium-welcome-premium { background: #392e12; border-color: #a88315; }
+body.dark-mode .premium-welcome-premium h3 { color: #fde68a; }
+
+@media (max-width: 520px) {
+    .premium-upsell-nudge { left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); flex-wrap: wrap; }
+    .premium-welcome-dialog { padding: 0 18px 18px; }
+    .premium-welcome-hero { margin-left: -18px; margin-right: -18px; padding: 28px 22px 22px; }
+    .premium-welcome-comparison { grid-template-columns: 1fr; }
+}
+
 /* Inputs del modal */
 .modal-content input {
     width: 100%;

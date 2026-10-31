@@ -5,12 +5,14 @@ const { readFileSync } = require("fs");
 const path = require("path");
 const { construirRespuestaConsulta, GENERAL_LABOR_WARNING } = require("./consultation-contract");
 const { CONVENIO_RAG_MAX_DISTANCE, evaluarEvidenciaConvenio, hasSemanticEvidence } = require("./rag-evidence");
-const { FREE_AI_DAILY_LIMIT, PREMIUM_AI_DAILY_LIMIT, limiteDiarioIA } = require("./quota-policy");
+const { FREE_AI_MONTHLY_LIMIT, obtenerMesCuota, obtenerResetCuota, interrequestWindowActive } = require("./quota-policy");
 const {
   AI_QUOTA_RESERVATION_TTL_MS,
   isReservationExpired,
   liquidarEstadoReserva,
   resumirReservasCaducadas,
+  contarReservasActivas,
+  obtenerUsoFreeMensual,
 } = require("./quota-reservation-policy");
 const { isEnabled: isOfficialWebFallbackEnabled } = require("./official-web-fallback");
 const { validarPayloadBasicoConsulta } = require("./consultation-payload");
@@ -164,11 +166,11 @@ test("contrato homogéneo incluye procedencia, evidencia, aviso y fallback", () 
   assert.strictEqual(result.warning, GENERAL_LABOR_WARNING);
 });
 
-test("cuotas diarias son 50 Free y 200 Premium", () => {
-  assert.strictEqual(FREE_AI_DAILY_LIMIT, 50);
-  assert.strictEqual(PREMIUM_AI_DAILY_LIMIT, 200);
-  assert.strictEqual(limiteDiarioIA(false), 50);
-  assert.strictEqual(limiteDiarioIA(true), 200);
+test("la cuota Free es de 5 consultas por mes natural de Madrid y reinicia con DST", () => {
+  assert.strictEqual(FREE_AI_MONTHLY_LIMIT, 5);
+  assert.strictEqual(obtenerMesCuota(new Date("2026-03-31T22:30:00.000Z")), "2026-04");
+  assert.strictEqual(obtenerResetCuota(new Date("2026-03-31T22:30:00.000Z")), "2026-04-30T22:00:00.000Z");
+  assert.strictEqual(obtenerResetCuota(new Date("2026-10-31T22:30:00.000Z")), "2026-10-31T23:00:00.000Z");
 });
 
 test("fallback oficial está activo por defecto y admite apagado de emergencia", () => {
@@ -185,37 +187,55 @@ test("las consultas explícitas sobre el Estatuto solicitan RAG base", () => {
   assert.strictEqual(shouldRetrieveWorkersStatute("¿Quién ganó el Mundial?"), false);
 });
 
-test("una reserva pendiente caducada deja de contar para la cuota", () => {
+test("las reservas caducadas devuelven cuota del mismo mes y las antiguas no alteran el mes actual", () => {
   const nowMs = 1_000_000;
   const result = resumirReservasCaducadas([
     {
       state: "reserved",
       plan: "free",
-      dayKey: "2026-08-23",
+      monthKey: "2026-08",
       expiresAt: new Date(nowMs - 1),
     },
-  ], { today: "2026-08-23", nowMs });
+    {
+      id: "old-month",
+      state: "reserved",
+      plan: "free",
+      monthKey: "2026-07",
+      expiresAt: new Date(nowMs - 1),
+    },
+  ], { monthKey: "2026-08", nowMs });
 
   assert.strictEqual(isReservationExpired(result.expiredReservations[0], nowMs), true);
   assert.strictEqual(result.expiredByPlan.free, 1);
-  assert.strictEqual(50 - result.expiredByPlan.free < FREE_AI_DAILY_LIMIT, true);
+  assert.strictEqual(obtenerUsoFreeMensual({ freeMonthlyKey: "2026-08", freeMonthlyCount: 5 }, "2026-08", result.expiredByPlan), 4);
+  assert.strictEqual(obtenerUsoFreeMensual({ freeMonthlyKey: "2026-07", freeMonthlyCount: 5 }, "2026-08", result.expiredByPlan), 0);
+  assert.strictEqual(contarReservasActivas([
+    ...result.expiredReservations,
+    { id: "active", state: "reserved", monthKey: "2026-08" },
+  ], result.expiredReservations), 1);
 });
 
-test("una caída simulada entre reserva y liquidación se recupera al expirar", () => {
+test("las reservas Premium no dependen de contador ni límite numérico", () => {
   const nowMs = 2_000_000;
   const result = resumirReservasCaducadas([
     {
       state: "reserved",
       plan: "premium",
-      dayKey: "2026-08-23",
+      monthKey: "2026-08",
       expiresAt: new Date(nowMs - 1),
     },
-  ], { today: "2026-08-23", nowMs });
+  ], { monthKey: "2026-08", nowMs });
 
-  const usedAfterRecovery = 200 - result.expiredByPlan.premium;
-  assert.strictEqual(usedAfterRecovery, 199);
-  assert.strictEqual(usedAfterRecovery < PREMIUM_AI_DAILY_LIMIT, true);
+  assert.strictEqual(result.expiredByPlan.premium, 1);
+  assert.strictEqual(obtenerUsoFreeMensual({ freeMonthlyKey: "2026-08", freeMonthlyCount: 5 }, "2026-08", result.expiredByPlan), 5);
   assert.strictEqual(AI_QUOTA_RESERVATION_TTL_MS, 5 * 60 * 1000);
+});
+
+test("el guardado de reservas impide solapar peticiones y aplica una ventana corta", () => {
+  const nowMs = Date.now();
+  assert.strictEqual(contarReservasActivas([{ id: "one", state: "reserved" }]), 1);
+  assert.strictEqual(interrequestWindowActive(new Date(nowMs - 1_000), nowMs, 2_000), true);
+  assert.strictEqual(interrequestWindowActive(new Date(nowMs - 3_000), nowMs, 2_000), false);
 });
 
 test("liquidar o devolver dos veces la misma reserva no cambia dos veces", () => {

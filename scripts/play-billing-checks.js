@@ -115,7 +115,7 @@ async function availability({ inTwa, paymentRequest, digitalGoods }) {
   assert.match(loaded.plans.children[0].innerHTML, /2,99 € <small>por mes<\/small>/);
   assert.match(loaded.plans.children[0].innerHTML, /Se renueva automáticamente por mes/);
   assert.match(loaded.plans.children[1].innerHTML, /29,99 € <small>por año<\/small>/);
-  assert.match(loaded.modal.innerHTML, /Más consultas de IA[\s\S]*Historial anual[\s\S]*Exportación a PDF/);
+  assert.match(loaded.modal.innerHTML, /IA sin cuota de consultas[\s\S]*Historial anual[\s\S]*Exportación a PDF/);
   assert.match(loaded.modal.innerHTML, /mantienes Premium hasta que venza el período pagado/);
 
   // This is the callback registered on each rendered plan. It must create the
@@ -166,6 +166,15 @@ async function availability({ inTwa, paymentRequest, digitalGoods }) {
   await pending.plans.children[0].listeners.click();
   assert.deepStrictEqual(pending.completions, ["fail"]);
   assert.strictEqual(pending.status.textContent, "La compra está pendiente de confirmación.");
+
+  const trialCatalog = billingWindow({ service: { getDetails: async () => products.map(product => ({ ...product, freeTrialPeriod: "P7D" })) } });
+  assert.equal(await trialCatalog.window.PlayBillingService.getTrialAvailability(), true);
+  assert.equal(trialCatalog.requests.length, 0, "Reading trial availability cannot start a purchase");
+  assert.equal(await pending.window.PlayBillingService.getTrialAvailability(), false);
+  await trialCatalog.window.PlayBillingService.openPremiumModal();
+  assert.match(trialCatalog.plans.children[0].innerHTML, /7 días gratis para cuentas elegibles/);
+  assert.match(trialCatalog.plans.children[0].innerHTML, /Después:/);
+  assert(!pending.plans.children[0].innerHTML.includes("7 días gratis"), "No trial promotion without a configured store offer");
 
   const cancelled = billingWindow({
     service: { getDetails: async () => products },

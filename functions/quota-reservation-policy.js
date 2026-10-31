@@ -16,19 +16,32 @@ function isReservationExpired(reservation, nowMs = Date.now()) {
     toMillis(reservation.expiresAt) > 0 && toMillis(reservation.expiresAt) <= nowMs;
 }
 
-function resumirReservasCaducadas(reservations, { today, nowMs = Date.now() } = {}) {
+function resumirReservasCaducadas(reservations, { monthKey, nowMs = Date.now() } = {}) {
   const expiredReservations = (reservations || []).filter((reservation) =>
     isReservationExpired(reservation, nowMs)
   );
   const expiredByPlan = { free: 0, premium: 0 };
 
   expiredReservations.forEach((reservation) => {
-    if (reservation.dayKey === today && expiredByPlan[reservation.plan] !== undefined) {
+    if (reservation.monthKey === monthKey && expiredByPlan[reservation.plan] !== undefined) {
       expiredByPlan[reservation.plan] += 1;
     }
   });
 
   return { expiredReservations, expiredByPlan };
+}
+
+function contarReservasActivas(reservations, expiredReservations = []) {
+  const expiredIds = new Set(expiredReservations.map(({ id }) => id));
+  return (reservations || []).filter((reservation) =>
+    reservation.state === "reserved" && !expiredIds.has(reservation.id)
+  ).length;
+}
+
+function obtenerUsoFreeMensual(usage, monthKey, expiredByPlan = {}) {
+  if (!usage || usage.freeMonthlyKey !== monthKey) return 0;
+  const count = Number(usage.freeMonthlyCount || 0);
+  return Math.max(0, (Number.isFinite(count) && count > 0 ? count : 0) - (expiredByPlan.free || 0));
 }
 
 function liquidarEstadoReserva(state, consume) {
@@ -41,4 +54,6 @@ module.exports = {
   isReservationExpired,
   liquidarEstadoReserva,
   resumirReservasCaducadas,
+  contarReservasActivas,
+  obtenerUsoFreeMensual,
 };

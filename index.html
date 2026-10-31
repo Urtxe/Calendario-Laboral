@@ -92,7 +92,7 @@
               Preguntale a la IA sobre jornada, vacaciones, pluses o salario.
             </p>
             <p id="legal-ai-header-copy">
-              Empieza con 3 consultas gratis y escala a Premium cuando quieras.
+              Tienes 5 consultas IA gratuitas al mes. Descubre lo que puedes hacer con Premium.
             </p>
           </div>
           <div class="ai-legal-actions">
@@ -857,8 +857,8 @@
           <div class="perk-item">
             <i data-lucide="file-check" class="perk-icon"></i>
             <p>
-              <b>Informes PDF:</b> Exporta registros oficiales válidos para
-              inspecciones.
+              <b>Informes PDF:</b> Exporta tus registros de jornada para
+              guardarlos o compartirlos.
             </p>
           </div>
           <div class="perk-item">
@@ -870,6 +870,8 @@
           </div>
         </div>
 
+        <p data-premium-trial hidden></p>
+        <p>IA sin cuota de consultas para uso personal, con protección frente a abuso. La suscripción se renueva automáticamente hasta su cancelación.</p>
         <div class="plans-container">
           <div class="plan-card" onclick="seleccionarPlan('mensual')">
             <span class="plan-name">Mensual</span>
@@ -912,6 +914,8 @@
 
     <script>
       window.APP_CONFIG = window.APP_CONFIG || {};
+      // Both live Payment Links were verified with a seven-day trial before release.
+      window.APP_CONFIG.stripeTrialEnabled = window.APP_CONFIG.stripeTrialEnabled ?? true;
       window.APP_CONFIG.legalAiEnabled =
         window.APP_CONFIG.legalAiEnabled ?? true;
       window.APP_CONFIG.appCheckSiteKey =
@@ -934,6 +938,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check-compat.js"></script>
     <script src="src/js/app/play-twa-context.js"></script>
+    <script src="src/js/app/premium-access.js"></script>
     <script src="src/js/app/play-billing-service.js"></script>
     <script src="src/js/app/ai-report-service.js"></script>
     <script src="src/js/firebase-public-config.js"></script>
@@ -942,6 +947,7 @@
     <script src="src/js/app/calendar.js"></script>
     <script src="src/js/app/sync.js"></script>
     <script src="src/js/app/ui.js"></script>
+    <script src="src/js/app/premium-upsell.js"></script>
     <script src="src/js/app/pdf.js"></script>
     <script src="src/js/analytics.js"></script>
     <script src="src/js/conversion-funnel.js"></script>

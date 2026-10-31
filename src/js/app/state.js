@@ -87,7 +87,8 @@ function usuarioTieneSesion() {
 }
 
 function usuarioPuedeUsarPremium() {
-    return usuarioTieneSesion() && !!window.esPremium;
+    return usuarioTieneSesion() && !!window.esPremium &&
+        (!window.PremiumAccess || window.PremiumAccess.isPremium(window.datosCuentaPremium || {}));
 }
 
 function obtenerReferenciaUsuario() {

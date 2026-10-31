@@ -304,6 +304,8 @@ window.cerrarSesion = () => { if(confirm('¿Cerrar sesión?')) auth.signOut(); }
 auth.onAuthStateChanged(user => {
     window.BALANCE_LABORAL_AUTH_STATE = user ? "authenticated" : "anonymous";
     window.usuarioActual = user;
+    window.BALANCE_LABORAL_PREMIUM_STATUS = { uid: user ? user.uid : null, premium: false, ready: !user };
+    window.dispatchEvent(new CustomEvent("balance-premium-status", { detail: window.BALANCE_LABORAL_PREMIUM_STATUS }));
     const authButtons = document.getElementById('auth-buttons');
     const userInfo = document.getElementById('user-info');
 

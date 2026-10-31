@@ -102,6 +102,8 @@ function handlers(db, lookup = async () => ({})) {
         exports: {},
         onRequest: (_options, handler) => handler,
         PLAY_BILLING_FUNCTION_OPTIONS: {},
+        projectId: "demo-balance-play",
+        PLAY_BILLING_RTDN_PUSH_SERVICE_ACCOUNT: "push@example.test",
         verifyRtdnOidcToken: async () => {},
     });
     vm.runInContext([

@@ -10,7 +10,27 @@ const MANUAL_REVIEW = {
   27: {
     source: "BON",
     frequencyMonths: 1,
-    action: "Comprobar publicaciones de transporte de mercancías, buscar convenio sucesor y confirmar su ámbito y relación con el instrumento 3107405.",
+    action: "Acreditar en fuente oficial la equivalencia REGCON y la cadena posterior del instrumento histórico 3107405; la cláusula de prórroga no acredita por sí sola vigencia actual.",
+    historicalReferences: [
+      {
+        bulletin: "BON",
+        number: 111,
+        date: "2008-09-10",
+        identifier: "Resolución 625/2008",
+        url: "https://bon.navarra.es/es/anuncio/-/texto/2008/111/16",
+        historicalCode: "3107405",
+        yearStart: 2007,
+        yearEnd: 2008,
+        note: "El artículo 4 prevé prórroga hasta un nuevo acuerdo; no acredita vigencia actual ni valida la copia local para RAG.",
+      },
+      {
+        bulletin: "BON",
+        number: 123,
+        date: "2008-10-08",
+        url: "https://bon.navarra.es/es/anuncio/-/texto/2008/123/15",
+        note: "Corrección de la identificación de la representación sindical firmante de la Resolución 625/2008; no es un convenio sucesor.",
+      },
+    ],
   },
 };
 
@@ -60,8 +80,10 @@ function buildInventory(markdown) {
   return rows;
 }
 
-const inventory = buildInventory(fs.readFileSync(matrixPath, "utf8"));
-fs.writeFileSync(outputPath, `${JSON.stringify(inventory, null, 2)}\n`);
-console.log(`Inventario de monitor generado desde la matriz: ${inventory.length} convenios.`);
+if (require.main === module) {
+  const inventory = buildInventory(fs.readFileSync(matrixPath, "utf8"));
+  fs.writeFileSync(outputPath, `${JSON.stringify(inventory, null, 2)}\n`);
+  console.log(`Inventario de monitor generado desde la matriz: ${inventory.length} convenios.`);
+}
 
 module.exports = { buildInventory };

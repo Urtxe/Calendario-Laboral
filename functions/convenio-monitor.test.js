@@ -3,7 +3,11 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
 const { inventory, parseRegconRows, parseRegconExport, announcedResultCount, isDue, pendingEntryCount, documentaryRetryDue, reviewInterval, addCalendarMonths, fetchRegcon, runMonthlyConvenioReview } = require("./convenio-monitor");
+const { buildInventory } = require("../scripts/build-convenio-monitor-inventory");
+const { processPendingDocument } = require("./convenio-document-processor");
 
 assert.equal(inventory.find((item) => item.id === "convenio-18").officialCode, "79002415012005");
 assert.equal(inventory.find((item) => item.id === "convenio-18").sourceCheck, "available");
@@ -71,6 +75,70 @@ test("inventario deriva exactamente las 28 fichas documentales, sin crear otra l
   assert.equal(inventory.find((item) => item.number === 26).pactEndYear, 2009, "la cadencia usa el periodo verificado del convenio, no el nombre local del PDF");
 assert.equal(inventory.find((item) => item.number === 24).pactEndYear, 2028, "interpreta el periodo abreviado 2026–28 del convenio de Barcelona");
 assert.equal(inventory.find((item) => item.number === 28).pactEndYear, 2028, "interpreta el periodo abreviado 2026–28 del convenio de Zaragoza");
+});
+
+test("las referencias BON de Navarra son informativas y no acreditan un código REGCON", () => {
+  const matrix = fs.readFileSync(path.join(__dirname, "../docs/matriz-vigencia-convenios-2026.md"), "utf8");
+  assert.deepEqual(buildInventory(matrix), inventory, "el inventario generado debe corresponder a la matriz y al generador");
+  const agreement = inventory.find((item) => item.id === "convenio-27");
+  assert.equal(agreement.officialCode, null);
+  assert.equal(agreement.sourceUrl, null);
+  assert.equal(agreement.source, null);
+  assert.equal(agreement.sourceCheck, "missing_official_regcon_reference");
+  assert.equal(agreement.pactEndYear, 2008);
+  const [publication, correction] = agreement.manualReview.historicalReferences;
+  assert.equal(agreement.manualReview.historicalReferences.length, 2);
+  assert.equal(publication.url, "https://bon.navarra.es/es/anuncio/-/texto/2008/111/16");
+  assert.equal(agreement.manualReview.url, publication.url);
+  assert.equal(publication.historicalCode, "3107405");
+  assert.equal(publication.identifier, "Resolución 625/2008");
+  assert.deepEqual([publication.bulletin, publication.number, publication.date, publication.yearStart, publication.yearEnd], ["BON", 111, "2008-09-10", 2007, 2008]);
+  assert.match(publication.note, /artículo 4.*prórroga/);
+  assert.equal(correction.url, "https://bon.navarra.es/es/anuncio/-/texto/2008/123/15");
+  assert.deepEqual([correction.bulletin, correction.number, correction.date], ["BON", 123, "2008-10-08"]);
+  assert.match(correction.note, /representación sindical.*no es un convenio sucesor/);
+});
+
+test("el cierre documental de Navarra conserva bloqueo, revisión mensual y ausencia de ingesta", async () => {
+  const db = memoryDb();
+  const logs = [];
+  const now = new Date("2026-11-01T04:00:06.891Z");
+  for (const item of inventory) db.values.set(`convenio_monitor_state/${item.id}`, {
+    nextReviewAt: new Date("2027-01-01T00:00:00Z"), status: "source_checked",
+  });
+  const statePath = "convenio_monitor_state/convenio-27";
+  db.values.set(statePath, {
+    officialCode: null, status: "blocked_missing_official_regcon_reference",
+    lastAttemptAt: new Date("2026-10-15T18:22:12.224Z"), nextReviewAt: now,
+    pendingEntries: [], knownSignatures: [],
+  });
+  const catalogPath = "catalogo_convenios/transporte_navarra_2007_2008";
+  db.values.set(catalogPath, { fileNames: ["Convenio Transporte Navarra 2007-2008.pdf"] });
+  const catalogBefore = structuredClone(db.values.get(catalogPath));
+  const options = {
+    fetchImpl: async () => { throw new Error("las referencias históricas no deben activar consultas ni descargas"); },
+    log: { info() {}, warn: (...args) => logs.push(args) },
+  };
+  const result = await runMonthlyConvenioReview(db, { ...options, now });
+  assert.deepEqual([result.examined, result.checked, result.blocked, result.pending, result.failed, result.newEntries], [28, 0, 1, 1, 0, 0]);
+  assert.equal(result.status, "partial");
+  const state = structuredClone(db.values.get(statePath));
+  assert.equal(state.officialCode, null);
+  assert.equal(state.sourceCheck, "missing_official_regcon_reference");
+  assert.equal(state.status, "blocked_missing_official_regcon_reference");
+  assert.equal(state.nextReviewAt.toISOString(), "2026-12-01T04:00:06.891Z");
+  assert.deepEqual(state.pendingEntries, []);
+  assert.deepEqual(state.knownSignatures, []);
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0][0], "convenio_manual_review_required");
+  assert.equal(logs[0][1].publication, state.manualReview.historicalReferences[0].url);
+  assert.equal((await processPendingDocument(db, "convenio-27", { now })).status, "unknown_agreement", "el código nulo impide incluso reclamar documentos");
+  assert.deepEqual(db.values.get(catalogPath), catalogBefore);
+  await runMonthlyConvenioReview(db, { ...options, now: new Date(now.getTime() + 60_000) });
+  assert.deepEqual(db.values.get(statePath), state, "repetir en noviembre no modifica metadatos ni adelanta diciembre");
+  assert.equal(logs.length, 1, "no duplica el aviso del mismo mes");
+  assert.equal([...db.values.keys()].filter((key) => key.startsWith("convenio_monitor_state/")).length, 28);
+  assert.equal(isDue(inventory.find((item) => item.id === "convenio-27"), state, state.nextReviewAt), true);
 });
 
 test("selecciona revisión bimestral con pendientes, periodo pactado terminado o fuente incompleta", () => {

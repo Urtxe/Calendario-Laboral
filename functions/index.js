@@ -122,7 +122,9 @@ if (admin.apps.length === 0) {
 }
 
 const db = admin.firestore();
-exports.syncOfficialHolidays = onSchedule({ schedule: "0 4 * * 0", timeZone: "Europe/Madrid", region: "europe-west1", maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "1GiB" }, async () => runScheduledHolidaySync(db));
+const holidaySyncOptions = { timeZone: "Europe/Madrid", region: "europe-west1", maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "1GiB", retryCount: 3, maxRetrySeconds: 1800, minBackoffSeconds: 60, maxBackoffSeconds: 300, maxDoublings: 2 };
+exports.syncOfficialHolidays = onSchedule({ ...holidaySyncOptions, schedule: "0 4 1 1-8 *" }, async () => runScheduledHolidaySync(db));
+exports.syncOfficialHolidaysWeekly = onSchedule({ ...holidaySyncOptions, schedule: "0 4 * 9-12 0" }, async () => runScheduledHolidaySync(db));
 exports.reviewConvenioSources = onSchedule({ schedule: "0 5 1 * *", timeZone: "Europe/Madrid", region: "europe-west1", serviceAccount: "convenio-monitor@calendario-laboral-252b1.iam.gserviceaccount.com", maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "512MiB", retryCount: 0 }, async () => runMonthlyConvenioReview(db));
 exports.cleanupAIReports = onSchedule({ schedule: "30 4 * * *", timeZone: "Europe/Madrid", serviceAccount: `ai-reports-cleanup@${projectId}.iam.gserviceaccount.com`, maxInstances: 1, concurrency: 1, timeoutSeconds: 120, memory: "256MiB" }, async () => {
     let result;

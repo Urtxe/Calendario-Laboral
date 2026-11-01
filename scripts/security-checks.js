@@ -166,6 +166,24 @@ addCheck("/consultarConvenio exige Firebase Auth antes de cuota o IA", () => {
   );
 });
 
+addCheck("El contexto laboral personal solo se lee para el uid autenticado y respeta el borrado", () => {
+  const functionsSource = normalize(read("functions/index.js"));
+  const helper = normalize(read("functions/personal-labor-context.js"));
+  const handler = extractConsultarConvenioHandler(functionsSource);
+
+  assertOrder(
+    handler,
+    ["uid = authResult.uid;", "contextoPersonal = await loadPersonalYearContext("],
+    "El resumen personal debe leerse después de verificar la cuenta autenticada",
+  );
+  assertIncludes(handler, "req.body.usarDatosCalendario === true");
+  assertIncludes(helper, "db.collection(\"accountDeletions\").doc(uid)");
+  assertIncludes(helper, "db.collection(\"usuarios\").doc(uid)");
+  assertIncludes(helper, "profileRef.collection(\"years\").doc(String(year))");
+  assertIncludes(helper, "deletionSnapshot.exists || !profileSnapshot.exists");
+  assert(!/req\.body\.uid|req\.body\.userId|req\.body\.yearPath/.test(handler), "El cliente no puede elegir otra identidad o ruta de Firestore");
+});
+
 addCheck("/consultarConvenio valida payload antes de Auth, cuota e IA", () => {
   const handler = extractConsultarConvenioHandler(normalize(read("functions/index.js")));
 

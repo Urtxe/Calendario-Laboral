@@ -12,7 +12,7 @@
     "test:intent": "node scripts/intent-classifier-checks.js",
     "test:convenio-metadata": "node functions/convenio-metadata.test.js",
     "test:rag-evidence": "node --test functions/rag-evidence.test.js",
-    "test:ai-consultation": "node functions/ai-consultation.test.js",
+    "test:ai-consultation": "node functions/ai-consultation.test.js && node --test functions/personal-labor-context.test.js",
     "test:ai-ui": "node scripts/ai-ui-checks.js && node scripts/ai-reports-ui-checks.js && node --test functions/ai-reports.test.js",
     "test:service-worker": "node scripts/service-worker-checks.js",
     "test:play-twa": "node scripts/play-twa-context-checks.js && node scripts/play-billing-checks.js && node scripts/premium-access-checks.js && node scripts/premium-upsell-checks.js && node functions/play-billing.test.js && node --test functions/billing-lifecycle.test.js functions/stripe-trial.test.js functions/monthly-quota.test.js",

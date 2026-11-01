@@ -26,7 +26,7 @@ function test(name, fn) { tests.push({ name, fn }); }
 
 test("el payload laboral valida tipo, tamaño y valores antes de usar contexto", () => {
   const validar = (body) => validarPayloadBasicoConsulta({ get: () => "application/json", body });
-  assert.strictEqual(validar({ pregunta: "vacaciones", sector: "alojamientos", ciudad: "Gipuzkoa" }).ok, true);
+  assert.strictEqual(validar({ pregunta: "vacaciones", sector: "alojamientos", ciudad: "Gipuzkoa", anio: 2026, usarDatosCalendario: true }).ok, true);
   for (const body of [
     { pregunta: "vacaciones", sector: ["alojamientos"] },
     { pregunta: "vacaciones", sector: "x".repeat(241) },
@@ -35,6 +35,11 @@ test("el payload laboral valida tipo, tamaño y valores antes de usar contexto",
     { pregunta: "vacaciones", convenioFileName: "x".repeat(241) },
     { pregunta: "vacaciones", preguntaAnterior: "x".repeat(301) },
     { pregunta: "vacaciones", contextoLaboral: {} },
+    { pregunta: "vacaciones", anio: "2026" },
+    { pregunta: "vacaciones", anio: 1999 },
+    { pregunta: "vacaciones", usarDatosCalendario: "true" },
+    { pregunta: "vacaciones", uid: "otro-usuario" },
+    { pregunta: "vacaciones", yearPath: "usuarios/otro/years/2026" },
   ]) {
     assert.strictEqual(validar(body).status, 400);
   }

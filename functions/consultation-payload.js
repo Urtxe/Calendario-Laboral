@@ -6,8 +6,9 @@ const { isSupportedLaborLocation, isSupportedLaborSector, normalizeText } = requ
 const ALLOWED_FIELDS = [
   "pregunta", "preguntaAnterior", "ciudad", "ciudadActual", "location", "sector", "sectorUsuario",
   "profesion", "convenioFileName", "file_name", "fileName", "convenioNombre", "convenioId",
+  "anio", "usarDatosCalendario",
 ];
-const OPTIONAL_FIELDS = ALLOWED_FIELDS.filter((field) => field !== "pregunta");
+const OPTIONAL_TEXT_FIELDS = ALLOWED_FIELDS.filter((field) => !["pregunta", "anio", "usarDatosCalendario"].includes(field));
 const MAX_CONTEXT_LENGTH = 240;
 
 function tieneContentTypeJson(req) {
@@ -25,11 +26,17 @@ function validarPayloadBasicoConsulta(req) {
   if (Object.keys(body).some((field) => !ALLOWED_FIELDS.includes(field))) {
     return { ok: false, status: 400, error: "La solicitud contiene campos no permitidos." };
   }
-  if (OPTIONAL_FIELDS.some((field) => body[field] !== undefined && typeof body[field] !== "string")) {
+  if (OPTIONAL_TEXT_FIELDS.some((field) => body[field] !== undefined && typeof body[field] !== "string")) {
     return { ok: false, status: 400, error: "Los datos de contexto deben ser texto." };
   }
-  if (OPTIONAL_FIELDS.some((field) => field !== "preguntaAnterior" && body[field]?.length > MAX_CONTEXT_LENGTH)) {
+  if (OPTIONAL_TEXT_FIELDS.some((field) => field !== "preguntaAnterior" && body[field]?.length > MAX_CONTEXT_LENGTH)) {
     return { ok: false, status: 400, error: "Los datos de contexto son demasiado largos." };
+  }
+  if (body.anio !== undefined && (!Number.isInteger(body.anio) || body.anio < 2000 || body.anio > 2100)) {
+    return { ok: false, status: 400, error: "El año consultado no es válido." };
+  }
+  if (body.usarDatosCalendario !== undefined && typeof body.usarDatosCalendario !== "boolean") {
+    return { ok: false, status: 400, error: "La preferencia de datos del calendario no es válida." };
   }
   if (["sector", "sectorUsuario", "profesion"].some((field) =>
     body[field] && normalizeText(body[field]) !== "general" && !isSupportedLaborSector(body[field])) ||

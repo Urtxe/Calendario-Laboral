@@ -245,7 +245,7 @@
         <article class="policy-shell">
             <div class="meta">
                 <span class="tag">Balance Laboral</span>
-                <span>Ultima actualizacion: 31 de octubre de 2026</span>
+                <span>Ultima actualizacion: 1 de noviembre de 2026</span>
             </div>
 
             <p>
@@ -300,10 +300,13 @@
 
             <h2>6. IA integrada para consultas sobre convenios</h2>
             <p>
-                La aplicacion puede incluir una funcion de inteligencia artificial para ayudar a interpretar consultas sobre convenios colectivos o informacion laboral. Las preguntas enviadas por el usuario pueden procesarse mediante Google Gemini para generar embeddings, consultar fuentes de convenios y producir una respuesta orientativa. La funcion recibe la pregunta y puede utilizar localidad, sector o la referencia de convenio facilitados para contextualizarla.
+                La aplicacion incluye una funcion de inteligencia artificial para ayudar a interpretar consultas sobre convenios colectivos o informacion laboral. Las preguntas enviadas pueden procesarse mediante Google Gemini para producir una respuesta orientativa y, cuando se consultan fuentes, generar una representacion vectorial de la pregunta para buscar fragmentos relevantes. La funcion puede utilizar localidad, sector o la referencia de convenio facilitados para contextualizarla.
+            </p>
+            <p>
+                Cuando el usuario mantiene activada la opcion «Usar mis datos del calendario» y pregunta por sus resultados, el backend autenticado consulta los campos de jornada de su perfil y únicamente el documento del año seleccionado de su propia cuenta, y calcula un resumen agregado para la respuesta. Según la pregunta, puede incluir la jornada configurada, el objetivo anual, el saldo calculado, los días equivalentes, vacaciones anotadas o, si se pregunta por horas extra, un total separado. No se envía a Gemini el UID, el correo, un listado de fechas ni el tipo individual de cada marca. El resumen no se guarda en logs ni en Analytics. Si se desactiva la opción o la pregunta no requiere datos personales, no se consulta el calendario para esa respuesta.
             </p>
             <div class="notice">
-                La IA ofrece informacion de apoyo y no sustituye el asesoramiento profesional, sindical, juridico o administrativo. No incluyas en las consultas datos personales innecesarios, credenciales, datos bancarios ni informacion de terceros. Las respuestas pueden contener errores, estar incompletas o no ajustarse a un caso concreto. El usuario debe verificar la informacion antes de tomar decisiones laborales o legales.
+                La IA ofrece informacion de apoyo con un tono práctico; no pertenece a un sindicato ni sustituye el asesoramiento profesional, sindical, juridico o administrativo. Los cálculos se basan en los datos guardados y en la fórmula de la aplicación: no prueban por sí solos horas reales, turnos, deudas ni derechos frente a la empresa. No incluyas en las consultas datos personales innecesarios, credenciales, datos bancarios ni informacion de terceros. Las respuestas pueden contener errores o estar incompletas. Verifica la informacion antes de tomar decisiones laborales o legales.
             </div>
 
             <h2>7. Pagos y funciones premium</h2>

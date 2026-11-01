@@ -897,6 +897,16 @@ function inyectarEstilosAsesorLegal() {
             border-color: #3d7bd9;
             box-shadow: 0 0 0 4px rgba(61, 123, 217, 0.12);
         }
+        .legal-ai-personal-context {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            color: #475569;
+            font-size: 0.78rem;
+            line-height: 1.4;
+        }
+        .legal-ai-personal-context input { margin-top: 2px; }
+        .legal-ai-personal-context a { color: #285bb1; }
         .legal-ai-actions {
             display: flex;
             align-items: center;
@@ -975,6 +985,7 @@ function anadirProcedenciaRespuestaLegal(mensaje, data) {
   if (!mensaje || !data || !data.sourceType) return;
 
   const etiquetas = {
+    personal_labor: "Cálculo orientativo con tus datos guardados",
     convenio: "Según tu convenio",
     official_web: "Información oficial actualizada",
     estatuto: "Normativa laboral general consultada",
@@ -1151,6 +1162,11 @@ async function enviarConsultaLegal() {
       sector: sectorUsuario === "general" ? "" : sectorUsuario || "",
       ciudad: ciudadActual || "",
     };
+    if (window.ultimaPromesaGuardadoCalendario) {
+      const calendarSaved = await Promise.resolve(window.ultimaPromesaGuardadoCalendario);
+      if (calendarSaved === false) throw new Error("No se ha podido sincronizar el calendario. Revisa la conexión antes de pedir un cálculo personalizado.");
+    }
+    const personalDataToggle = document.getElementById("legal-ai-use-personal-data");
     const response = await fetch(consultarConvenioUrl, {
       method: "POST",
       headers,
@@ -1159,6 +1175,8 @@ async function enviarConsultaLegal() {
         ...(ultimaPreguntaLegal ? { preguntaAnterior: ultimaPreguntaLegal } : {}),
         ciudad: contextoLaboral.ciudad,
         sector: contextoLaboral.sector,
+        anio: Number(anioActual),
+        usarDatosCalendario: Boolean(personalDataToggle && personalDataToggle.checked),
         ...(contextoLaboral.convenioFileName ? { convenioFileName: contextoLaboral.convenioFileName } : {}),
       }),
     });
@@ -1287,14 +1305,18 @@ function montarAsesorLegal() {
         <div class="legal-ai-panel" role="dialog" aria-modal="true" aria-labelledby="legal-ai-title">
             <div class="legal-ai-header">
                 <div>
-                    <h3 class="legal-ai-title" id="legal-ai-title">Asesoría Legal sobre Convenios</h3>
+                    <h3 class="legal-ai-title" id="legal-ai-title">Asesor laboral y de convenios</h3>
                 </div>
                 <button type="button" class="legal-ai-close" id="legal-ai-close" aria-label="Cerrar asesor legal">×</button>
             </div>
             <div class="legal-ai-status" id="legal-ai-status"></div>
             <div class="legal-ai-messages" id="legal-ai-messages"></div>
             <div class="legal-ai-inputbar">
-                <textarea id="legal-ai-input" class="legal-ai-input" placeholder="Escribe tu duda sobre el convenio colectivo..."></textarea>
+                <label class="legal-ai-personal-context">
+                    <input type="checkbox" id="legal-ai-use-personal-data" checked>
+                    <span>Usar mis datos del calendario para consultas personales. Si preguntas por tus resultados, la IA usa un resumen anual agregado, sin fechas ni datos de identidad. <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacidad</a></span>
+                </label>
+                <textarea id="legal-ai-input" class="legal-ai-input" placeholder="Pregunta por tu calendario, jornada o convenio..."></textarea>
                 <div class="legal-ai-actions">
                     <div class="legal-ai-note" id="legal-ai-note"></div>
                     <button type="button" id="legal-ai-send" class="legal-ai-send">Preguntar</button>

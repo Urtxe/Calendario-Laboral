@@ -32,6 +32,14 @@ const {
     classifyLaborIntent,
 } = require("./intent-classifier");
 const { prepararContextoConversacional } = require("./conversation-context");
+const {
+    formatPersonalLaborContext,
+    isPersonalLaborQuestion,
+    loadPersonalYearContext,
+    resolvePersonalYear,
+    wantsOvertimeDetails,
+    wantsVacationDetails,
+} = require("./personal-labor-context");
 const { tieneContentTypeJson, validarPayloadBasicoConsulta } = require("./consultation-payload");
 const { construirConsultaRag } = require("./rag-query");
 const {
@@ -2313,6 +2321,48 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             pregunta, payloadValidation.body.preguntaAnterior || "",
         );
         const preguntaParaBusqueda = contextoConversacional.preguntaParaBusqueda;
+        const preguntaPersonal = isPersonalLaborQuestion(preguntaParaBusqueda);
+        const quiereUsarCalendario = req.body.usarDatosCalendario === true;
+        let contextoPersonal = null;
+        if (preguntaPersonal && !quiereUsarCalendario) {
+            const payload = construirOrientacionClarificacion(
+                "Para personalizar esta respuesta con tu jornada, activa «Usar mis datos del calendario» y vuelve a preguntar.",
+                "personal_calendar_opt_in_required",
+            );
+            registrarResultado({ sourceType: "clarification", fallbackReason: "personal_calendar_opt_in_required", useful: true, quotaConsumed: false });
+            return res.status(200).json(payload);
+        }
+        if (preguntaPersonal && quiereUsarCalendario) {
+            const year = resolvePersonalYear(preguntaParaBusqueda, req.body.anio);
+            if (!year) {
+                const payload = construirOrientacionClarificacion(
+                    "Has mencionado varios años. Selecciona un solo año en el calendario y vuelve a preguntarme para no mezclar resultados.",
+                    "personal_calendar_year_ambiguous",
+                );
+                registrarResultado({ sourceType: "clarification", fallbackReason: "personal_calendar_year_ambiguous", useful: true, quotaConsumed: false });
+                return res.status(200).json(payload);
+            }
+            contextoPersonal = await loadPersonalYearContext(
+                db,
+                uid,
+                year,
+                new Date(),
+                {
+                    includeOvertime: wantsOvertimeDetails(preguntaParaBusqueda),
+                    includeVacations: wantsVacationDetails(preguntaParaBusqueda),
+                },
+            );
+            if (contextoPersonal.reason === "account_unavailable") {
+                registrarResultado({ sourceType: "error", status: 403, useful: false, quotaConsumed: false });
+                return res.status(403).json({ error: "No se ha encontrado tu perfil de usuario." });
+            }
+            if (!contextoPersonal.available) {
+                const message = "No encuentro una jornada y un objetivo anual guardados para ese año. Configura y guarda las horas anuales y tu tipo de jornada en el calendario; después vuelve a preguntarme.";
+                const payload = construirOrientacionClarificacion(message, "personal_calendar_setup_missing");
+                registrarResultado({ sourceType: "clarification", fallbackReason: "personal_calendar_setup_missing", useful: true, quotaConsumed: false });
+                return res.status(200).json(payload);
+            }
+        }
         const referenciaConvenio = obtenerReferenciaConvenio(req.body);
         let convenioValidado = null;
         if (referenciaConvenio) {
@@ -2342,7 +2392,43 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             registrarResultado({ sourceType: "clarification", fallbackReason: `statute_version_${seleccionEstatuto.status}`, useful: true, quotaConsumed: false });
             return res.status(200).json(payload);
         }
-        const esLaboral = intentClassification.intent !== "out_of_scope" || consultaNormativaBase;
+        const esLaboral = intentClassification.intent !== "out_of_scope" || consultaNormativaBase || Boolean(contextoPersonal);
+
+        const requiereContextoConvenio = ["collective_agreement", "needs_clarification", "mixed_labor"]
+            .includes(intentClassification.intent);
+        const personalNeedsVerifiedSource = consultaNormativaBase ||
+            /\b(derecho|legal|ley|reclamar|reclamacion|convenio|estatuto|articulo|empresa me debe|me debe la empresa|compensacion legal)\b/i
+                .test(preguntaParaBusqueda.normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+        if (contextoPersonal && !personalNeedsVerifiedSource) {
+            if (!await reservarCuota()) return;
+            const generacion = await generarRespuestaConvenio({
+                idiomaRespuesta,
+                pregunta: preguntaOriginal,
+                preguntaAnterior: contextoConversacional.preguntaAnterior,
+                contexto: formatPersonalLaborContext(contextoPersonal),
+                promptSistema: [
+                    "Actúa como una persona asesora laboral cercana, práctica y orientada a ayudar a la persona trabajadora, con el estilo claro de una asesoría sindical, sin afirmar que perteneces a un sindicato ni sustituir asesoramiento profesional.",
+                    "Responde usando el resumen agregado del calendario y conserva exactamente sus cifras; no vuelvas a calcularlas ni inventes turnos o días laborables.",
+                    "Distingue el saldo calculado por la aplicación de horas realmente trabajadas y de cualquier derecho legal. El calendario no demuestra por sí solo que la empresa deba dinero, días libres o compensación.",
+                    "Aclara que los días equivalentes son una estimación según la jornada configurada. Si falta un dato concreto, formula una sola pregunta útil.",
+                    "No completes con normas no incluidas en el contexto. Para cuestiones jurídicas, indica qué convenio, nómina, cuadrante o dato habría que contrastar.",
+                    "Responde primero a lo preguntado, con lenguaje natural y sencillo. Una duda sencilla puede resolverse en una o dos frases; desarrolla solo lo necesario. Evita introducciones, cierres y advertencias genéricas. Usa listas solo si aportan claridad.",
+                    idiomaRespuesta === "euskera" ? "Responde en euskera." : "Responde en castellano.",
+                ].join(" "),
+            });
+            if (!esRespuestaGeneradaUtil(generacion)) return responderFalloTecnico(null, "personal_labor_context");
+            return responderUtil(construirRespuestaConsulta({
+                respuesta: generacion.respuesta,
+                sourceType: "personal_labor",
+                grounded: false,
+                warning: "Cálculo orientativo basado en los datos que has guardado y en la fórmula de Balance Laboral; no acredita por sí solo horas reales ni derechos frente a la empresa.",
+                fallbackReason: null,
+                convenioUsado: null,
+                conveniosUsados: [],
+                convenioDetectado: null,
+                fuentes: [],
+            }), { sourceType: "personal_labor", modelRoute: "personal_labor_context" });
+        }
 
         if (!esLaboral) {
             if (!await reservarCuota()) return;
@@ -2365,8 +2451,6 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
         let conveniosFileName = [];
         let convenioResuelto = convenioValidado;
         let fallbackReason = null;
-        const requiereContextoConvenio = ["collective_agreement", "needs_clarification", "mixed_labor"]
-            .includes(intentClassification.intent);
 
         const criterioExplicito = detectConvenioCriteria({ pregunta, ciudad: "", sector: "" });
         const solicitudConvenioEspecifico = Boolean(
@@ -2552,6 +2636,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                     bloquesContexto.push(`[FECHAS ESTRUCTURADAS DE FUENTE VERIFICADA]\n${fechasVerificadas.join("\n")}`);
                 }
             }
+            if (contextoPersonal) bloquesContexto.push(formatPersonalLaborContext(contextoPersonal));
             const contexto = bloquesContexto.join("\n\n===\n\n");
             const hayConvenioEspecifico = evidencia.suficiente;
             const fechaHoyMadrid = new Intl.DateTimeFormat("en-CA", {
@@ -2573,6 +2658,10 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
                     preguntaAnterior: contextoConversacional.preguntaAnterior,
                     contexto,
                     promptSistema: [
+                        "Ayuda con un tono cercano, práctico y orientado a los derechos de la persona trabajadora, como una asesoría sindical clara; no afirmes pertenecer a un sindicato ni sustituir asesoramiento profesional.",
+                        contextoPersonal
+                            ? "El resumen personal agregado no es evidencia legal. Conserva sus cifras tal como están, distingue la estimación de la aplicación de los fragmentos normativos y nunca concluyas que la empresa debe dinero, días libres u otra compensación solo a partir del balance."
+                            : "",
                         hayConvenioEspecifico
                             ? "Responde con los fragmentos recuperados. Distingue el Estatuto como normativa base y el convenio como regulación específica; usa la norma base como mínimo legal y no afirmes que una condición concreta mejora o desplaza a la otra sin comparar el texto aplicable.": "Responde exclusivamente con los fragmentos de normativa base. No atribuyas sus reglas a un convenio ni afirmes que has localizado una mejora convencional.",
                         convenioResuelto?.legalEffect === "extraestatutario_eficacia_limitada"
@@ -2686,15 +2775,31 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             return res.status(200).json(payload);
         }
 
-        const general = await generarRespuestaGeneral({
-            pregunta, preguntaAnterior: contextoConversacional.preguntaAnterior, idiomaRespuesta, esLaboral: true,
-        });
+        const general = contextoPersonal
+            ? await generarRespuestaConvenio({
+                idiomaRespuesta,
+                pregunta: preguntaOriginal,
+                preguntaAnterior: contextoConversacional.preguntaAnterior,
+                contexto: `${formatPersonalLaborContext(contextoPersonal)}\n\nNo se ha recuperado una fuente normativa verificada para resolver la parte jurídica de la pregunta.`,
+                promptSistema: [
+                    "Actúa con tono cercano y práctico, como una asesoría sindical clara, sin afirmar que perteneces a un sindicato.",
+                    "Puedes explicar el resumen numérico del calendario, pero no contestes la parte jurídica con conocimiento externo: indica que el balance de la aplicación no demuestra por sí solo una deuda ni un derecho, y pide el convenio o documento necesario para verificarlo.",
+                    "Conserva exactamente las cifras calculadas en el resumen; no inventes datos ni turnos.",
+                    "Responde primero a lo preguntado, con lenguaje natural y sencillo. Formula una sola pregunta útil si falta información.",
+                    idiomaRespuesta === "euskera" ? "Responde en euskera." : "Responde en castellano.",
+                ].join(" "),
+            })
+            : await generarRespuestaGeneral({
+                pregunta, preguntaAnterior: contextoConversacional.preguntaAnterior, idiomaRespuesta, esLaboral: true,
+            });
         if (!esRespuestaGeneradaUtil(general)) return responderFalloTecnico(null, "general_ai");
         return responderUtil(construirRespuestaConsulta({
             respuesta: general.respuesta,
-            sourceType: "general_ai",
+            sourceType: contextoPersonal ? "personal_labor" : "general_ai",
             grounded: false,
-            warning: GENERAL_LABOR_WARNING,
+            warning: contextoPersonal
+                ? "El balance se basa en tus marcas y en la fórmula de Balance Laboral; no sustituye la comprobación de tu convenio ni acredita por sí solo una deuda o un derecho."
+                : GENERAL_LABOR_WARNING,
             fallbackReason: fallbackReason || "official_sources_unavailable",
             convenioUsado: convenioFileName || null,
             conveniosUsados: conveniosFileName,
@@ -2702,7 +2807,7 @@ exports.consultarConvenio = onRequest({ ...CONSULTAR_CONVENIO_FUNCTION_OPTIONS, 
             fuentes: [],
             webFallbackUsed: false,
             webFallbackReason: webFallbackResponse ? webFallbackResponse.webFallbackReason : "official_sources_unavailable",
-        }), { sourceType: "general_labor", modelRoute: "general_ai", fallbackReason, chunksUsed: chunksEspecificos.length });
+        }), { sourceType: contextoPersonal ? "personal_labor" : "general_labor", modelRoute: contextoPersonal ? "personal_labor_context" : "general_ai", fallbackReason, chunksUsed: chunksEspecificos.length });
     } catch (error) {
         return responderFalloTecnico(error, "consultation_pipeline");
     }

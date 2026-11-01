@@ -34,6 +34,11 @@ assert(source.includes("preguntaAnterior: ultimaPreguntaLegal"), "La UI debe env
 assert(source.includes("pregunta.length <= LIMITE_PREGUNTA_ANTERIOR_IA"), "La UI debe limitar el historial");
 assert(normalizedSource.includes("ultimaPreguntaLegal = \"\";\n  contextoLaboralSesion = null;\n  limpiarMensajesLegales();"), "La UI debe olvidar el contexto al abrir una sesión");
 assert(source.includes("const contextoLaboral = contextoLaboralSesion || {"), "La UI debe reutilizar los datos configurados");
+assert(source.includes('id="legal-ai-use-personal-data" checked'), "El asesor debe mostrar un control informado para usar datos personales del calendario");
+assert(source.includes('usarDatosCalendario: Boolean(personalDataToggle && personalDataToggle.checked)'), "La UI debe enviar la preferencia explícita de calendario");
+assert(source.includes("anio: Number(anioActual)"), "La UI debe enviar el año seleccionado, sin enviar el calendario");
+assert(source.includes("Cálculo orientativo con tus datos guardados"), "La UI debe distinguir las respuestas personalizadas");
+assert(source.includes("window.ultimaPromesaGuardadoCalendario"), "La consulta debe esperar a que se guarde el último cambio del calendario");
 assert(source.includes("data.convenioDetectado.sectorKeys[0]"), "La UI debe conservar el convenio resuelto en la sesión");
 assert(source.includes("contextoLaboralSesion = null;\n};") || normalizedSource.includes("contextoLaboralSesion = null;\n};"), "Cerrar el asesor debe limpiar el contexto de sesión");
 assert(!source.includes('localStorage.getItem("convenioFileName")'), "No debe confiar en un convenio local sin validar");
@@ -64,7 +69,8 @@ assert.strictEqual(quota.getConsultasUsadas("2026-11"), 0, "A cached previous-mo
 quota.setConsultasUsadas(5, "2026-11-01T00:00:00.000Z");
 assert.strictEqual(quota.getConsultasRestantes(), 0);
 assert.match(quota.formatearResetCuotaLegal(), /1 de noviembre/i);
-assert.strictEqual(quota.setCuotaLegalDesdeRespuesta({ plan: "free", period: "month", used: 2, limit: 5, remaining: 3, resetAt: "2026-11-01T00:00:00.000Z" }), true);
+const futureQuotaReset = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+assert.strictEqual(quota.setCuotaLegalDesdeRespuesta({ plan: "free", period: "month", used: 2, limit: 5, remaining: 3, resetAt: futureQuotaReset }), true);
 assert.strictEqual(quota.getConsultasRestantes(), 3, "A server quota response refreshes the displayed count");
 quotaWindow.esPremium = true;
 assert.strictEqual(quota.getConsultasRestantes(), Infinity, "A Premium account has no monthly client quota");

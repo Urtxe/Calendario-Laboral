@@ -102,7 +102,7 @@ function guardarTodoEnFirebase() {
     tipoJornadaPorAnio[anioActual] = jornadaActual;
     objetivosAnuales[anioActual] = horasAnualesActuales;
 
-    return Promise.all([
+    var savePromise = Promise.all([
         userRef.set({
             ciudadActual: ciudadActual,
             sectorUsuario: sectorUsuario,
@@ -134,6 +134,8 @@ function guardarTodoEnFirebase() {
         mostrarSync(false);
         return false;
     });
+    window.ultimaPromesaGuardadoCalendario = savePromise;
+    return savePromise;
 }
 
 function mostrarSync(m) {

@@ -22,10 +22,12 @@ function prepararContextoConversacional(pregunta, preguntaAnterior = "") {
   const intencionActual = classifyLaborIntent({ pregunta });
   const intencionAnterior = anterior && classifyLaborIntent({ pregunta: anterior });
   const criteriaAnterior = anterior && detectConvenioCriteria({ pregunta: anterior });
+  const intencionActualReutilizaConvenio = ["collective_agreement", "current_labor"]
+    .includes(intencionActual.intent);
   const convenioContextoAnterior = Boolean(
     criteriaAnterior?.provinces.length &&
     criteriaAnterior?.sectorKeys.length &&
-    intencionActual.intent !== "out_of_scope"
+    intencionActualReutilizaConvenio
   );
 
   if ((!esRepregunta && !convenioContextoAnterior) || !intencionAnterior ||

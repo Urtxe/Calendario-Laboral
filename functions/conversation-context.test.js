@@ -21,4 +21,10 @@ const unrelated = prepararContextoConversacional(
 assert.strictEqual(unrelated.preguntaAnterior, "");
 assert.strictEqual(unrelated.preguntaParaBusqueda, "¿Qué tiempo hará mañana?");
 
+const mixed = prepararContextoConversacional(
+    "¿Qué tiempo hará mañana y qué convenio aplica?",
+    identificacion,
+);
+assert.strictEqual(mixed.preguntaAnterior, "");
+
 console.log("Contexto conversacional: mantiene territorio y sector en una repregunta laboral.");

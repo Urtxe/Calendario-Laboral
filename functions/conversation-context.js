@@ -1,6 +1,6 @@
 "use strict";
 
-const { normalizeText } = require("./convenio-metadata");
+const { normalizeText, detectConvenioCriteria } = require("./convenio-metadata");
 const { classifyLaborIntent } = require("./intent-classifier");
 
 const MAX_PREVIOUS_QUESTION_LENGTH = 300;
@@ -21,9 +21,15 @@ function prepararContextoConversacional(pregunta, preguntaAnterior = "") {
       /^(?:cuantos dias puedo coger|tengo \d+ dias|son naturales(?: o laborables)?|son laborables(?: o naturales)?)$/.test(actual));
   const intencionActual = classifyLaborIntent({ pregunta });
   const intencionAnterior = anterior && classifyLaborIntent({ pregunta: anterior });
+  const criteriaAnterior = anterior && detectConvenioCriteria({ pregunta: anterior });
+  const convenioContextoAnterior = Boolean(
+    criteriaAnterior?.provinces.length &&
+    criteriaAnterior?.sectorKeys.length &&
+    intencionActual.intent !== "out_of_scope"
+  );
 
-  if (!esRepregunta || !intencionAnterior || intencionAnterior.intent === "out_of_scope" ||
-      intencionActual.reason === "non_labor_topic") {
+  if ((!esRepregunta && !convenioContextoAnterior) || !intencionAnterior ||
+      intencionAnterior.intent === "out_of_scope" || intencionActual.reason === "non_labor_topic") {
     return { preguntaParaBusqueda: pregunta, preguntaAnterior: "" };
   }
 

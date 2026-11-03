@@ -46,6 +46,8 @@ Se inspeccionó el archivo de fuente asociado a la revisión activa y también e
 
 `e0c3076` es una recuperación de código probada para conservar `gemini-3.5-flash-lite` con el SDK heredado, **no** es una copia equivalente de la fuente desplegada en 00054. La comparación encontró cambios de código y datos de recursos entre ambos árboles. Sí pasó las pruebas locales de cliente, RAG y seguridad, y una consulta real de solo lectura con embeddings actuales, índice Firestore productivo y Flash-Lite. Es, por tanto, una opción de recuperación compatible con el aviso, pero requiere una nueva compilación y despliegue y no es una reversión instantánea de revisión. No recuperará un fallo causado por el propio modelo o por sus respuestas.
 
+**Gate de autorización: NO-GO mientras se exija una recuperación equivalente y ya verificada.** La revisión 00054/00053 restaura el modelo retirado; `e0c3076` mantiene Flash-Lite pero su diferencia de fuente impide afirmar que revierte únicamente el SDK. Antes de autorizar, preparar y validar un candidato de recuperación basado en la fuente archivada de la revisión activa, cambiando solo el SDK/adaptador necesario y manteniendo Flash-Lite, o aceptar explícitamente los cambios funcionales de `e0c3076` tras revisarlos. La receta de abajo documenta el candidato `e0c3076`, no elimina este gate.
+
 ### Alcance y precondiciones
 
 Antes y después del despliegue, guardar las salidas de estos comandos en el expediente del cambio. No mostrar ni copiar el valor del secreto:

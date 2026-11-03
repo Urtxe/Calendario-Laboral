@@ -26,7 +26,7 @@ El Agente de Instagram usa `gemini-3.5-flash-lite`, `thinking_level=minimal` por
 - **Hostelería Málaga, salarios 2026:** `hasUnindexedSalaryEvidence` bloqueó la generación antes de recuperar/generar importes. El handler produce respuesta `unconfirmed`, sin fuentes, con `quotaConsumed=false`. No se llamó a Gemini para este caso.
 - **Transporte Navarra:** el documento histórico resultó `source_unverified`; no se recuperaron sus chunks ni se llamó a Gemini.
 - **Tres turnos de Hostelería Málaga:** se mantuvo el identificador seleccionado desde la primera consulta; se respondió 30 días naturales de vacaciones y 1.800 horas anuales, con citas a los chunks del convenio de Málaga.
-- Las siete generaciones usaron 12.358 tokens de entrada y 2.845 tokens de salida/razonamiento. A precios públicos de pago, coste estimado de generación: USD 0,01082. Límite superior estimado para embeddings de consulta: USD 0,00015. Coste conjunto estimado: menos de USD 0,011; no se consultó la factura. No hubo respuestas `MAX_TOKENS` ni reintentos en las llamadas de esta pasada.
+- Las seis generaciones usaron 12.358 tokens de entrada y 2.845 tokens de salida/razonamiento. A precios públicos de pago, coste estimado de generación: USD 0,01082. Límite superior estimado para embeddings de consulta: USD 0,00015. Coste conjunto estimado: menos de USD 0,011; no se consultó la factura. No hubo respuestas `MAX_TOKENS` ni reintentos en las llamadas de esta pasada.
 
 La prueba integra Firestore RAG real y Gemini real. No llama al endpoint HTTP autenticado, porque el handler reserva y liquida cuotas productivas. Por tanto, no se declara E2E de Auth/cuota; esas rutas se validan con pruebas locales. No se usaron usuarios temporales ni se alteraron cuotas.
 

@@ -1,7 +1,10 @@
 const { normalizeText } = require("./convenio-metadata");
+const { getGenerationModel, getThinkingLevel } = require("./gemini-config");
 
 const GEMINI_SEARCH_ENDPOINT =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+    "https://generativelanguage.googleapis.com/v1beta/models/" +
+    encodeURIComponent(getGenerationModel()) +
+    ":generateContent";
 const WEB_FALLBACK_TIMEOUT_MS = 20000;
 
 const DEFAULT_ALLOWED_DOMAINS = [
@@ -299,8 +302,10 @@ async function consultarFallbackWebOficial({ question, apiKey, env = process.env
             },
         ],
         generationConfig: {
-            temperature: 0.1,
             maxOutputTokens: 1200,
+            thinkingConfig: {
+                thinkingLevel: getThinkingLevel(),
+            },
         },
     };
 

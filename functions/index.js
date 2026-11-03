@@ -8,6 +8,8 @@ const functionsV1 = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { getGenerationModel, getThinkingLevel } = require("./gemini-config");
+const { generateContentWithRetry } = require("./gemini-client");
 const {
     applyKnownSourceVerificationOverrides,
     CATALOGO_CONVENIOS,
@@ -178,7 +180,7 @@ const CONSULTAR_CONVENIO_FUNCTION_OPTIONS = {
 };
 const GLOBAL_CONVENIO_TOP_K = 3;
 const SPECIFIC_CHUNKS_TOP_K = 5;
-const GEMINI_CONSULTATION_MODEL = "gemini-2.5-flash";
+const GEMINI_CONSULTATION_MODEL = getGenerationModel();
 const CLARIFICATION_STATUSES = new Set(["missing_all", "missing_sector", "missing_location", "ambiguous", "source_unverified"]);
 const CONSULTAR_CONVENIO_ALLOWED_ORIGINS = new Set([
     "https://balancelaboral.es",
@@ -1121,12 +1123,12 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
             },
         ],
         generationConfig: {
-            temperature: 0.2,
             maxOutputTokens,
+            thinkingConfig: { thinkingLevel: getThinkingLevel() },
         },
     });
 
-    const firstResult = await chatModel.generateContent(buildRequest(promptSistema, 3072));
+    const firstResult = await generateContentWithRetry(chatModel, buildRequest(promptSistema, 3072));
     const firstFinishReason = extraerFinishReason(firstResult);
     const firstText = extraerTextoRespuesta(firstResult).trim();
 
@@ -1151,7 +1153,7 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
         "No copies listados completos: resume categorías y cita la fuente.",
     ].join(" ");
 
-    const retryResult = await chatModel.generateContent(buildRequest(promptBreve, 4096));
+    const retryResult = await generateContentWithRetry(chatModel, buildRequest(promptBreve, 4096));
     const retryFinishReason = extraerFinishReason(retryResult);
     const retryText = extraerTextoRespuesta(retryResult).trim();
 
@@ -1205,7 +1207,7 @@ async function generarRespuestaGeneral({ pregunta, preguntaAnterior = "", idioma
             : "Responde siempre en castellano.",
     ].join(" ");
 
-    const result = await chatModel.generateContent({
+    const result = await generateContentWithRetry(chatModel, {
         systemInstruction: promptSistema,
         contents: [
             {
@@ -1214,8 +1216,8 @@ async function generarRespuestaGeneral({ pregunta, preguntaAnterior = "", idioma
             },
         ],
         generationConfig: {
-            temperature: 0.2,
             maxOutputTokens: 800,
+            thinkingConfig: { thinkingLevel: getThinkingLevel() },
         },
     });
 

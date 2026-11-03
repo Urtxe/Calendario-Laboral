@@ -7,9 +7,9 @@ const { randomUUID } = require("crypto");
 const functionsV1 = require("firebase-functions/v1"); 
 const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenAI } = require("@google/genai");
 const { getGenerationModel, getThinkingLevel } = require("./gemini-config");
-const { generateContentWithRetry } = require("./gemini-client");
+const { embedContent, generateContentWithRetry } = require("./gemini-client");
 const {
     applyKnownSourceVerificationOverrides,
     CATALOGO_CONVENIOS,
@@ -151,16 +151,21 @@ function getStripeClient() {
 }
 
 let geminiApiKey = "";
-let embeddingModel = null;
-let chatModel = null;
+let geminiClient = null;
 let geminiInitialized = false;
 function initializeGemini() {
     if (geminiInitialized) return;
     geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
         process.env.GOOGLE_AI_STUDIO_API_KEY || process.env.API_KEY || "";
-    const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
-    embeddingModel = genAI ? genAI.getGenerativeModel({ model: "gemini-embedding-001" }) : null;
-    chatModel = genAI ? genAI.getGenerativeModel({ model: GEMINI_CONSULTATION_MODEL }) : null;
+    geminiClient = geminiApiKey
+        ? new GoogleGenAI({
+            apiKey: geminiApiKey,
+            httpOptions: {
+                timeout: 35_000,
+                retryOptions: { attempts: 1 },
+            },
+        })
+        : null;
     geminiInitialized = true;
 }
 
@@ -236,7 +241,9 @@ function setCorsHeaders(req, res) {
 
 function extraerTextoRespuesta(result) {
     if (!result) return "";
+    if (typeof result.text === "string") return result.text;
     if (typeof result.text === "function") return result.text();
+    if (typeof result.response?.text === "string") return result.response.text;
     if (result.response && typeof result.response.text === "function") return result.response.text();
     return "";
 }
@@ -275,8 +282,9 @@ function validarPreguntaConsulta(body) {
 }
 
 function extraerFinishReason(result) {
-    return result && result.response && Array.isArray(result.response.candidates)
-        ? result.response.candidates[0] && result.response.candidates[0].finishReason
+    const candidates = result?.candidates || result?.response?.candidates;
+    return Array.isArray(candidates)
+        ? candidates[0] && candidates[0].finishReason
         : null;
 }
 
@@ -354,19 +362,24 @@ function construirBloqueContexto(chunks, etiqueta) {
 }
 
 async function generarEmbeddingPregunta(pregunta) {
-    if (!embeddingModel) {
+    if (!geminiClient) {
         throw new Error("Gemini no está configurado. Falta la API key.");
     }
 
-    const response = await embeddingModel.embedContent({
-        content: {
-            parts: [{ text: pregunta }],
+    const embeddings = await embedContent(
+        geminiClient,
+        "gemini-embedding-001",
+        [{ role: "user", parts: [{ text: pregunta }] }],
+        {
+            taskType: "RETRIEVAL_QUERY",
+            outputDimensionality: EMBEDDING_DIMENSIONS,
         },
-        taskType: "RETRIEVAL_QUERY",
-        outputDimensionality: EMBEDDING_DIMENSIONS,
-    });
-
-    return response.embedding.values;
+    );
+    const vector = embeddings[0];
+    if (!Array.isArray(vector) || vector.length !== EMBEDDING_DIMENSIONS) {
+        throw new Error("Gemini devolvió un embedding de consulta con dimensión no compatible.");
+    }
+    return vector;
 }
 
 async function isWorkersStatuteEditionAvailable(statuteSelection) {
@@ -1128,7 +1141,7 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
         },
     });
 
-    const firstResult = await generateContentWithRetry(chatModel, buildRequest(promptSistema, 3072));
+    const firstResult = await generateContentWithRetry(geminiClient, GEMINI_CONSULTATION_MODEL, buildRequest(promptSistema, 3072));
     const firstFinishReason = extraerFinishReason(firstResult);
     const firstText = extraerTextoRespuesta(firstResult).trim();
 
@@ -1153,7 +1166,7 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
         "No copies listados completos: resume categorías y cita la fuente.",
     ].join(" ");
 
-    const retryResult = await generateContentWithRetry(chatModel, buildRequest(promptBreve, 4096));
+    const retryResult = await generateContentWithRetry(geminiClient, GEMINI_CONSULTATION_MODEL, buildRequest(promptBreve, 4096));
     const retryFinishReason = extraerFinishReason(retryResult);
     const retryText = extraerTextoRespuesta(retryResult).trim();
 
@@ -1181,7 +1194,7 @@ async function generarRespuestaConvenio({ promptSistema, idiomaRespuesta, pregun
 }
 
 async function generarRespuestaGeneral({ pregunta, preguntaAnterior = "", idiomaRespuesta, esLaboral }) {
-    if (!chatModel) {
+    if (!geminiClient) {
         return {
             respuesta: "",
             finishReason: null,
@@ -1207,7 +1220,7 @@ async function generarRespuestaGeneral({ pregunta, preguntaAnterior = "", idioma
             : "Responde siempre en castellano.",
     ].join(" ");
 
-    const result = await generateContentWithRetry(chatModel, {
+    const result = await generateContentWithRetry(geminiClient, GEMINI_CONSULTATION_MODEL, {
         systemInstruction: promptSistema,
         contents: [
             {

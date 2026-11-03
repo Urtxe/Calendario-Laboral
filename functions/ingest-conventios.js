@@ -2,7 +2,8 @@ const fs = require("fs/promises");
 const path = require("path");
 const admin = require("firebase-admin");
 const { PDFParse } = require("pdf-parse");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenAI } = require("@google/genai");
+const { embedContent } = require("./gemini-client");
 const { MAX_ATOMIC_CHUNKS, activateChunkSet, reserveEmbeddingBudget, omitUndefinedFields } = require("./convenio-ingestion");
 const { downloadOfficialPdf, storeOfficialPdf, verifyPdfBytes, classifyOfficialDocument } = require("./official-convenio-document");
 const {
@@ -58,8 +59,11 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
-const embeddingModel = apiKey
-  ? new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: EMBEDDING_MODEL })
+const embeddingClient = apiKey
+  ? new GoogleGenAI({
+    apiKey,
+    httpOptions: { timeout: 60_000, retryOptions: { attempts: 1 } },
+  })
   : null;
 
 function pause(ms) {
@@ -200,23 +204,22 @@ function extractRetryDelayMs(error) {
   return 60000;
 }
 
-async function embedBatch(model, batch, title) {
+async function embedBatch(client, batch, title) {
   let attempt = 0;
 
   while (true) {
     try {
-      const response = await model.batchEmbedContents({
-        requests: batch.map((chunk) => ({
-          content: {
-            parts: [{ text: chunk }],
-          },
+      return await embedContent(
+        client,
+        EMBEDDING_MODEL,
+        batch,
+        {
           taskType: "RETRIEVAL_DOCUMENT",
           title,
           outputDimensionality: EMBEDDING_DIMENSIONS,
-        })),
-      });
-
-      return response.embeddings.map((embedding) => embedding.values);
+          httpOptions: { timeout: 60_000, retryOptions: { attempts: 1 } },
+        },
+      );
     } catch (error) {
       const status = error && (error.status || error.code);
       if (String(status) === "429" && attempt < MAX_RETRIES) {
@@ -557,7 +560,7 @@ async function processFile(filePath, { dryRun = false, metadataOverride = null, 
   if (missingChunkIndexes.length && chunks.length > MAX_ATOMIC_CHUNKS) {
     throw new Error(`El documento supera el límite de activación atómica (${MAX_ATOMIC_CHUNKS} chunks); no se generan embeddings.`);
   }
-  if (missingChunkIndexes.length && !embeddingModel) {
+  if (missingChunkIndexes.length && !embeddingClient) {
     throw new Error("Se requieren embeddings nuevos, pero no hay API key configurada. No se han escrito chunks.");
   }
   const estimatedTokens = missingChunkIndexes.reduce((total, index) => total + Math.ceil(chunks[index].length / 4), 0);
@@ -572,7 +575,7 @@ async function processFile(filePath, { dryRun = false, metadataOverride = null, 
 
     console.log(`  - Procesando lote ${batchIndex + 1} de ${totalBatches} para ${fileName}...`);
 
-    const embeddings = await embedBatch(embeddingModel, batchChunks, fileName);
+    const embeddings = await embedBatch(embeddingClient, batchChunks, fileName);
     if (embeddings.length !== batchChunks.length) {
       throw new Error(`No se pudieron generar todos los embeddings para ${fileName} en el lote ${batchIndex + 1}`);
     }

@@ -7,20 +7,45 @@ function getHttpStatus(error) {
     return Number(error?.status || error?.statusCode || error?.response?.status || 0);
 }
 
-async function generateContentWithRetry(model, request, options = {}) {
+async function generateContentWithRetry(client, model, request, options = {}) {
     const sleep = options.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     for (let attempt = 0; ; attempt += 1) {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), GEMINI_REQUEST_TIMEOUT_MS);
         try {
-            return await model.generateContent(request, { signal: controller.signal });
+            return await client.models.generateContent({
+                model,
+                contents: request.contents,
+                config: {
+                    ...(request.systemInstruction ? { systemInstruction: request.systemInstruction } : {}),
+                    ...(request.generationConfig || {}),
+                    automaticContinuation: false,
+                    httpOptions: {
+                        timeout: GEMINI_REQUEST_TIMEOUT_MS,
+                        retryOptions: { attempts: 1 },
+                    },
+                },
+            });
         } catch (error) {
             if (attempt >= 1 || !TRANSIENT_HTTP_STATUSES.has(getHttpStatus(error))) throw error;
             await sleep(250);
-        } finally {
-            clearTimeout(timeout);
         }
     }
 }
 
-module.exports = { GEMINI_REQUEST_TIMEOUT_MS, generateContentWithRetry };
+async function embedContent(client, model, contents, config = {}) {
+    const { httpOptions, ...embedConfig } = config;
+    const response = await client.models.embedContent({
+        model,
+        contents,
+        config: {
+            ...embedConfig,
+            httpOptions: {
+                timeout: GEMINI_REQUEST_TIMEOUT_MS,
+                retryOptions: { attempts: 1 },
+                ...httpOptions,
+            },
+        },
+    });
+    return response.embeddings?.map((embedding) => embedding.values || []) || [];
+}
+
+module.exports = { GEMINI_REQUEST_TIMEOUT_MS, embedContent, generateContentWithRetry };

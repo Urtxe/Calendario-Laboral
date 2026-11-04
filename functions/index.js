@@ -1,6 +1,6 @@
 const { onRequest } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
-const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const { randomUUID } = require("crypto");
 // Forzamos la carga de la versión 1 específicamente para el disparador de usuario
@@ -79,6 +79,10 @@ const { createGa4MetricsHandler } = require("./metrics-ga4");
 const { runScheduledHolidaySync } = require("./holidays-scheduler");
 const { runMonthlyConvenioReview } = require("./convenio-monitor");
 const {
+    syncAdminProfileLegacySummaries,
+    syncAdminYearSummary,
+} = require("./admin-year-summary");
+const {
     PLAY_PACKAGE_NAME,
     PREMIUM_PRODUCT_IDS,
     hashPurchaseToken,
@@ -124,6 +128,49 @@ if (admin.apps.length === 0) {
 }
 
 const db = admin.firestore();
+exports.syncAdminYearSummary = onDocumentWritten({
+    document: "usuarios/{userId}/years/{yearId}",
+    region: "us-central1",
+    maxInstances: 10,
+    retry: true,
+}, async (event) => {
+    try {
+        return await syncAdminYearSummary({
+            db,
+            userId: event.params.userId,
+            yearId: event.params.yearId,
+            serverTimestamp: () => FieldValue.serverTimestamp(),
+        });
+    } catch {
+        console.error("admin_year_summary_sync_failed");
+        throw new Error("admin_year_summary_sync_failed");
+    }
+});
+exports.syncAdminProfileLegacyYearSummaries = onDocumentWritten({
+    document: "usuarios/{userId}",
+    region: "us-central1",
+    maxInstances: 10,
+    retry: true,
+}, async (event) => {
+    try {
+        const beforeExists = Boolean(event.data?.before.exists);
+        const afterExists = Boolean(event.data?.after.exists);
+        const existingYearIds = !beforeExists && afterExists
+            ? (await db.collection("usuarios").doc(event.params.userId).collection("years").get()).docs.map((yearDoc) => yearDoc.id)
+            : [];
+        return await syncAdminProfileLegacySummaries({
+            db,
+            userId: event.params.userId,
+            before: event.data?.before.exists ? event.data.before.data() : {},
+            after: event.data?.after.exists ? event.data.after.data() : {},
+            existingYearIds,
+            serverTimestamp: () => FieldValue.serverTimestamp(),
+        });
+    } catch {
+        console.error("admin_profile_legacy_year_summary_sync_failed");
+        throw new Error("admin_profile_legacy_year_summary_sync_failed");
+    }
+});
 const holidaySyncOptions = { timeZone: "Europe/Madrid", region: "europe-west1", maxInstances: 1, concurrency: 1, timeoutSeconds: 540, memory: "1GiB", retryCount: 3, maxRetrySeconds: 1800, minBackoffSeconds: 60, maxBackoffSeconds: 300, maxDoublings: 2 };
 exports.syncOfficialHolidays = onSchedule({ ...holidaySyncOptions, schedule: "0 4 1 1-8 *" }, async () => runScheduledHolidaySync(db));
 exports.syncOfficialHolidaysWeekly = onSchedule({ ...holidaySyncOptions, schedule: "0 4 * 9-12 0" }, async () => runScheduledHolidaySync(db));

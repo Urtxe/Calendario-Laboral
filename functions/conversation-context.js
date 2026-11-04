@@ -25,8 +25,8 @@ function prepararContextoConversacional(pregunta, preguntaAnterior = "") {
   const intencionActualReutilizaConvenio = ["collective_agreement", "current_labor"]
     .includes(intencionActual.intent);
   const convenioContextoAnterior = Boolean(
-    criteriaAnterior?.provinces.length &&
-    criteriaAnterior?.sectorKeys.length &&
+    criteriaAnterior?.provinces?.length &&
+    criteriaAnterior?.sectorKeys?.length &&
     intencionActualReutilizaConvenio
   );
 
